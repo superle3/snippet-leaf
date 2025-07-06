@@ -15,43 +15,19 @@ const args = {
 	banner: {
 		js: banner,
 	},
-	entryPoints: ["src/main.ts"],
+	entryPoints: [
+        "src/extension.ts"
+	],
 	bundle: true,
-	external: [
-		"obsidian",
-		"electron",
-		"@codemirror/autocomplete",
-		"@codemirror/closebrackets",
-		"@codemirror/collab",
-		"@codemirror/commands",
-		"@codemirror/comment",
-		"@codemirror/fold",
-		"@codemirror/gutter",
-		"@codemirror/highlight",
-		"@codemirror/history",
-		"@codemirror/language",
-		"@codemirror/lint",
-		"@codemirror/matchbrackets",
-		"@codemirror/panel",
-		"@codemirror/rangeset",
-		"@codemirror/rectangular-selection",
-		"@codemirror/search",
-		"@codemirror/state",
-		"@codemirror/stream-parser",
-		"@codemirror/text",
-		"@codemirror/tooltip",
-		"@codemirror/view",
-		"@lezer/highlight",
-		...builtins],
-	format: "cjs",
-	target: "es2016",
-	logLevel: "info",
+	format: "iife", // or "esm" if your manifest supports it
+	platform: "browser",
+	target: ["es2017"], // or "es2017"
+	outdir: "dist",
 	sourcemap: prod ? false : "inline",
-	treeShaking: true,
-	outfile: "main.js",
 	plugins: [
 		inlineImportPlugin()
-	]
+	],
+	logLevel: "info"
 };
 
 if (!prod) {
