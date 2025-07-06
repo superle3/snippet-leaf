@@ -17,96 +17,107 @@ import { handleMathTooltip } from "./editor_extensions/math_tooltip";
 import { isComposing } from "./utils/editor_utils";
 
 export const handleUpdate = (update: ViewUpdate) => {
-	const settings = getLatexSuiteConfig(update.state);
+    const settings = getLatexSuiteConfig(update.state);
 
-	// The math tooltip handler is driven by view updates because it utilizes
-	// information about visual line, which is not available in EditorState
-	if (settings.mathPreviewEnabled) {
-		handleMathTooltip(update);
-	}
+    // The math tooltip handler is driven by view updates because it utilizes
+    // information about visual line, which is not available in EditorState
+    if (settings.mathPreviewEnabled) {
+        handleMathTooltip(update);
+    }
 
-	handleUndoRedo(update);
-}
+    handleUndoRedo(update);
+};
 
 export const onKeydown = (event: KeyboardEvent, view: EditorView) => {
-	const success = handleKeydown(event.key, event.shiftKey, event.ctrlKey || event.metaKey, isComposing(view, event), view);
+    const success = handleKeydown(
+        event.key,
+        event.shiftKey,
+        event.ctrlKey || event.metaKey,
+        isComposing(view, event),
+        view,
+    );
 
-	if (success) event.preventDefault();
-}
+    if (success) event.preventDefault();
+};
 
-export const handleKeydown = (key: string, shiftKey: boolean, ctrlKey: boolean, isIME: boolean, view: EditorView) => {
+export const handleKeydown = (
+    key: string,
+    shiftKey: boolean,
+    ctrlKey: boolean,
+    isIME: boolean,
+    view: EditorView,
+) => {
+    const settings = getLatexSuiteConfig(view);
+    const ctx = Context.fromView(view);
 
-	const settings = getLatexSuiteConfig(view);
-	const ctx = Context.fromView(view);
+    let success = false;
 
-	let success = false;
+    /*
+     * When backspace is pressed, if the cursor is inside an empty inline math,
+     * delete both $ symbols, not just the first one.
+     */
+    if (settings.autoDelete$ && key === "Backspace" && ctx.mode.inMath()) {
+        const charAtPos = getCharacterAtPos(view, ctx.pos);
+        const charAtPrevPos = getCharacterAtPos(view, ctx.pos - 1);
 
-	/*
-	* When backspace is pressed, if the cursor is inside an empty inline math,
-	* delete both $ symbols, not just the first one.
-	*/
-	if (settings.autoDelete$ && key === "Backspace" && ctx.mode.inMath()) {
-		const charAtPos = getCharacterAtPos(view, ctx.pos);
-		const charAtPrevPos = getCharacterAtPos(view, ctx.pos - 1);
+        if (charAtPos === "$" && charAtPrevPos === "$") {
+            replaceRange(view, ctx.pos - 1, ctx.pos + 1, "");
+            // Note: not sure if removeAllTabstops is necessary
+            removeAllTabstops(view);
+            return true;
+        }
+    }
 
-		if (charAtPos === "$" && charAtPrevPos === "$") {
-			replaceRange(view, ctx.pos - 1, ctx.pos + 1, "");
-			// Note: not sure if removeAllTabstops is necessary
-			removeAllTabstops(view);
-			return true;
-		}
-	}
+    if (settings.snippetsEnabled) {
+        // Prevent IME from triggering keydown events.
+        if (settings.suppressSnippetTriggerOnIME && isIME) return;
 
-	if (settings.snippetsEnabled) {
+        // Allows Ctrl + z for undo, instead of triggering a snippet ending with z
+        if (!ctrlKey) {
+            try {
+                success = runSnippets(view, ctx, key);
+                if (success) return true;
+            } catch (e) {
+                clearSnippetQueue(view);
+                console.error(e);
+            }
+        }
+    }
 
-		// Prevent IME from triggering keydown events.
-		if (settings.suppressSnippetTriggerOnIME && isIME) return;
+    if (key === "Tab") {
+        success = setSelectionToNextTabstop(view);
 
-		// Allows Ctrl + z for undo, instead of triggering a snippet ending with z
-		if (!ctrlKey) {
-			try {
-				success = runSnippets(view, ctx, key);
-				if (success) return true;
-			}
-			catch (e) {
-				clearSnippetQueue(view);
-				console.error(e);
-			}
-		}
-	}
+        if (success) return true;
+    }
 
-	if (key === "Tab") {
-		success = setSelectionToNextTabstop(view);
+    if (settings.autofractionEnabled && ctx.mode.strictlyInMath()) {
+        if (key === "/") {
+            success = runAutoFraction(view, ctx);
 
-		if (success) return true;
-	}
+            if (success) return true;
+        }
+    }
 
-	if (settings.autofractionEnabled && ctx.mode.strictlyInMath()) {
-		if (key === "/") {
-			success = runAutoFraction(view, ctx);
+    if (settings.matrixShortcutsEnabled && ctx.mode.strictlyInMath()) {
+        if (["Tab", "Enter"].contains(key)) {
+            success = runMatrixShortcuts(view, ctx, key, shiftKey);
 
-			if (success) return true;
-		}
-	}
+            if (success) return true;
+        }
+    }
 
-	if (settings.matrixShortcutsEnabled && ctx.mode.strictlyInMath()) {
-		if (["Tab", "Enter"].contains(key)) {
-			success = runMatrixShortcuts(view, ctx, key, shiftKey);
+    if (settings.taboutEnabled) {
+        // check if the main cursor has something selected since ctx.mode only checks the main cursor.
+        //  This does give weird behaviour with multicursor.
+        if (
+            (key === "Tab" && view.state.selection.main.empty) ||
+            shouldTaboutByCloseBracket(view, key)
+        ) {
+            success = tabout(view, ctx);
 
-			if (success) return true;
-		}
-	}
+            if (success) return true;
+        }
+    }
 
-	if (settings.taboutEnabled) {
-		// check if the main cursor has something selected since ctx.mode only checks the main cursor.
-		//  This does give weird behaviour with multicursor.
-		if ((key === "Tab" && view.state.selection.main.empty) 
-			|| shouldTaboutByCloseBracket(view, key)) {
-			success = tabout(view, ctx);
-
-			if (success) return true;
-		}
-	}
-
-	return false;
-}
+    return false;
+};
