@@ -1,3 +1,5 @@
+import type {
+    Output} from "valibot";
 import {
     optional,
     object,
@@ -6,37 +8,41 @@ import {
     instance,
     parse,
     number,
-    Output,
     special,
 } from "valibot";
 import { encode } from "js-base64";
+import type {
+    Snippet} from "./snippets";
 import {
     RegexSnippet,
     serializeSnippetLike,
-    Snippet,
     StringSnippet,
     VISUAL_SNIPPET_MAGIC_SELECTION_PLACEHOLDER,
     VisualSnippet,
 } from "./snippets";
 import { Options } from "./options";
 import { sortSnippets } from "./sort";
-import { EXCLUSIONS, Environment } from "./environment";
+import type { Environment } from "./environment";
+import { EXCLUSIONS } from "./environment";
 
 export type SnippetVariables = Record<string, string>;
 
-async function importRaw(maybeJavaScriptCode: string) {
+export async function importRaw(maybeJavaScriptCode: string) {
     let raw;
     try {
         try {
             // first, try to import as a plain js module
             // js-base64.encode is needed over builtin `window.btoa` because the latter errors on unicode
-            raw = await importModuleDefault(
-                `data:text/javascript;base64,${encode(maybeJavaScriptCode)}`,
+            raw = await import(
+                "data:text/javascript;base64," + encode(maybeJavaScriptCode)
             );
+            raw = raw.default;
         } catch {
             // otherwise, try to import as a standalone js object
             raw = await importModuleDefault(
-                `data:text/javascript;base64,${encode(`export default ${maybeJavaScriptCode}`)}`,
+                `data:text/javascript;base64,${encode(
+                    `export default ${maybeJavaScriptCode}`
+                )}`
             );
         }
     } catch (e) {
@@ -47,7 +53,7 @@ async function importRaw(maybeJavaScriptCode: string) {
 
 export async function parseSnippetVariables(snippetVariablesStr: string) {
     const rawSnippetVariables = (await importRaw(
-        snippetVariablesStr,
+        snippetVariablesStr
     )) as SnippetVariables;
 
     if (Array.isArray(rawSnippetVariables))
@@ -72,7 +78,7 @@ export async function parseSnippetVariables(snippetVariablesStr: string) {
 
 export async function parseSnippets(
     snippetsStr: string,
-    snippetVariables: SnippetVariables,
+    snippetVariables: SnippetVariables
 ) {
     let rawSnippets = (await importRaw(snippetsStr)) as RawSnippet[];
 
@@ -153,7 +159,9 @@ function validateRawSnippets(snippets: unknown): RawSnippet[] {
         try {
             return parse(RawSnippetSchema, raw);
         } catch (e) {
-            throw `Value does not resemble snippet.\nErroring snippet:\n${serializeSnippetLike(raw)}`;
+            throw `Value does not resemble snippet.\nErroring snippet:\n${serializeSnippetLike(
+                raw
+            )}`;
         }
     });
 }
@@ -167,7 +175,7 @@ function validateRawSnippets(snippets: unknown): RawSnippet[] {
  */
 function parseSnippet(
     raw: RawSnippet,
-    snippetVariables: SnippetVariables,
+    snippetVariables: SnippetVariables
 ): Snippet {
     const { replacement, priority, description } = raw;
     const options = Options.fromSource(raw.options);

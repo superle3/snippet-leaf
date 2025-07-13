@@ -1,7 +1,7 @@
-import { Editor } from "obsidian";
-import { EditorView } from "@codemirror/view";
+import type { Editor } from "obsidian";
+import type { EditorView } from "@codemirror/view";
 import { replaceRange, setCursor, setSelection } from "../utils/editor_utils";
-import LatexSuitePlugin from "src/main";
+import type LatexSuitePlugin from "src/main";
 import { Context } from "src/utils/context";
 
 function boxCurrentEquation(view: EditorView) {

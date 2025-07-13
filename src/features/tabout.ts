@@ -1,15 +1,20 @@
-import { EditorView } from "@codemirror/view";
+import type { EditorView } from "@codemirror/view";
 import {
     replaceRange,
     setCursor,
     getCharacterAtPos,
-} from "src/utils/editor_utils";
-import { Context } from "src/utils/context";
+} from "../utils/editor_utils";
+import type { Context } from "../utils/context";
+import type { syntaxTree as syntaxTreeC } from "@codemirror/language";
 
-export const tabout = (view: EditorView, ctx: Context): boolean => {
+export const tabout = (
+    view: EditorView,
+    ctx: Context,
+    syntaxTree: typeof syntaxTreeC
+): boolean => {
     if (!ctx.mode.inMath()) return false;
 
-    const result = ctx.getBounds();
+    const result = ctx.getBounds(syntaxTree);
     if (!result) return false;
     const end = result.end;
 
@@ -21,7 +26,7 @@ export const tabout = (view: EditorView, ctx: Context): boolean => {
     const rangle = "\\rangle";
 
     for (let i = pos; i < end; i++) {
-        if (["}", ")", "]", ">", "|", "$"].contains(text.charAt(i))) {
+        if (["}", ")", "]", ">", "|", "$"].includes(text.charAt(i))) {
             setCursor(view, i + 1);
 
             return true;
@@ -67,7 +72,7 @@ export const tabout = (view: EditorView, ctx: Context): boolean => {
 
 export const shouldTaboutByCloseBracket = (
     view: EditorView,
-    keyPressed: string,
+    keyPressed: string
 ) => {
     const sel = view.state.selection.main;
     if (!sel.empty) return;
@@ -76,7 +81,7 @@ export const shouldTaboutByCloseBracket = (
     const c = getCharacterAtPos(view, pos);
     const brackets = [")", "]", "}"];
 
-    if (c === keyPressed && brackets.contains(c)) {
+    if (c === keyPressed && brackets.includes(c)) {
         return true;
     } else {
         return false;

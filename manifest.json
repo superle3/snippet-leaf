@@ -6,7 +6,7 @@
     "author": "superle3",
     "content_scripts": [
         {
-            "matches": ["*://*.overleaf.com/*"],
+            "matches": ["<all_urls>"],
             "js": ["dist/extension.js"],
             "world": "MAIN"
         }
@@ -14,5 +14,5 @@
     "background": {
         "scripts": ["background.js"]
     },
-    "permissions": ["cookies", "https://www.overleaf.com/"]
+    "permissions": ["cookies", "http://localhost/project/*"]
 }

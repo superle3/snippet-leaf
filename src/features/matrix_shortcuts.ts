@@ -1,16 +1,20 @@
-import { EditorView } from "@codemirror/view";
+import type { EditorView } from "@codemirror/view";
 import { setCursor } from "src/utils/editor_utils";
+import type { LatexSuiteFacet } from "src/snippets/codemirror/config";
 import { getLatexSuiteConfig } from "src/snippets/codemirror/config";
-import { Context } from "src/utils/context";
+import type { Context } from "src/utils/context";
 import { tabout } from "src/features/tabout";
+import type { syntaxTree as syntaxTreeC } from "@codemirror/language";
 
 export const runMatrixShortcuts = (
     view: EditorView,
     ctx: Context,
     key: string,
     shiftKey: boolean,
+    latexSuiteConfig: LatexSuiteFacet,
+    syntaxTree: typeof syntaxTreeC
 ): boolean => {
-    const settings = getLatexSuiteConfig(view);
+    const settings = getLatexSuiteConfig(view, latexSuiteConfig);
 
     // Check whether we are inside a matrix / align / case environment
     let isInsideAnEnv = false;
@@ -21,7 +25,7 @@ export const runMatrixShortcuts = (
             closeSymbol: "\\end{" + envName + "}",
         };
 
-        isInsideAnEnv = ctx.isWithinEnvironment(ctx.pos, env);
+        isInsideAnEnv = ctx.isWithinEnvironment(ctx.pos, env, syntaxTree);
         if (isInsideAnEnv) break;
     }
 
@@ -42,7 +46,7 @@ export const runMatrixShortcuts = (
 
             setCursor(view, nextLine.to);
         } else if (shiftKey && ctx.mode.inlineMath) {
-            tabout(view, ctx);
+            tabout(view, ctx, syntaxTree);
         } else if (ctx.mode.blockMath) {
             const d = view.state.doc;
             const lineText = d.lineAt(ctx.pos).text;
@@ -50,7 +54,7 @@ export const runMatrixShortcuts = (
             const leadingIndents = matchIndents ? matchIndents[0] : "";
 
             view.dispatch(
-                view.state.replaceSelection(` \\\\\n${leadingIndents}`),
+                view.state.replaceSelection(` \\\\\n${leadingIndents}`)
             );
         } else {
             view.dispatch(view.state.replaceSelection(" \\\\ "));

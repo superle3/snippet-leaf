@@ -1,17 +1,24 @@
-import { EditorView } from "@codemirror/view";
+import type { EditorView as EditorViewC } from "@codemirror/view";
 import { findMatchingBracket } from "src/utils/editor_utils";
-import { queueSnippet } from "src/snippets/codemirror/snippet_queue_state_field";
-import { expandSnippets } from "src/snippets/snippet_management";
+import type { snippetQueues } from "src/snippets/codemirror/snippet_queue_state_field";
 import { Context } from "src/utils/context";
+import type { LatexSuiteFacet } from "src/snippets/codemirror/config";
 import { getLatexSuiteConfig } from "src/snippets/codemirror/config";
+import type { syntaxTree as syntaxTreeC } from "@codemirror/language";
 
-export const autoEnlargeBrackets = (view: EditorView) => {
-    const settings = getLatexSuiteConfig(view);
+export const autoEnlargeBrackets = (
+    view: EditorViewC,
+    latexSuiteConfig: LatexSuiteFacet,
+    syntaxTree: typeof syntaxTreeC,
+    queueSnippet: ReturnType<typeof snippetQueues>["queueSnippet"],
+    expandSnippets: (view: EditorViewC) => boolean
+) => {
+    const settings = getLatexSuiteConfig(view, latexSuiteConfig);
     if (!settings.autoEnlargeBrackets) return;
 
     // The Context needs to be regenerated since changes to the document may have happened before autoEnlargeBrackets was triggered
-    const ctx = Context.fromView(view);
-    const result = ctx.getBounds();
+    const ctx = Context.fromView(view, latexSuiteConfig, syntaxTree);
+    const result = ctx.getBounds(syntaxTree);
     if (!result) return false;
     const { start, end } = result;
 
@@ -59,7 +66,7 @@ export const autoEnlargeBrackets = (view: EditorView) => {
         // Check whether the brackets contain sum, int or frac
         const bracketContents = text.slice(i + 1, j);
         const containsTrigger = settings.autoEnlargeBracketsTriggers.some(
-            (word) => bracketContents.contains("\\" + word),
+            (word) => bracketContents.includes("\\" + word)
         );
 
         if (!containsTrigger) {

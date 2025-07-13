@@ -1,21 +1,34 @@
-import { EditorView } from "@codemirror/view";
-import { EditorState, SelectionRange } from "@codemirror/state";
+import type { EditorView as EditorViewC } from "@codemirror/view";
+import type { EditorState, SelectionRange } from "@codemirror/state";
+import type { LatexSuiteFacet } from "src/snippets/codemirror/config";
 import { getLatexSuiteConfig } from "src/snippets/codemirror/config";
-import { queueSnippet } from "src/snippets/codemirror/snippet_queue_state_field";
-import { Mode, Options } from "src/snippets/options";
-import { expandSnippets } from "src/snippets/snippet_management";
-import { Context } from "src/utils/context";
+import type { snippetQueues } from "src/snippets/codemirror/snippet_queue_state_field";
+import type { Mode, Options } from "src/snippets/options";
+import type { Context } from "src/utils/context";
 import { autoEnlargeBrackets } from "./auto_enlarge_brackets";
+import type { syntaxTree as syntaxTreeC } from "@codemirror/language";
 
 export const runSnippets = (
-    view: EditorView,
+    view: EditorViewC,
     ctx: Context,
     key: string,
+    latexSuiteConfig: LatexSuiteFacet,
+    queueSnippet: ReturnType<typeof snippetQueues>["queueSnippet"],
+    expandSnippets: (view: EditorViewC) => boolean,
+    syntaxTree: typeof syntaxTreeC
 ): boolean => {
     let shouldAutoEnlargeBrackets = false;
 
     for (const range of ctx.ranges) {
-        const result = runSnippetCursor(view, ctx, key, range);
+        const result = runSnippetCursor(
+            view,
+            ctx,
+            key,
+            range,
+            latexSuiteConfig,
+            syntaxTree,
+            queueSnippet
+        );
 
         if (result.shouldAutoEnlargeBrackets) shouldAutoEnlargeBrackets = true;
     }
@@ -23,19 +36,28 @@ export const runSnippets = (
     const success = expandSnippets(view);
 
     if (shouldAutoEnlargeBrackets) {
-        autoEnlargeBrackets(view);
+        autoEnlargeBrackets(
+            view,
+            latexSuiteConfig,
+            syntaxTree,
+            queueSnippet,
+            expandSnippets
+        );
     }
 
     return success;
 };
 
 const runSnippetCursor = (
-    view: EditorView,
+    view: EditorViewC,
     ctx: Context,
     key: string,
     range: SelectionRange,
+    latexSuiteConfig: LatexSuiteFacet,
+    syntaxTree: typeof syntaxTreeC,
+    queueSnippet: ReturnType<typeof snippetQueues>["queueSnippet"]
 ): { success: boolean; shouldAutoEnlargeBrackets: boolean } => {
-    const settings = getLatexSuiteConfig(view);
+    const settings = getLatexSuiteConfig(view, latexSuiteConfig);
     const { from, to } = range;
     const sel = view.state.sliceDoc(from, to);
     const line = view.state.sliceDoc(0, to);
@@ -61,7 +83,7 @@ const runSnippetCursor = (
         // in practice, a snippet should have very few excluded environments, if any,
         // so the cost of this check shouldn't be very high
         for (const environment of snippet.excludedEnvironments) {
-            if (ctx.isWithinEnvironment(to, environment)) {
+            if (ctx.isWithinEnvironment(to, environment, syntaxTree)) {
                 isExcluded = true;
             }
         }
@@ -82,7 +104,7 @@ const runSnippetCursor = (
                     view.state,
                     triggerPos,
                     to,
-                    settings.wordDelimiters,
+                    settings.wordDelimiters
                 )
             )
                 continue;
@@ -100,7 +122,7 @@ const runSnippetCursor = (
         queueSnippet(view, start, to, replacement, key);
 
         const containsTrigger = settings.autoEnlargeBracketsTriggers.some(
-            (word) => replacement.contains("\\" + word),
+            (word) => replacement.includes("\\" + word)
         );
         return { success: true, shouldAutoEnlargeBrackets: containsTrigger };
     }
@@ -132,7 +154,7 @@ const isOnWordBoundary = (
     state: EditorState,
     triggerPos: number,
     to: number,
-    wordDelimiters: string,
+    wordDelimiters: string
 ) => {
     const prevChar = state.sliceDoc(triggerPos - 1, triggerPos);
     const nextChar = state.sliceDoc(to, to + 1);
@@ -140,7 +162,7 @@ const isOnWordBoundary = (
     wordDelimiters = wordDelimiters.replace("\\n", "\n");
 
     return (
-        wordDelimiters.contains(prevChar) && wordDelimiters.contains(nextChar)
+        wordDelimiters.includes(prevChar) && wordDelimiters.includes(nextChar)
     );
 };
 

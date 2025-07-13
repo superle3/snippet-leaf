@@ -1,7 +1,7 @@
-import { EditorView } from "@codemirror/view";
-import { ChangeSpec } from "@codemirror/state";
-import { TabstopSpec } from "../tabstop";
-import { findMatchingBracket } from "src/utils/editor_utils";
+import type { EditorView } from "@codemirror/view";
+import type { ChangeSpec } from "@codemirror/state";
+import type { TabstopSpec } from "../tabstop";
+import { findMatchingBracket } from "../../utils/editor_utils";
 
 export class SnippetChangeSpec {
     from: number;
@@ -43,7 +43,7 @@ export class SnippetChangeSpec {
                     "{",
                     "}",
                     false,
-                    start + this.insert.length,
+                    start + this.insert.length
                 );
 
                 // Create a copy of the entire tabstop string from the document
@@ -65,7 +65,7 @@ export class SnippetChangeSpec {
                 // Isolate the replacement text from after the colon to the end of the tabstop bracket pair
                 tabstopReplacement = text.slice(
                     i + colonIndex + 1,
-                    closingIndex,
+                    closingIndex
                 );
                 tabstopEnd = closingIndex + 1;
                 i = closingIndex;
