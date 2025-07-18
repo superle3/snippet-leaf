@@ -81,8 +81,6 @@ export function stateEffect_variables(
     return {
         startSnippet,
         endSnippet,
-        undidStartSnippet,
-        undidEndSnippet,
         snippetInvertedEffects,
         handleUndoRedo,
     };

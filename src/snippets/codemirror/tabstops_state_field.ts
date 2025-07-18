@@ -119,9 +119,6 @@ export function create_tabstopsStateField(
         removeAllTabstops,
         getTabstopGroupsFromView,
         tabstopsStateField,
-        addTabstopsEffect,
-        removeAllTabstopsEffect,
         getNextTabstopColor,
-        getCurrentTabstopGroupIndex,
     };
 }

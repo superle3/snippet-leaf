@@ -67,6 +67,11 @@ type CodeMirrorExt = {
     hoverTooltip: typeof hoverTooltipC;
     keymap: FacetC<readonly KeyBindingC[]>;
     syntaxTree: typeof syntaxTreeC;
+    invertedEffects: typeof invertedEffectsC;
+    ChangeSet: typeof ChangeSetC;
+    undo: typeof undoC;
+    redo: typeof redoC;
+    isolateHistory: typeof isolateHistoryC;
 };
 
 type CodeMirrorVimExt = {
@@ -75,14 +80,9 @@ type CodeMirrorVimExt = {
     CodeMirror: typeof CodeMirrorVimC;
 };
 type extraExtensions = {
-    invertedEffects: typeof invertedEffectsC;
-    ChangeSet: typeof ChangeSetC;
-    undo: typeof undoC;
-    redo: typeof redoC;
     RangeSet: typeof RangeSetC;
     RangeValue: typeof RangeValueC;
     RangeSetBuilder: typeof RangeSetBuilderC;
-    isolateHistory: typeof isolateHistoryC;
 };
 
 type OverleafEventDetail = {
@@ -102,9 +102,7 @@ window.addEventListener("UNSTABLE_editor:extensions", async (e) => {
     // }
     logger.info("Latex Suite extension loaded");
     const evt = e as unknown as Overleaf_event;
-    const { CodeMirror, CodeMirrorVim, extensions, extraExtensions } =
-        evt.detail;
-    if (!extraExtensions) return;
+    const { CodeMirror, extensions } = evt.detail;
     // const { undo, redo } = CodeMirrorVim.CodeMirror.commands as unknown as {
     //     undo: typeof undoC;
     //     redo: typeof redoC;
@@ -118,20 +116,12 @@ window.addEventListener("UNSTABLE_editor:extensions", async (e) => {
         EditorSelection,
         StateField,
         StateEffect,
-        ViewPlugin,
-        WidgetType,
-        hoverTooltip,
-    } = CodeMirror;
-    const {
-        RangeSet,
-        RangeValue,
-        RangeSetBuilder,
         invertedEffects,
         ChangeSet,
         isolateHistory,
         undo,
         redo,
-    } = extraExtensions;
+    } = CodeMirror;
     // await new Promise<void>((resolve) => {
     //     const view = CodeMirror.EditorView.findFromDOM(document);
     //     // Check every 100ms if view is configured. Resolve promise when it is..
@@ -192,30 +182,21 @@ window.addEventListener("UNSTABLE_editor:extensions", async (e) => {
     while (extensions.length > 0) {
         extensions.pop();
     }
-    const {
-        handleUndoRedo,
-        endSnippet,
-        startSnippet,
-        snippetInvertedEffects,
-        undidEndSnippet,
-        undidStartSnippet,
-    } = stateEffect_variables(
-        StateEffect,
-        invertedEffects,
-        undo,
-        redo,
-        StateField,
-        Decoration,
-        EditorView
-    );
+    const { handleUndoRedo, endSnippet, startSnippet, snippetInvertedEffects } =
+        stateEffect_variables(
+            StateEffect,
+            invertedEffects,
+            undo,
+            redo,
+            StateField,
+            Decoration,
+            EditorView
+        );
     const {
         addTabstops,
-        addTabstopsEffect,
-        getCurrentTabstopGroupIndex,
         getNextTabstopColor,
         getTabstopGroupsFromView,
         removeAllTabstops,
-        removeAllTabstopsEffect,
         tabstopsStateField,
     } = create_tabstopsStateField(
         StateEffect,
@@ -223,25 +204,9 @@ window.addEventListener("UNSTABLE_editor:extensions", async (e) => {
         Decoration,
         EditorView
     );
-    const {
-        clearSnippetQueue,
-        clearSnippetQueueEffect,
-        queueSnippet,
-        queueSnippetEffect,
-        snippetQueueStateField,
-    } = snippetQueues(StateEffect, StateField);
+    const { clearSnippetQueue, queueSnippet, snippetQueueStateField } =
+        snippetQueues(StateEffect, StateField);
     const snippet_leaf_extension = [
-        // mkConcealPlugin(
-        //     0,
-        //     ViewPlugin,
-        //     Decoration,
-        //     EditorView,
-        //     syntaxTree,
-        //     WidgetType,
-        //     RangeSet,
-        //     RangeValue,
-        //     RangeSetBuilder
-        // ).extension,
         latexSuiteConfig.of(CMSettings),
         Prec.highest(
             EditorView.domEventHandlers({

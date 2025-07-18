@@ -55,8 +55,6 @@ export function snippetQueues(
     return {
         queueSnippet,
         clearSnippetQueue,
-        queueSnippetEffect,
-        clearSnippetQueueEffect,
         snippetQueueStateField,
     };
 }
