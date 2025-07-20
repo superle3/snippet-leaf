@@ -18,12 +18,6 @@ interface LatexSuiteBasicSettings {
     snippetsFileLocation: string;
     snippetVariablesFileLocation: string;
     autofractionEnabled: boolean;
-    concealEnabled: boolean;
-    concealRevealTimeout: number;
-    colorPairedBracketsEnabled: boolean;
-    highlightCursorBracketsEnabled: boolean;
-    mathPreviewEnabled: boolean;
-    mathPreviewPositionIsAbove: boolean;
     autofractionSymbol: string;
     autofractionBreakingChars: string;
     matrixShortcutsEnabled: boolean;

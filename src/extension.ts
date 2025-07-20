@@ -37,7 +37,6 @@ import type { SnippetVariables } from "./snippets/parse";
 import { parseSnippets, parseSnippetVariables } from "./snippets/parse";
 import { DEFAULT_SNIPPET_VARIABLES } from "./utils/default_snippet_variables";
 import { DEFAULT_SNIPPETS } from "./utils/default_snippets";
-import { mkConcealPlugin } from "./editor_extensions/conceal";
 import type {
     LatexSuiteCMSettings,
     LatexSuitePluginSettings,
@@ -48,7 +47,6 @@ import {
     DEFAULT_SETTINGS,
     processLatexSuiteSettings,
 } from "./settings/settings";
-import { tabstopSpecsToTabstopGroups } from "./snippets/tabstop";
 import { expandSnippets } from "./snippets/snippet_management";
 import { stateEffect_variables } from "./snippets/codemirror/history";
 import { create_tabstopsStateField } from "./snippets/codemirror/tabstops_state_field";
@@ -97,16 +95,9 @@ type Overleaf_event = CustomEvent<OverleafEventDetail>;
 console.log("snippet_leaf extension loaded");
 window.addEventListener("UNSTABLE_editor:extensions", async (e) => {
     console.log("starting snippet_leaf");
-    // if (!loaded) { loaded = true;
-    //     return;
-    // }
     logger.info("Latex Suite extension loaded");
     const evt = e as unknown as Overleaf_event;
     const { CodeMirror, extensions } = evt.detail;
-    // const { undo, redo } = CodeMirrorVim.CodeMirror.commands as unknown as {
-    //     undo: typeof undoC;
-    //     redo: typeof redoC;
-    // };
     const {
         Prec,
         keymap,
@@ -122,14 +113,6 @@ window.addEventListener("UNSTABLE_editor:extensions", async (e) => {
         undo,
         redo,
     } = CodeMirror;
-    // await new Promise<void>((resolve) => {
-    //     const view = CodeMirror.EditorView.findFromDOM(document);
-    //     // Check every 100ms if view is configured. Resolve promise when it is..
-    //     const conf_interval = setInterval(() => {
-    //         if (view.state.config.base.length > 0) resolve();
-    //         clearInterval(conf_interval);
-    //     }, 100);
-    // });
     const user_variables: string = null;
     const raw_variables =
         user_variables ?? (DEFAULT_SNIPPET_VARIABLES as string);
@@ -157,14 +140,6 @@ window.addEventListener("UNSTABLE_editor:extensions", async (e) => {
         settings
     );
 
-    // logger.info(
-    //     `Loaded settings from extension.ts , ${JSON.stringify(
-    //         CMSettings,
-    //         null,
-    //         2
-    //     )}`
-    // );
-    //
     const Facet = Object.getPrototypeOf(keymap).constructor as typeof FacetC;
 
     const latexSuiteConfig = Facet.define<
