@@ -1,4 +1,4 @@
-# Snippetleaf `<img src="https://img.shields.io/github/manifest-json/v/superle3/snippet-leaf">`
+# Snippetleaf
 
 A port of [Obsidian Latex Suite](https://github.com/artisticat1/obsidian-latex-suite) to overleaf that aims to make typesetting LaTeX math as fast as handwriting.
 
