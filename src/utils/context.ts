@@ -213,6 +213,7 @@ export class Context {
             [MathMode.ParenInline]: ParenMathOffset,
             [MathMode.DollarInline]: InlineMathOffset,
             [MathMode.Array]: ArrayMathOffset,
+            [MathMode.TextEnv]: TextEnvOffset,
         };
         return {
             start: mathMode.bounds.start - offSets[mathMode.type].start,
