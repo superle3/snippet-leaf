@@ -14,5 +14,5 @@
     "background": {
         "scripts": ["background.js"]
     },
-    "permissions": ["cookies", "http://localhost/project/*"]
+    "permissions": ["cookies", "https://overleaf/project/*"]
 }

@@ -39,14 +39,12 @@ interface LatexSuiteRawSettings {
     autofractionExcludedEnvs: string;
     matrixShortcutsEnvNames: string;
     autoEnlargeBracketsTriggers: string;
-    forceMathLanguages: string;
 }
 
 interface LatexSuiteParsedSettings {
     autofractionExcludedEnvs: Environment[];
     matrixShortcutsEnvNames: string[];
     autoEnlargeBracketsTriggers: string[];
-    forceMathLanguages: string[];
 }
 
 export type LatexSuitePluginSettings = {
@@ -79,7 +77,7 @@ export type LatexSuiteFacet = FacetC<
 export function getLatexSuiteConfig(
     viewOrState: EditorView | EditorState,
     latexSuiteConfig: LatexSuiteFacet
-) {
+): LatexSuiteCMSettings {
     const state = (viewOrState as EditorView).state
         ? (viewOrState as EditorView).state
         : (viewOrState as EditorState);

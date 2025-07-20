@@ -35,14 +35,12 @@ interface LatexSuiteRawSettings {
     autofractionExcludedEnvs: string;
     matrixShortcutsEnvNames: string;
     autoEnlargeBracketsTriggers: string;
-    forceMathLanguages: string;
 }
 
 interface LatexSuiteParsedSettings {
     autofractionExcludedEnvs: Environment[];
     matrixShortcutsEnvNames: string[];
     autoEnlargeBracketsTriggers: string[];
-    forceMathLanguages: string[];
 }
 
 export type LatexSuitePluginSettings = {
@@ -91,12 +89,11 @@ export const DEFAULT_SETTINGS: LatexSuitePluginSettings = {
     matrixShortcutsEnvNames:
         "pmatrix, cases, align, gather, bmatrix, Bmatrix, vmatrix, Vmatrix, array, matrix",
     autoEnlargeBracketsTriggers: "sum, int, frac, prod, bigcup, bigcap",
-    forceMathLanguages: "math",
 };
 
 export function processLatexSuiteSettings(
     snippets: Snippet[],
-    settings: LatexSuitePluginSettings,
+    settings: LatexSuitePluginSettings
 ): LatexSuiteCMSettings {
     function strToArray(str: string) {
         return str.replace(/\s/g, "").split(",");
@@ -123,12 +120,11 @@ export function processLatexSuiteSettings(
         // Override raw settings with parsed settings
         snippets: snippets,
         autofractionExcludedEnvs: getAutofractionExcludedEnvs(
-            settings.autofractionExcludedEnvs,
+            settings.autofractionExcludedEnvs
         ),
         matrixShortcutsEnvNames: strToArray(settings.matrixShortcutsEnvNames),
         autoEnlargeBracketsTriggers: strToArray(
-            settings.autoEnlargeBracketsTriggers,
+            settings.autoEnlargeBracketsTriggers
         ),
-        forceMathLanguages: strToArray(settings.forceMathLanguages),
     };
 }

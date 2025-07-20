@@ -22,22 +22,24 @@ export const autoEnlargeBrackets = (
     if (!result) return false;
     const { start, end } = result;
 
-    const text = view.state.doc.toString();
+    const text = view.state.doc.sliceString(start, end);
     const left = "\\left";
     const right = "\\right";
 
-    for (let i = start; i < end; i++) {
-        const brackets: { [open: string]: string } = {
-            "(": ")",
-            "[": "]",
-            "\\{": "\\}",
-            "\\langle": "\\rangle",
-            "\\lvert": "\\rvert",
-            "\\lVert": "\\rVert",
-            "\\lceil": "\\rceil",
-            "\\lfloor": "\\rfloor",
-        };
-        const openBrackets = Object.keys(brackets);
+    const brackets: { [open: string]: string } = {
+        "(": ")",
+        "[": "]",
+        "\\{": "\\}",
+        "\\langle": "\\rangle",
+        "\\lvert": "\\rvert",
+        "\\lVert": "\\rVert",
+        "\\lceil": "\\rceil",
+        "\\lfloor": "\\rfloor",
+    } as const;
+    const openBrackets = Object.keys(brackets);
+    console.log(text);
+    for (let i = 0; i < text.length; i++) {
+        console.log("enlarge iteration: ", i);
         let found = false;
         let open = "";
 
@@ -60,8 +62,9 @@ export const autoEnlargeBrackets = (
         if (
             text.slice(i - left.length, i) === left &&
             text.slice(j - right.length, j) === right
-        )
+        ) {
             continue;
+        }
 
         // Check whether the brackets contain sum, int or frac
         const bracketContents = text.slice(i + 1, j);
@@ -75,8 +78,18 @@ export const autoEnlargeBrackets = (
         }
 
         // Enlarge the brackets
-        queueSnippet(view, i, i + bracketSize, left + open + " ");
-        queueSnippet(view, j, j + bracketSize, " " + right + close);
+        queueSnippet(
+            view,
+            start + i,
+            start + i + bracketSize,
+            left + open + " "
+        );
+        queueSnippet(
+            view,
+            start + j,
+            start + j + bracketSize,
+            " " + right + close
+        );
     }
 
     expandSnippets(view);

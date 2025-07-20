@@ -40,12 +40,21 @@ export class Options {
 
 export class Mode {
     text: boolean;
-    inlineMath: boolean;
-    blockMath: boolean;
-    codeMath: boolean;
-    code: boolean;
+    dollarInlineMath: boolean;
+    dollarBlockMath: boolean;
+    parenInlineMath: boolean;
+    bracketBlockMath: boolean;
     textEnv: boolean;
 
+    /** Whether the state is inside an inline math environment. */
+    get inlineMath(): boolean {
+        return this.dollarInlineMath || this.parenInlineMath;
+    }
+
+    /** Whether the state is inside a block math environment. */
+    get blockMath(): boolean {
+        return this.dollarBlockMath || this.bracketBlockMath;
+    }
     /**
      * Whether the state is inside an equation bounded by $ or $$ delimeters.
      */
@@ -59,7 +68,7 @@ export class Mode {
      * The equation may be bounded by $ or $$ delimeters, or it may be an equation inside a `math` codeblock.
      */
     inMath(): boolean {
-        return this.inlineMath || this.blockMath || this.codeMath;
+        return this.inlineMath || this.blockMath;
     }
 
     /**
@@ -73,19 +82,20 @@ export class Mode {
 
     constructor() {
         this.text = false;
-        this.blockMath = false;
-        this.inlineMath = false;
-        this.code = false;
         this.textEnv = false;
+        this.bracketBlockMath = false;
+        this.dollarInlineMath = false;
+        this.dollarBlockMath = false;
+        this.parenInlineMath = false;
     }
 
     invert() {
         this.text = !this.text;
-        this.blockMath = !this.blockMath;
-        this.inlineMath = !this.inlineMath;
-        this.codeMath = !this.codeMath;
-        this.code = !this.code;
         this.textEnv = !this.textEnv;
+        this.bracketBlockMath = !this.bracketBlockMath;
+        this.dollarInlineMath = !this.dollarInlineMath;
+        this.dollarBlockMath = !this.dollarBlockMath;
+        this.parenInlineMath = !this.parenInlineMath;
     }
 
     static fromSource(source: string): Mode {
@@ -94,34 +104,26 @@ export class Mode {
         for (const flag_char of source) {
             switch (flag_char) {
                 case "m":
-                    mode.blockMath = true;
-                    mode.inlineMath = true;
+                    mode.bracketBlockMath = true;
+                    mode.dollarBlockMath = true;
+                    mode.parenInlineMath = true;
+                    mode.dollarInlineMath = true;
                     break;
                 case "n":
-                    mode.inlineMath = true;
+                    mode.dollarInlineMath = true;
+                    mode.parenInlineMath = true;
                     break;
                 case "M":
-                    mode.blockMath = true;
+                    mode.bracketBlockMath = true;
+                    mode.dollarBlockMath = true;
                     break;
                 case "t":
                     mode.text = true;
                     break;
-                case "c":
-                    mode.code = true;
-                    break;
             }
         }
 
-        if (
-            !(
-                mode.text ||
-                mode.inlineMath ||
-                mode.blockMath ||
-                mode.codeMath ||
-                mode.code ||
-                mode.textEnv
-            )
-        ) {
+        if (!(mode.text || mode.inlineMath || mode.blockMath || mode.textEnv)) {
             // for backwards compat we need to assume that this is a catchall mode then
             mode.invert();
             return mode;

@@ -12,16 +12,18 @@ export const tabout = (
     ctx: Context,
     syntaxTree: typeof syntaxTreeC
 ): boolean => {
-    if (!ctx.mode.inMath()) return false;
-
-    const result = ctx.getBounds(syntaxTree);
-    if (!result) return false;
+    if (!ctx.mode.inMath()) {
+        return false;
+    }
+    const result = ctx.getOuterBounds(syntaxTree);
+    if (!result) {
+        return false;
+    }
     const end = result.end;
 
     const pos = view.state.selection.main.to;
-    const d = view.state.doc;
-    const text = d.toString();
-
+    const doc = view.state.doc;
+    const text = doc.toString();
     // Move to the next closing bracket: }, ), ], >, |, or \\rangle
     const rangle = "\\rangle";
 
@@ -41,21 +43,21 @@ export const tabout = (
 
     // Check whether we're at end of equation
     // Accounting for whitespace, using trim
-    const textBtwnCursorAndEnd = d.sliceString(pos, end);
+    const textBtwnCursorAndEnd = doc.sliceString(pos, end);
     const atEnd = textBtwnCursorAndEnd.trim().length === 0;
 
     if (!atEnd) return false;
 
     // Check whether we're in inline math or a block eqn
-    if (ctx.mode.inlineMath || ctx.mode.codeMath) {
+    if (ctx.mode.inlineMath) {
         setCursor(view, end + 1);
     } else {
         // First, locate the $$ symbol
-        const dollarLine = d.lineAt(end + 2);
+        const dollarLine = doc.lineAt(end + 2);
 
         // If there's no line after the equation, create one
 
-        if (dollarLine.number === d.lines) {
+        if (dollarLine.number === doc.lines) {
             replaceRange(view, dollarLine.to, dollarLine.to, "\n");
         }
 
@@ -63,7 +65,7 @@ export const tabout = (
         setCursor(view, dollarLine.to + 1);
 
         // Trim whitespace at beginning / end of equation
-        const line = d.lineAt(pos);
+        const line = doc.lineAt(pos);
         replaceRange(view, line.from, line.to, line.text.trim());
     }
 
