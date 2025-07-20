@@ -1,22 +1,21 @@
 // https://discuss.codemirror.net/t/concealing-syntax/3135
 
-import {
-    ViewUpdate,
-    Decoration,
-    DecorationSet,
-    WidgetType,
-    ViewPlugin,
-    EditorView,
+import type { ViewUpdate, DecorationSet } from "@codemirror/view";
+import type {
+    Decoration as DecorationC,
+    WidgetType as WidgetTypeC,
+    ViewPlugin as ViewPluginC,
+    EditorView as EditorViewC,
 } from "@codemirror/view";
-import {
-    EditorSelection,
-    Range,
-    RangeSet,
-    RangeSetBuilder,
-    RangeValue,
+import type { EditorSelection, Range } from "@codemirror/state";
+import type {
+    RangeSet as RangeSetC,
+    RangeSetBuilder as RangeSetBuilderC,
+    RangeValue as RangeValueC,
 } from "@codemirror/state";
 import { conceal } from "./conceal_fns";
-import { debounce, livePreviewState } from "obsidian";
+// import { debounce, livePreviewState } from "obsidian";
+import type { syntaxTree as syntaxTreeC } from "@codemirror/language";
 
 export type Replacement = {
     start: number;
@@ -27,6 +26,39 @@ export type Replacement = {
 };
 
 export type ConcealSpec = Replacement[];
+export function debounce<T extends unknown[]>(
+    cb: (...args: [...T]) => unknown,
+    timeout?: number,
+    resetTimer?: boolean
+): Debouncer<T> {
+    let timer: NodeJS.Timeout | null = null;
+    const fn: Debouncer<T> = (...args: [...T]) => {
+        if (timer) {
+            clearTimeout(timer);
+        }
+        timer = setTimeout(() => {
+            cb(...args);
+        }, timeout);
+    };
+
+    fn.cancel = () => {
+        if (timer) {
+            clearTimeout(timer);
+            timer = null;
+        }
+        return fn;
+    };
+
+    return fn;
+}
+
+/** @public */
+export interface Debouncer<T extends unknown[]> {
+    /** @public */
+    (...args: [...T]): void;
+    /** @public */
+    cancel(): this;
+}
 
 /**
  * Make a ConcealSpec from the given list of Replacements.
@@ -46,62 +78,67 @@ export type Concealment = {
 // 'delay' means reveal after a time delay.
 type ConcealAction = "conceal" | "reveal" | "delay";
 
-class ConcealWidget extends WidgetType {
-    private readonly className: string;
-    private readonly elementType: string;
+function ConcealWidget(
+    widgetType: typeof WidgetTypeC,
+    symbol: string,
+    className?: string,
+    elementType?: string
+) {
+    return class extends widgetType {
+        private readonly className: string;
+        private readonly elementType: string;
+        readonly symbol: string = symbol;
 
-    constructor(
-        readonly symbol: string,
-        className?: string,
-        elementType?: string,
-    ) {
-        super();
+        constructor() {
+            super();
+            this.className = className ? className : "";
+            this.elementType = elementType ? elementType : "span";
+        }
 
-        this.className = className ? className : "";
-        this.elementType = elementType ? elementType : "span";
-    }
+        eq(other: typeof this) {
+            return (
+                other.symbol == this.symbol &&
+                other.className === this.className &&
+                other.elementType === this.elementType
+            );
+        }
 
-    eq(other: ConcealWidget) {
-        return (
-            other.symbol == this.symbol &&
-            other.className === this.className &&
-            other.elementType === this.elementType
-        );
-    }
+        toDOM() {
+            const span = document.createElement(this.elementType);
+            span.className = "cm-math " + this.className;
+            span.textContent = this.symbol;
+            return span;
+        }
 
-    toDOM() {
-        const span = document.createElement(this.elementType);
-        span.className = "cm-math " + this.className;
-        span.textContent = this.symbol;
-        return span;
-    }
-
-    ignoreEvent() {
-        return false;
-    }
+        ignoreEvent() {
+            return false;
+        }
+    };
 }
 
-class TextWidget extends WidgetType {
-    constructor(readonly symbol: string) {
-        super();
-    }
+function TextWidget(widgetType: typeof WidgetTypeC, symbol: string) {
+    return class extends widgetType {
+        readonly symbol: string = symbol;
+        constructor() {
+            super();
+        }
 
-    eq(other: TextWidget) {
-        return other.symbol == this.symbol;
-    }
+        eq(other: typeof this) {
+            return other.symbol == this.symbol;
+        }
 
-    toDOM() {
-        const span = document.createElement("span");
-        span.className = "cm-math";
-        span.textContent = this.symbol;
-        return span;
-    }
+        toDOM() {
+            const span = document.createElement("span");
+            span.className = "cm-math";
+            span.textContent = this.symbol;
+            return span;
+        }
 
-    ignoreEvent() {
-        return false;
-    }
+        ignoreEvent() {
+            return false;
+        }
+    };
 }
-
 /**
  * Determine if the two ConcealSpec instances before and after the update can be
  * considered identical.
@@ -109,7 +146,7 @@ class TextWidget extends WidgetType {
 function atSamePosAfter(
     update: ViewUpdate,
     oldConceal: ConcealSpec,
-    newConceal: ConcealSpec,
+    newConceal: ConcealSpec
 ): boolean {
     if (oldConceal.length !== newConceal.length) return false;
 
@@ -129,7 +166,7 @@ function atSamePosAfter(
 
 function determineCursorPosType(
     sel: EditorSelection,
-    concealSpec: ConcealSpec,
+    concealSpec: ConcealSpec
 ): Concealment["cursorPosType"] {
     // Priority: "within" > "edge" > "apart"
 
@@ -182,7 +219,7 @@ function determineAction(
     oldCursor: Concealment["cursorPosType"] | undefined,
     newCursor: Concealment["cursorPosType"],
     mousedown: boolean,
-    delayEnabled: boolean,
+    delayEnabled: boolean
 ): ConcealAction {
     if (mousedown) return "conceal";
 
@@ -197,8 +234,12 @@ function determineAction(
 }
 
 // Build a decoration set from the given concealments
-function buildDecoSet(concealments: Concealment[]) {
-    const decos: Range<Decoration>[] = [];
+function buildDecoSet(
+    concealments: Concealment[],
+    Decoration: typeof DecorationC,
+    WidgetType: typeof WidgetTypeC
+) {
+    const decos: Range<DecorationC>[] = [];
 
     for (const conc of concealments) {
         if (!conc.enable) continue;
@@ -208,9 +249,9 @@ function buildDecoSet(concealments: Concealment[]) {
                 // Add an additional "/" symbol, as part of concealing \\frac{}{} -> ()/()
                 decos.push(
                     Decoration.widget({
-                        widget: new TextWidget(replace.text),
+                        widget: new (TextWidget(WidgetType, replace.text))(),
                         block: false,
-                    }).range(replace.start, replace.end),
+                    }).range(replace.start, replace.end)
                 );
             } else {
                 // Improve selecting empty replacements such as "\frac" -> ""
@@ -220,15 +261,16 @@ function buildDecoSet(concealments: Concealment[]) {
 
                 decos.push(
                     Decoration.replace({
-                        widget: new ConcealWidget(
+                        widget: new (ConcealWidget(
+                            WidgetType,
                             replace.text,
                             replace.class,
-                            replace.elementType,
-                        ),
+                            replace.elementType
+                        ))(),
                         inclusiveStart,
                         inclusiveEnd,
                         block: false,
-                    }).range(replace.start, replace.end),
+                    }).range(replace.start, replace.end)
                 );
             }
         }
@@ -241,7 +283,11 @@ function buildDecoSet(concealments: Concealment[]) {
 // The resulting ranges are basically the same as the original replacements, but empty replacements
 // are merged with the "next character," which can be either plain text or another replacement.
 // This adjustment makes cursor movement around empty replacements more intuitive.
-function buildAtomicRanges(concealments: Concealment[]) {
+function buildAtomicRanges(
+    concealments: Concealment[],
+    RangeValue: typeof RangeValueC,
+    RangeSetBuilder: typeof RangeSetBuilderC
+) {
     const repls: Replacement[] = concealments
         .filter((c) => c.enable)
         .flatMap((c) => c.spec)
@@ -265,7 +311,17 @@ function buildAtomicRanges(concealments: Concealment[]) {
     return builder.finish();
 }
 
-export const mkConcealPlugin = (revealTimeout: number) =>
+export const mkConcealPlugin = (
+    revealTimeout: number,
+    ViewPlugin: typeof ViewPluginC,
+    Decoration: typeof DecorationC,
+    EditorView: typeof EditorViewC,
+    syntaxTree: typeof syntaxTreeC,
+    WidgetType: typeof WidgetTypeC,
+    RangeSet: typeof RangeSetC,
+    RangeValue: typeof RangeValueC,
+    RangeSetBuilder: typeof RangeSetBuilderC
+) =>
     ViewPlugin.fromClass(
         class {
             // Stateful ViewPlugin: you should avoid one in general, but here
@@ -273,7 +329,7 @@ export const mkConcealPlugin = (revealTimeout: number) =>
             // obsidian's internal logic and causes weird rendering.
             concealments: Concealment[];
             decorations: DecorationSet;
-            atomicRanges: RangeSet<RangeValue>;
+            atomicRanges: RangeSetC<RangeValueC>;
             delayEnabled: boolean;
 
             constructor() {
@@ -284,19 +340,27 @@ export const mkConcealPlugin = (revealTimeout: number) =>
             }
 
             delayedReveal = debounce(
-                (delayedConcealments: Concealment[], view: EditorView) => {
+                (delayedConcealments: Concealment[], view: EditorViewC) => {
                     // Implicitly change the state
                     for (const concealment of delayedConcealments) {
                         concealment.enable = false;
                     }
-                    this.decorations = buildDecoSet(this.concealments);
-                    this.atomicRanges = buildAtomicRanges(this.concealments);
+                    this.decorations = buildDecoSet(
+                        this.concealments,
+                        Decoration,
+                        WidgetType
+                    );
+                    this.atomicRanges = buildAtomicRanges(
+                        this.concealments,
+                        RangeValue,
+                        RangeSetBuilder
+                    );
 
                     // Invoke the update method to reflect the changes of this.decoration
                     view.dispatch();
                 },
                 revealTimeout,
-                true,
+                true
             );
 
             update(update: ViewUpdate) {
@@ -313,10 +377,12 @@ export const mkConcealPlugin = (revealTimeout: number) =>
                 this.delayedReveal.cancel();
 
                 const selection = update.state.selection;
-                const mousedown =
-                    update.view.plugin(livePreviewState)?.mousedown;
+                // const mousedown =
+                //     update.view.plugin(livePreviewState)?.mousedown;
+                // TODO: find the codemirror equivalent of livePreviewState
+                const mousedown = false;
 
-                const concealSpecs = conceal(update.view);
+                const concealSpecs = conceal(update.view, syntaxTree);
 
                 // Collect concealments from the new conceal specs
                 const concealments: Concealment[] = [];
@@ -326,17 +392,17 @@ export const mkConcealPlugin = (revealTimeout: number) =>
                 for (const spec of concealSpecs) {
                     const cursorPosType = determineCursorPosType(
                         selection,
-                        spec,
+                        spec
                     );
                     const oldConcealment = this.concealments.find((old) =>
-                        atSamePosAfter(update, old.spec, spec),
+                        atSamePosAfter(update, old.spec, spec)
                     );
 
                     const concealAction = determineAction(
                         oldConcealment?.cursorPosType,
                         cursorPosType,
                         mousedown,
-                        this.delayEnabled,
+                        this.delayEnabled
                     );
 
                     const concealment: Concealment = {
@@ -357,7 +423,11 @@ export const mkConcealPlugin = (revealTimeout: number) =>
                 }
 
                 this.concealments = concealments;
-                this.decorations = buildDecoSet(this.concealments);
+                this.decorations = buildDecoSet(
+                    this.concealments,
+                    Decoration,
+                    WidgetType
+                );
                 this.atomicRanges = buildAtomicRanges(this.concealments);
             }
         },
@@ -365,7 +435,7 @@ export const mkConcealPlugin = (revealTimeout: number) =>
             decorations: (v) => v.decorations,
             provide: (plugin) =>
                 EditorView.atomicRanges.of(
-                    (view) => view.plugin(plugin).atomicRanges,
+                    (view) => view.plugin(plugin).atomicRanges
                 ),
-        },
+        }
     );

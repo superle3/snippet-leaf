@@ -1,7 +1,9 @@
-import { ChangeDesc, EditorSelection, SelectionRange } from "@codemirror/state";
-import { Decoration, DecorationSet, EditorView } from "@codemirror/view";
-import { resetCursorBlink } from "src/utils/editor_utils";
-import { endSnippet } from "./codemirror/history";
+import type { ChangeDesc, SelectionRange } from "@codemirror/state";
+import type { EditorSelection as EditorSelectionC } from "@codemirror/state";
+import type { DecorationSet, EditorView } from "@codemirror/view";
+import type { Decoration as DecorationC } from "@codemirror/view";
+import { resetCursorBlink } from "../utils/editor_utils";
+import type { stateEffect_variables } from "./codemirror/history";
 
 const LATEX_SUITE_TABSTOP_DECO_CLASS = "latex-suite-snippet-placeholder";
 
@@ -12,7 +14,12 @@ export interface TabstopSpec {
     replacement: string;
 }
 
-function getMarkerDecoration(from: number, to: number, color: number) {
+function getMarkerDecoration(
+    from: number,
+    to: number,
+    color: number,
+    Decoration: typeof DecorationC
+) {
     const className = `${LATEX_SUITE_TABSTOP_DECO_CLASS} ${LATEX_SUITE_TABSTOP_DECO_CLASS}-${color}`;
 
     return Decoration.mark({
@@ -22,105 +29,122 @@ function getMarkerDecoration(from: number, to: number, color: number) {
     }).range(from, to);
 }
 
-export class TabstopGroup {
-    decos: DecorationSet;
-    color: number;
-    hidden: boolean;
+export function TabstopGroup(
+    endSnippet: ReturnType<typeof stateEffect_variables>["endSnippet"],
+    EditorSelection: typeof EditorSelectionC,
+    Decoration: typeof DecorationC
+) {
+    return class TabstopGroup1 {
+        decos: DecorationSet;
+        color: number;
+        hidden: boolean;
 
-    constructor(tabstopSpecs: TabstopSpec[], color: number) {
-        const decos = tabstopSpecs.map((spec) =>
-            getMarkerDecoration(spec.from, spec.to, color),
-        );
-        this.decos = Decoration.set(decos, true);
-        this.color = color;
-        this.hidden = false;
-    }
-
-    select(view: EditorView, selectEndpoints: boolean, isEndSnippet: boolean) {
-        const sel = this.toEditorSelection();
-        const toSelect = selectEndpoints
-            ? getEditorSelectionEndpoints(sel)
-            : sel;
-
-        view.dispatch({
-            selection: toSelect,
-            effects: isEndSnippet ? endSnippet.of(null) : null,
-        });
-        resetCursorBlink();
-
-        this.hideFromEditor();
-    }
-
-    toSelectionRanges() {
-        const ranges = [];
-        const cur = this.decos.iter();
-
-        while (cur.value != null) {
-            ranges.push(EditorSelection.range(cur.from, cur.to));
-            cur.next();
+        constructor(tabstopSpecs: TabstopSpec[], color: number) {
+            const decos = tabstopSpecs.map((spec) =>
+                getMarkerDecoration(spec.from, spec.to, color, Decoration)
+            );
+            this.decos = Decoration.set(decos, true);
+            this.color = color;
+            this.hidden = false;
         }
 
-        return ranges;
-    }
-
-    toEditorSelection(endpoints = false) {
-        let sel = EditorSelection.create(this.toSelectionRanges());
-        if (endpoints) sel = getEditorSelectionEndpoints(sel);
-        return sel;
-    }
-
-    containsSelection(selection: EditorSelection) {
-        function rangeLiesWithinSelection(
-            range: SelectionRange,
-            sel: SelectionRange[],
+        select(
+            view: EditorView,
+            selectEndpoints: boolean,
+            isEndSnippet: boolean
         ) {
-            for (const selRange of sel) {
-                if (selRange.from <= range.from && selRange.to >= range.to) {
-                    return true;
+            const sel = this.toEditorSelection();
+            const toSelect = selectEndpoints
+                ? getEditorSelectionEndpoints(sel)
+                : sel;
+
+            view.dispatch({
+                selection: toSelect,
+                effects: isEndSnippet ? endSnippet.of(null) : null,
+            });
+            resetCursorBlink();
+
+            this.hideFromEditor();
+        }
+
+        toSelectionRanges() {
+            const ranges = [];
+            const cur = this.decos.iter();
+
+            while (cur.value != null) {
+                ranges.push(EditorSelection.range(cur.from, cur.to));
+                cur.next();
+            }
+
+            return ranges;
+        }
+
+        toEditorSelection(endpoints = false) {
+            let sel = EditorSelection.create(this.toSelectionRanges());
+            if (endpoints) sel = getEditorSelectionEndpoints(sel);
+            return sel;
+        }
+
+        containsSelection(selection: EditorSelectionC) {
+            function rangeLiesWithinSelection(
+                range: SelectionRange,
+                sel: SelectionRange[]
+            ) {
+                for (const selRange of sel) {
+                    if (
+                        selRange.from <= range.from &&
+                        selRange.to >= range.to
+                    ) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            const tabstopRanges = this.toSelectionRanges();
+            let result = true;
+
+            for (const range of selection.ranges) {
+                if (!rangeLiesWithinSelection(range, tabstopRanges)) {
+                    result = false;
+                    break;
                 }
             }
-            return false;
+            return result;
         }
 
-        const tabstopRanges = this.toSelectionRanges();
-        let result = true;
+        hideFromEditor() {
+            this.hidden = true;
+        }
 
-        for (const range of selection.ranges) {
-            if (!rangeLiesWithinSelection(range, tabstopRanges)) {
-                result = false;
-                break;
+        map(changes: ChangeDesc) {
+            this.decos = this.decos.map(changes);
+        }
+
+        getRanges() {
+            const ranges = [];
+            const cur = this.decos.iter();
+
+            while (cur.value != null) {
+                if (cur.from != cur.to) {
+                    ranges.push(cur.value.range(cur.from, cur.to));
+                }
+                cur.next();
             }
+
+            return ranges;
         }
-        return result;
-    }
-
-    hideFromEditor() {
-        this.hidden = true;
-    }
-
-    map(changes: ChangeDesc) {
-        this.decos = this.decos.map(changes);
-    }
-
-    getRanges() {
-        const ranges = [];
-        const cur = this.decos.iter();
-
-        while (cur.value != null) {
-            if (cur.from != cur.to) {
-                ranges.push(cur.value.range(cur.from, cur.to));
-            }
-            cur.next();
-        }
-
-        return ranges;
-    }
+    };
 }
+export type TabstopGroupC = InstanceType<ReturnType<typeof TabstopGroup>>;
 
 export function tabstopSpecsToTabstopGroups(
     tabstops: TabstopSpec[],
     color: number,
-): TabstopGroup[] {
+    endSnippet: ReturnType<typeof stateEffect_variables>["endSnippet"],
+    EditorSelection: typeof EditorSelectionC,
+    Decoration: typeof DecorationC
+): TabstopGroupC[] {
     const tabstopsByNumber: { [n: string]: TabstopSpec[] } = {};
 
     for (const tabstop of tabstops) {
@@ -138,16 +162,20 @@ export function tabstopSpecsToTabstopGroups(
     numbers.sort((a, b) => parseInt(a) - parseInt(b));
 
     for (const number of numbers) {
-        const grp = new TabstopGroup(tabstopsByNumber[number], color);
+        const grp = new (TabstopGroup(endSnippet, EditorSelection, Decoration))(
+            tabstopsByNumber[number],
+            color
+        );
         result.push(grp);
     }
 
     return result;
 }
 
-export function getEditorSelectionEndpoints(sel: EditorSelection) {
+export function getEditorSelectionEndpoints(sel: EditorSelectionC) {
+    const EditorSelection = sel.constructor as typeof EditorSelectionC;
     const endpoints = sel.ranges.map((range) =>
-        EditorSelection.range(range.to, range.to),
+        EditorSelection.range(range.to, range.to)
     );
 
     return EditorSelection.create(endpoints);

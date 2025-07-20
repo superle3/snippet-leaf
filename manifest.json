@@ -1,11 +1,18 @@
 {
-	"id": "obsidian-latex-suite",
-	"name": "Latex Suite",
-	"version": "1.9.8",
-	"minAppVersion": "1.0.0",
-	"description": "Make typesetting LaTeX math as fast as handwriting through snippets, text expansion, and editor enhancements",
-	"author": "artisticat",
-	"authorUrl": "https://github.com/artisticat1",
-	"fundingUrl": "https://ko-fi.com/artisticat",
-	"isDesktopOnly": false
+    "manifest_version": 3,
+    "name": "Snippet Leaf",
+    "version": "0.0.1",
+    "description": "Make typesetting LaTeX math as fast as handwriting through snippets, text expansion, and editor enhancements",
+    "author": "superle3",
+    "content_scripts": [
+        {
+            "matches": ["<all_urls>"],
+            "js": ["dist/extension.js"],
+            "world": "MAIN"
+        }
+    ],
+    "background": {
+        "scripts": ["background.js"]
+    },
+    "permissions": ["cookies", "https://overleaf/project/*"]
 }

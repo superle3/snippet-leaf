@@ -1,7 +1,7 @@
 export default [
     // Math mode
-    { trigger: "mk", replacement: "$$0$", options: "tA" },
-    { trigger: "dm", replacement: "$$\n$0\n$$", options: "tAw" },
+    { trigger: "mk", replacement: "\\( $0 \\)$1", options: "tA" },
+    { trigger: "dm", replacement: "\\[\n$0\n\\]$1", options: "tAw" },
     {
         trigger: "beg",
         replacement: "\\begin{$0}\n$1\n\\end{$0}",

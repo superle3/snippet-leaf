@@ -1,6 +1,6 @@
-import { SelectionRange } from "@codemirror/state";
-import { Options } from "./options";
-import { Environment } from "./environment";
+import type { SelectionRange } from "@codemirror/state";
+import type { Options } from "./options";
+import type { Environment } from "./environment";
 
 /**
  * in visual snippets, if the replacement is a string, this is the magic substring to indicate the selection.

@@ -1,21 +1,43 @@
-import { EditorView } from "@codemirror/view";
-import { SelectionRange } from "@codemirror/state";
+import type { EditorView } from "@codemirror/view";
+import type { SelectionRange } from "@codemirror/state";
 import { findMatchingBracket, getOpenBracket } from "src/utils/editor_utils";
-import { queueSnippet } from "src/snippets/codemirror/snippet_queue_state_field";
-import { expandSnippets } from "src/snippets/snippet_management";
+import type { snippetQueues } from "src/snippets/codemirror/snippet_queue_state_field";
+import type { expandSnippetsC } from "../snippets/snippet_management";
 import { autoEnlargeBrackets } from "./auto_enlarge_brackets";
-import { Context } from "src/utils/context";
-import { getLatexSuiteConfig } from "src/snippets/codemirror/config";
+import type { Context } from "../utils/context";
+import type { LatexSuiteFacet } from "../snippets/codemirror/config";
+import { getLatexSuiteConfig } from "../snippets/codemirror/config";
+import type { syntaxTree as syntaxTreeC } from "@codemirror/language";
 
-export const runAutoFraction = (view: EditorView, ctx: Context): boolean => {
+export const runAutoFraction = (
+    view: EditorView,
+    ctx: Context,
+    latexSuiteConfig: LatexSuiteFacet,
+    syntaxTree: typeof syntaxTreeC,
+    queueSnippet: ReturnType<typeof snippetQueues>["queueSnippet"],
+    expandSnippets: expandSnippetsC
+): boolean => {
     for (const range of ctx.ranges) {
-        runAutoFractionCursor(view, ctx, range);
+        runAutoFractionCursor(
+            view,
+            ctx,
+            range,
+            latexSuiteConfig,
+            syntaxTree,
+            queueSnippet
+        );
     }
 
     const success = expandSnippets(view);
 
     if (success) {
-        autoEnlargeBrackets(view);
+        autoEnlargeBrackets(
+            view,
+            latexSuiteConfig,
+            syntaxTree,
+            queueSnippet,
+            expandSnippets
+        );
     }
 
     return success;
@@ -25,19 +47,22 @@ export const runAutoFractionCursor = (
     view: EditorView,
     ctx: Context,
     range: SelectionRange,
+    latexSuiteConfig: LatexSuiteFacet,
+    syntaxTree: typeof syntaxTreeC,
+    queueSnippet: ReturnType<typeof snippetQueues>["queueSnippet"]
 ): boolean => {
-    const settings = getLatexSuiteConfig(view);
+    const settings = getLatexSuiteConfig(view, latexSuiteConfig);
     const { from, to } = range;
 
     // Don't run autofraction in excluded environments
     for (const env of settings.autofractionExcludedEnvs) {
-        if (ctx.isWithinEnvironment(to, env)) {
+        if (ctx.isWithinEnvironment(to, env, syntaxTree)) {
             return false;
         }
     }
 
     // Get the bounds of the equation
-    const result = ctx.getBounds();
+    const result = ctx.getBounds(syntaxTree);
     if (!result) return false;
     const eqnStart = result.start;
 
@@ -64,7 +89,7 @@ export const runAutoFractionCursor = (
         for (let i = curLine.length - 1; i >= eqnStart; i--) {
             const curChar = curLine.charAt(i);
 
-            if ([")", "]", "}"].contains(curChar)) {
+            if ([")", "]", "}"].includes(curChar)) {
                 const closeBracket = curChar;
                 const openBracket = getOpenBracket(closeBracket);
 
@@ -73,7 +98,7 @@ export const runAutoFractionCursor = (
                     i,
                     openBracket,
                     closeBracket,
-                    true,
+                    true
                 );
 
                 if (j === -1) return false;
@@ -90,7 +115,7 @@ export const runAutoFractionCursor = (
             if (
                 " $([{\n"
                     .concat(settings.autofractionBreakingChars)
-                    .contains(curChar)
+                    .includes(curChar)
             ) {
                 start = i + 1;
                 break;

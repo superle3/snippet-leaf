@@ -1,16 +1,14 @@
-import { EditorState, SelectionRange } from "@codemirror/state";
-import { EditorView } from "@codemirror/view";
-import {
-    Direction,
-    escalateToToken,
-    findMatchingBracket,
-    getCharacterAtPos,
-    getCloseBracket,
-} from "src/utils/editor_utils";
+import type {
+    EditorState as EditorStateC,
+    SelectionRange as SelectionRangeC,
+} from "@codemirror/state";
+import type { EditorView } from "@codemirror/view";
+import { findMatchingBracket, getCloseBracket } from "./editor_utils";
 import { Mode } from "../snippets/options";
-import { Environment } from "../snippets/environment";
-import { getLatexSuiteConfig } from "../snippets/codemirror/config";
-import { syntaxTree } from "@codemirror/language";
+import type { Environment } from "../snippets/environment";
+import type { LatexSuiteFacet } from "../snippets/codemirror/config";
+import type { syntaxTree as syntaxTreeC } from "@codemirror/language";
+import type { SyntaxNode, Tree, NodeIterator } from "@lezer/common";
 
 export interface Bounds {
     start: number;
@@ -18,14 +16,18 @@ export interface Bounds {
 }
 
 export class Context {
-    state: EditorState;
+    state: EditorStateC;
     mode!: Mode;
     pos: number;
-    ranges: SelectionRange[];
+    ranges: SelectionRangeC[];
     codeblockLanguage: string;
-    boundsCache: Map<number, Bounds>;
+    boundsCache: Map<number, EquationInfo>;
 
-    static fromState(state: EditorState): Context {
+    static fromState(
+        state: EditorStateC,
+        latexSuiteConfig: LatexSuiteFacet,
+        syntaxTree: typeof syntaxTreeC
+    ): Context {
         const ctx = new Context();
         const sel = state.selection;
         ctx.state = state;
@@ -34,43 +36,49 @@ export class Context {
         ctx.mode = new Mode();
         ctx.boundsCache = new Map();
 
-        const codeblockLanguage = langIfWithinCodeblock(state);
-        const inCode = codeblockLanguage !== null;
+        const mathMode = equationType(state, syntaxTree);
 
-        const settings = getLatexSuiteConfig(state);
-        const forceMath =
-            settings.forceMathLanguages.contains(codeblockLanguage);
-        ctx.mode.codeMath = forceMath;
-        ctx.mode.code = inCode && !forceMath;
-        if (ctx.mode.code) ctx.codeblockLanguage = codeblockLanguage;
-
-        // first, check if math mode should be "generally" on
-        const inMath = forceMath || isWithinEquation(state);
-
-        if (inMath && !forceMath) {
-            const inInlineEquation = isWithinInlineEquation(state);
-
-            ctx.mode.blockMath = !inInlineEquation;
-            ctx.mode.inlineMath = inInlineEquation;
+        if (mathMode) {
+            ctx.mode.textEnv = MathMode.TextEnv === mathMode.type;
+            ctx.mode.bracketBlockMath =
+                mathMode.type === MathMode.BracketDisplay;
+            ctx.mode.dollarBlockMath = mathMode.type === MathMode.DollarDisplay;
+            ctx.mode.dollarInlineMath = mathMode.type === MathMode.DollarInline;
+            ctx.mode.parenInlineMath = mathMode.type === MathMode.ParenInline;
+            ctx.mode.text = false;
+            ctx.boundsCache.set(ctx.pos, mathMode);
+        } else {
+            ctx.mode.text = true;
         }
 
-        if (inMath) {
-            ctx.mode.textEnv = ctx.inTextEnvironment();
-        }
-
-        ctx.mode.text = !inCode && !inMath;
-
+        const mode_hashmap: Record<string, string> = {
+            default: "text",
+            [MathMode.DollarInline]: "inlineMath",
+            [MathMode.DollarDisplay]: "blockMath",
+            [MathMode.ParenInline]: "parenInline",
+            [MathMode.BracketDisplay]: "bracketDisplay",
+            [MathMode.Array]: "arrayMath",
+        };
+        console.log("mode_hashmap:", mode_hashmap[mathMode?.type ?? "default"]);
         return ctx;
     }
 
-    static fromView(view: EditorView): Context {
-        return Context.fromState(view.state);
+    static fromView(
+        view: EditorView,
+        latexSuiteConfig: LatexSuiteFacet,
+        syntaxTree: typeof syntaxTreeC
+    ): Context {
+        return Context.fromState(view.state, latexSuiteConfig, syntaxTree);
     }
 
-    isWithinEnvironment(pos: number, env: Environment): boolean {
+    isWithinEnvironment(
+        pos: number,
+        env: Environment,
+        syntaxTree: typeof syntaxTreeC
+    ): boolean {
         if (!this.mode.inMath()) return false;
 
-        const bounds = this.getInnerBounds();
+        const bounds = this.getBounds(syntaxTree);
         if (!bounds) return;
 
         const { start, end } = bounds;
@@ -88,7 +96,7 @@ export class Context {
         let openSearchSymbol;
 
         if (
-            ["{", "[", "("].contains(openBracket) &&
+            ["{", "[", "("].includes(openBracket) &&
             env.closeSymbol === closeBracket
         ) {
             offset = env.openSymbol.length - 1;
@@ -106,7 +114,7 @@ export class Context {
                 left + offset,
                 openSearchSymbol,
                 env.closeSymbol,
-                false,
+                false
             );
 
             if (right === -1) return false;
@@ -125,114 +133,230 @@ export class Context {
         return false;
     }
 
-    inTextEnvironment(): boolean {
+    inTextEnvironment(syntaxTree: typeof syntaxTreeC): boolean {
         return (
-            this.isWithinEnvironment(this.pos, {
-                openSymbol: "\\text{",
-                closeSymbol: "}",
-            }) ||
-            this.isWithinEnvironment(this.pos, {
-                openSymbol: "\\tag{",
-                closeSymbol: "}",
-            }) ||
-            this.isWithinEnvironment(this.pos, {
-                openSymbol: "\\begin{",
-                closeSymbol: "}",
-            }) ||
-            this.isWithinEnvironment(this.pos, {
-                openSymbol: "\\end{",
-                closeSymbol: "}",
-            }) ||
-            this.isWithinEnvironment(this.pos, {
-                openSymbol: "\\mathrm{",
-                closeSymbol: "}",
-            }) ||
-            this.isWithinEnvironment(this.pos, {
-                openSymbol: "\\color{",
-                closeSymbol: "}",
-            })
+            this.isWithinEnvironment(
+                this.pos,
+                {
+                    openSymbol: "\\text{",
+                    closeSymbol: "}",
+                },
+                syntaxTree
+            ) ||
+            this.isWithinEnvironment(
+                this.pos,
+                {
+                    openSymbol: "\\tag{",
+                    closeSymbol: "}",
+                },
+                syntaxTree
+            ) ||
+            this.isWithinEnvironment(
+                this.pos,
+                {
+                    openSymbol: "\\begin{",
+                    closeSymbol: "}",
+                },
+                syntaxTree
+            ) ||
+            this.isWithinEnvironment(
+                this.pos,
+                {
+                    openSymbol: "\\end{",
+                    closeSymbol: "}",
+                },
+                syntaxTree
+            ) ||
+            this.isWithinEnvironment(
+                this.pos,
+                {
+                    openSymbol: "\\mathrm{",
+                    closeSymbol: "}",
+                },
+                syntaxTree
+            ) ||
+            this.isWithinEnvironment(
+                this.pos,
+                {
+                    openSymbol: "\\color{",
+                    closeSymbol: "}",
+                },
+                syntaxTree
+            )
         );
     }
 
-    getBounds(pos: number = this.pos): Bounds {
+    getBounds(syntaxTree: typeof syntaxTreeC, pos: number = this.pos): Bounds {
         // yes, I also want the cache to work over the produced range instead of just that one through
         // a BTree or the like, but that'd be probably overkill
         if (this.boundsCache.has(pos)) {
-            return this.boundsCache.get(pos);
+            return this.boundsCache.get(pos).bounds;
         }
 
-        let bounds;
-        if (this.mode.codeMath) {
-            // means a codeblock language triggered the math mode -> use the codeblock bounds instead
-            bounds = getCodeblockBounds(this.state, pos);
-        } else {
-            bounds = getEquationBounds(this.state);
-        }
+        const mathMode = equationType(this.state, syntaxTree);
+        const bounds = mathMode?.bounds;
 
-        this.boundsCache.set(pos, bounds);
+        this.boundsCache.set(pos, mathMode);
         return bounds;
+    }
+    getOuterBounds(
+        syntaxTree: typeof syntaxTreeC,
+        pos: number = this.pos
+    ): Bounds {
+        const mathMode = this.boundsCache.has(pos)
+            ? this.boundsCache.get(pos)
+            : equationType(this.state, syntaxTree);
+        if (!mathMode) return;
+        const offSets = {
+            [MathMode.BracketDisplay]: BracketMathOffset,
+            [MathMode.DollarDisplay]: DisplayMathOffset,
+            [MathMode.ParenInline]: ParenMathOffset,
+            [MathMode.DollarInline]: InlineMathOffset,
+            [MathMode.Array]: ArrayMathOffset,
+        };
+        return {
+            start: mathMode.bounds.start - offSets[mathMode.type].start,
+            end: mathMode.bounds.end - offSets[mathMode.type].end,
+        };
     }
 
     // Accounts for equations within text environments, e.g. $$\text{... $...$}$$
-    getInnerBounds(pos: number = this.pos): Bounds {
-        let bounds;
-        if (this.mode.codeMath) {
-            // means a codeblock language triggered the math mode -> use the codeblock bounds instead
-            bounds = getCodeblockBounds(this.state, pos);
-        } else {
-            bounds = getInnerEquationBounds(this.state);
-        }
-
+    getInnerBounds(
+        syntaxTree: typeof syntaxTreeC,
+        pos: number = this.pos
+    ): Bounds {
+        const bounds = getInnerEquationBounds(this.state, syntaxTree);
         return bounds;
     }
 }
 
-const isWithinEquation = (state: EditorState): boolean => {
-    const pos = state.selection.main.to;
-    const tree = syntaxTree(state);
+export enum MathMode {
+    DollarInline,
+    DollarDisplay,
+    ParenInline,
+    BracketDisplay,
+    Array,
+    TextEnv,
+}
 
-    let syntaxNode = tree.resolveInner(pos, -1);
-    if (syntaxNode.name.contains("math-end")) return false;
-
-    if (!syntaxNode.parent) {
-        syntaxNode = tree.resolveInner(pos, 1);
-        if (syntaxNode.name.contains("math-begin")) return false;
-    }
-
-    // Account/allow for being on an empty line in a equation
-    if (!syntaxNode.parent) {
-        const left = tree.resolveInner(pos - 1, -1);
-        const right = tree.resolveInner(pos + 1, 1);
-
-        return (
-            left.name.contains("math") &&
-            right.name.contains("math") &&
-            !left.name.contains("math-end")
-        );
-    }
-
-    return syntaxNode.name.contains("math");
+const DisplayMathOffset: Bounds = {
+    start: 1,
+    end: -1,
+};
+const BracketMathOffset: Bounds = {
+    start: 2,
+    end: -2,
+};
+const InlineMathOffset: Bounds = {
+    start: 0,
+    end: -1,
+};
+const ParenMathOffset: Bounds = {
+    start: 2,
+    end: -2,
 };
 
-const isWithinInlineEquation = (state: EditorState): boolean => {
+// TODO: implement this properly somehow
+const ArrayMathOffset: Bounds = {
+    start: 0,
+    end: 0,
+};
+// TODO: implement this properly somehow
+const TextEnvOffset: Bounds = {
+    start: 0,
+    end: 0,
+};
+
+type EquationInfo = {
+    type: MathMode;
+    bounds: Bounds;
+} | null;
+
+const equationType = (
+    state: EditorStateC,
+    syntaxTree: typeof syntaxTreeC,
+    direction: 1 | -1 = 1,
+    iterations: number = 0
+): EquationInfo => {
     const pos = state.selection.main.to;
-    const tree = syntaxTree(state);
+    const tree: Tree = syntaxTree(state);
 
-    let syntaxNode = tree.resolveInner(pos, -1);
-    if (syntaxNode.name.contains("math-end")) return false;
-
-    if (!syntaxNode.parent) {
-        syntaxNode = tree.resolveInner(pos, 1);
-        if (syntaxNode.name.contains("math-begin")) return false;
+    // Traverse up the tree to find math context
+    let currentNode: NodeIterator = tree.resolveStack(pos, direction);
+    let type: MathMode;
+    let bounds: Bounds;
+    let offset: Bounds;
+    while (currentNode) {
+        if (currentNode.node.name === "InlineMath") {
+            type = MathMode.DollarInline;
+            bounds = boundsFromNode(currentNode.node);
+            offset = InlineMathOffset;
+            break;
+        } else if (currentNode.node.name === "ParenMath") {
+            type = MathMode.ParenInline;
+            bounds = boundsFromNode(currentNode.node);
+            offset = ParenMathOffset;
+            break;
+        } else if (currentNode.node.name === "BracketMath") {
+            type = MathMode.BracketDisplay;
+            bounds = boundsFromNode(currentNode.node);
+            offset = BracketMathOffset;
+            break;
+        } else if (currentNode.node.name === "DisplayMath") {
+            if (pos === currentNode.node.from || pos === currentNode.node.to) {
+                return null;
+            }
+            type = MathMode.DollarDisplay;
+            bounds = boundsFromNode(currentNode.node);
+            offset = DisplayMathOffset;
+            break;
+        } else if (currentNode.node.name === "ArrayMath") {
+            type = MathMode.Array;
+            bounds = boundsFromNode(currentNode.node);
+            offset = ArrayMathOffset;
+            break;
+        } else if (currentNode.node.name === "DollarMath") {
+            if (currentNode.node.to - currentNode.node.from < 4) {
+                type = MathMode.DollarInline;
+                bounds = boundsFromNode(currentNode.node);
+                offset = InlineMathOffset;
+                break;
+            }
+            return equationType(
+                state,
+                syntaxTree,
+                -direction as 1 | -1,
+                iterations
+            );
+        } else if (currentNode.node.name === "TextArgument") {
+            type = MathMode.TextEnv;
+            bounds = boundsFromNode(currentNode.node);
+            offset = TextEnvOffset;
+            break;
+        }
+        iterations++;
+        currentNode = currentNode.next;
+    }
+    if (type) {
+        return {
+            type,
+            bounds: addBounds(bounds, offset),
+        };
     }
 
-    // Account/allow for being on an empty line in a equation
-    if (!syntaxNode.parent) syntaxNode = tree.resolveInner(pos - 1, -1);
+    return null;
+};
 
-    const cursor = syntaxNode.cursor();
-    const res = escalateToToken(cursor, Direction.Backward, "math-begin");
+const addBounds = (...bounds: Bounds[]) => {
+    if (bounds.length === 0) return null;
 
-    return !res?.name.contains("math-block");
+    return bounds.reduce((acc, bound) => {
+        if (!acc) return bound;
+        return {
+            start: acc.start + bound.start,
+            end: acc.end + bound.end,
+        };
+    });
 };
 
 /**
@@ -240,117 +364,28 @@ const isWithinInlineEquation = (state: EditorState): boolean => {
  *
  * **Note:** If you intend to use this directly, check out Context.getBounds instead, which caches and also takes care of codeblock languages which should behave like math mode.
  */
-export const getEquationBounds = (state: EditorState, pos?: number): Bounds => {
+export const getEquationBounds = (
+    state: EditorStateC,
+    syntaxTree: typeof syntaxTreeC,
+    pos?: number
+): Bounds | null => {
     if (!pos) pos = state.selection.main.to;
-    const tree = syntaxTree(state);
-
-    let syntaxNode = tree.resolveInner(pos, -1);
-
-    if (!syntaxNode.parent) {
-        syntaxNode = tree.resolveInner(pos, 1);
-    }
-
-    // Account/allow for being on an empty line in a equation
-    if (!syntaxNode.parent) syntaxNode = tree.resolveInner(pos - 1, -1);
-
-    const cursor = syntaxNode.cursor();
-    const begin = escalateToToken(cursor, Direction.Backward, "math-begin");
-    const end = escalateToToken(cursor, Direction.Forward, "math-end");
-
-    if (begin && end) {
-        return { start: begin.to, end: end.from };
-    } else {
-        return null;
-    }
+    return equationType(state, syntaxTree)?.bounds ?? null;
 };
 
 // Accounts for equations within text environments, e.g. $$\text{... $...$}$$
-const getInnerEquationBounds = (state: EditorState, pos?: number): Bounds => {
-    if (!pos) pos = state.selection.main.to;
-    let text = state.doc.toString();
-
-    // ignore \$
-    text = text.replaceAll("\\$", "\\R");
-
-    const left = text.lastIndexOf("$", pos - 1);
-    const right = text.indexOf("$", pos);
-
-    if (left === -1 || right === -1) return null;
-
-    return { start: left + 1, end: right };
-};
-
-/**
- * Figures out where this codeblock starts and where it ends.
- *
- * **Note:** If you intend to use this directly, check out Context.getBounds instead, which caches and also takes care of codeblock languages which should behave like math mode.
- */
-const getCodeblockBounds = (
-    state: EditorState,
-    pos: number = state.selection.main.from,
+const getInnerEquationBounds = (
+    state: EditorStateC,
+    syntaxTree: typeof syntaxTreeC,
+    pos?: number
 ): Bounds => {
-    const tree = syntaxTree(state);
-
-    let cursor = tree.cursorAt(pos, -1);
-    const blockBegin = escalateToToken(
-        cursor,
-        Direction.Backward,
-        "HyperMD-codeblock-begin",
-    );
-
-    cursor = tree.cursorAt(pos, -1);
-    const blockEnd = escalateToToken(
-        cursor,
-        Direction.Forward,
-        "HyperMD-codeblock-end",
-    );
-
-    return { start: blockBegin.to + 1, end: blockEnd.from - 1 };
+    if (!pos) pos = state.selection.main.to;
+    return equationType(state, syntaxTree, 1, 0)?.bounds;
 };
 
-const langIfWithinCodeblock = (state: EditorState): string | null => {
-    const tree = syntaxTree(state);
+const boundsFromNode = (node: SyntaxNode): Bounds | null => {
+    const start = node.from;
+    const end = node.to;
 
-    const pos = state.selection.ranges[0].from;
-
-    /*
-     * get a tree cursor at the position
-     *
-     * A newline does not belong to any syntax nodes except for the Document,
-     * which corresponds to the whole document. So, we change the `mode` of the
-     * `cursorAt` depending on whether the character just before the cursor is a
-     * newline.
-     */
-    const cursor =
-        pos === 0 || getCharacterAtPos(state, pos - 1) === "\n"
-            ? tree.cursorAt(pos, 1)
-            : tree.cursorAt(pos, -1);
-
-    // check if we're in a codeblock atm at all
-    const inCodeblock = cursor.name.contains("codeblock");
-    if (!inCodeblock) {
-        return null;
-    }
-
-    // locate the start of the block
-    const codeblockBegin = escalateToToken(
-        cursor,
-        Direction.Backward,
-        "HyperMD-codeblock_HyperMD-codeblock-begin",
-    );
-
-    if (codeblockBegin == null) {
-        console.warn(
-            "unable to locate start of the codeblock even though inside one",
-        );
-        return "";
-    }
-
-    // extract the language
-    // codeblocks may start and end with an arbitrary number of backticks
-    const language = state
-        .sliceDoc(codeblockBegin.from, codeblockBegin.to)
-        .replace(/`+/, "");
-
-    return language;
+    return { start, end };
 };

@@ -1,13 +1,12 @@
-import { Platform } from "obsidian";
-import { EditorView } from "@codemirror/view";
-import { SyntaxNode, TreeCursor } from "@lezer/common";
-import { EditorState } from "@codemirror/state";
+import type { EditorView } from "@codemirror/view";
+import type { SyntaxNode, TreeCursor } from "@lezer/common";
+import type { EditorState } from "@codemirror/state";
 
 export function replaceRange(
     view: EditorView,
     start: number,
     end: number,
-    replacement: string,
+    replacement: string
 ) {
     view.dispatch({
         changes: { from: start, to: end, insert: replacement },
@@ -16,10 +15,11 @@ export function replaceRange(
 
 export function getCharacterAtPos(
     viewOrState: EditorView | EditorState,
-    pos: number,
+    pos: number
 ) {
-    const state =
-        viewOrState instanceof EditorView ? viewOrState.state : viewOrState;
+    const state = (viewOrState as EditorView).state
+        ? (viewOrState as EditorView).state
+        : (viewOrState as EditorState);
     const doc = state.doc;
     return doc.slice(pos, pos + 1).toString();
 }
@@ -41,10 +41,10 @@ export function setSelection(view: EditorView, start: number, end: number) {
 }
 
 export function resetCursorBlink() {
-    if (Platform.isMobile) return;
+    // if (Platform.isMobile) return;
 
     const cursorLayer = document.getElementsByClassName(
-        "cm-cursorLayer",
+        "cm-cursorLayer"
     )[0] as HTMLElement;
 
     if (cursorLayer) {
@@ -64,7 +64,7 @@ export function findMatchingBracket(
     openBracket: string,
     closeBracket: string,
     searchBackwards: boolean,
-    end?: number,
+    end?: number
 ): number {
     if (searchBackwards) {
         const reversedIndex = findMatchingBracket(
@@ -72,7 +72,7 @@ export function findMatchingBracket(
             text.length - (start + closeBracket.length),
             reverse(closeBracket),
             reverse(openBracket),
-            false,
+            false
         );
 
         if (reversedIndex === -1) return -1;
@@ -135,10 +135,10 @@ export enum Direction {
 export function escalateToToken(
     cursor: TreeCursor,
     dir: Direction,
-    target: string,
+    target: string
 ): SyntaxNode | null {
     // Allow the starting node to be a match
-    if (cursor.name.contains(target)) {
+    if (cursor.name.includes(target)) {
         return cursor.node;
     }
 
@@ -148,7 +148,7 @@ export function escalateToToken(
             (dir == Direction.Forward && cursor.next()) ||
             cursor.parent())
     ) {
-        if (cursor.name.contains(target)) {
+        if (cursor.name.includes(target)) {
             return cursor.node;
         }
     }
