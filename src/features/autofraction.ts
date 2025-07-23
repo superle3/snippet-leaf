@@ -132,7 +132,10 @@ export const runAutoFractionCursor = (
     let numerator = view.state.sliceDoc(start, to);
 
     // Remove unnecessary outer parentheses
-    if (numerator.at(0) === "(" && numerator.at(-1) === ")") {
+    if (
+        numerator.charAt(0) === "(" &&
+        numerator.charAt(numerator.length - 1) === ")"
+    ) {
         const closing = findMatchingBracket(numerator, 0, "(", ")", false);
         if (closing === numerator.length - 1) {
             numerator = numerator.slice(1, -1);

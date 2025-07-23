@@ -92,10 +92,8 @@ type OverleafEventDetail = {
 
 type Overleaf_event = CustomEvent<OverleafEventDetail>;
 
-console.log("snippet_leaf extension loaded");
 window.addEventListener("UNSTABLE_editor:extensions", async (e) => {
-    console.log("starting snippet_leaf");
-    logger.info("Latex Suite extension loaded");
+    console.log("starting snippet_leaf", e);
     const evt = e as unknown as Overleaf_event;
     const { CodeMirror, extensions } = evt.detail;
     const {
@@ -154,6 +152,7 @@ window.addEventListener("UNSTABLE_editor:extensions", async (e) => {
             return settings;
         },
     });
+    console.log("processing");
     while (extensions.length > 0) {
         extensions.pop();
     }

@@ -134,7 +134,8 @@ const snippetShouldRunInMode = (options: Options, mode: Mode) => {
     if (
         (options.mode.inlineMath && mode.inlineMath) ||
         (options.mode.blockMath && mode.blockMath) ||
-        ((options.mode.inlineMath || options.mode.blockMath) && mode.codeMath)
+        options.mode.inlineMath ||
+        options.mode.blockMath
     ) {
         if (!mode.textEnv) {
             return true;
@@ -145,7 +146,7 @@ const snippetShouldRunInMode = (options: Options, mode: Mode) => {
         return true;
     }
 
-    if ((options.mode.text && mode.text) || (options.mode.code && mode.code)) {
+    if (options.mode.text && mode.text) {
         return true;
     }
 };
