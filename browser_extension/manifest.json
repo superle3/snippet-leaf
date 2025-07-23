@@ -9,6 +9,13 @@
             "matches": ["<all_urls>"],
             "js": ["dist/browser_extension.js"],
             "world": "MAIN"
+        },
+        {
+            "js": ["dist/settings/content_script.js"],
+            "matches": ["https://overleaf/project/*"],
+            "run_at": "document_start"
         }
-    ]
+    ],
+    "permissions": ["storage"],
+    "options_page": "settings.html"
 }
