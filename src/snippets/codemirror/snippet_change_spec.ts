@@ -1,86 +1,97 @@
 import type { EditorView } from "@codemirror/view";
 import type { ChangeSpec } from "@codemirror/state";
 import type { TabstopSpec } from "../tabstop";
-import { findMatchingBracket } from "../../utils/editor_utils";
 
+/**
+ * Represents how a tabstop can look like in a snippet.
+ * Examples:
+ * - `@1` - a numbered tabstop with no replacement text
+ * - `@{2}` - a numbered tabstop with no replacement text, bounded such that `@{2}2` is not tabstop number 22
+ * - `@{3:example}` - a named tabstop with replacement text "example"
+ *
+ * **Note:** For original string `@@1`, the `@` is escaped and treated as a literal `@`, so it does not count as a tabstop.
+ * In the actual snippet, we only see `@1` but know from the original string that it was `@@1` and thus it is treated as a literal `@`.
+ */
+const tabstop_regex = /@(?:(\d+)|\{(\d+)\}|\{(\d+):([^}]+)\})/g;
+/**
+ * Matches all tabstop-like patterns and escaped `@` in a snippet.
+ * Represents how an escaped @ looks like in a snippet.
+ * Examples:
+ * - `@@` - an escaped `@` that should be treated as a literal `@`
+ * - `@{2:example@@}` - a named tabstop with replacement text "example@@", here the `@@` is not escaped and is treated as a literal `@@`
+ *
+ * tabstop-like pattern is needed on top of escaped `@` to ensure we don't replace the `@@` inside a tabstop like in the string `@{2:example@@}`.
+ * (regex is not powerful enough to make a pattern that matches only escaped `@` and not tabstop-like patterns)
+ */
+const escape_tabstop_regex = /@(?:(@)|\d+|\{\d+\}|\{\d+:([^}]+)\})/g;
 export class SnippetChangeSpec {
     from: number;
     to: number;
     insert: string;
     keyPressed?: string;
+    /**indexes to **ignore** when placing tabstops, these correspond to literal `@` characters and can't be seen as tabstops */
+    escaped_inserts: number[];
 
     constructor(from: number, to: number, insert: string, keyPressed?: string) {
         this.from = from;
         this.to = to;
-        this.insert = insert;
+        this.insert = insert.replace(escape_tabstop_regex, (match, p1) => {
+            if (p1) {
+                return "@";
+            }
+            return match;
+        });
         this.keyPressed = keyPressed;
+        // offset to account for each `@@` that has been replaced
+        let offset = 0;
+        this.escaped_inserts =
+            Array.from(insert.matchAll(escape_tabstop_regex), (match) => {
+                if (match[0] !== "@@") return;
+                const result = match.index - offset;
+                offset++;
+                return result;
+            }).filter((val) => val !== undefined) || [];
     }
 
     getTabstops(view: EditorView, start: number): TabstopSpec[] {
-        const tabstops: TabstopSpec[] = [];
-        const text = view.state.doc.toString();
+        const text = view.state.doc.sliceString(
+            start,
+            start + this.insert.length
+        );
 
-        for (let i = start; i < start + this.insert.length; i++) {
-            if (!(text.charAt(i) === "$")) {
-                continue;
+        const matches = text.matchAll(tabstop_regex);
+        const tabstops: TabstopSpec[] = Array.from(
+            matches,
+            (match): TabstopSpec | undefined => {
+                if (!match || this.escaped_inserts.includes(match.index))
+                    return;
+                if (match[1]) {
+                    const number = parseInt(match[1], 10);
+                    return {
+                        number: number,
+                        from: start + match.index,
+                        to: start + match.index + match[0].length,
+                        replacement: "",
+                    };
+                } else if (match[2]) {
+                    const number = parseInt(match[2], 10);
+                    return {
+                        number: number,
+                        from: start + match.index,
+                        to: start + match.index + match[0].length,
+                        replacement: "",
+                    };
+                } else if (match[3] && match[4]) {
+                    const number = parseInt(match[3], 10);
+                    return {
+                        number: number,
+                        from: start + match.index,
+                        to: start + match.index + match[0].length,
+                        replacement: match[4],
+                    };
+                }
             }
-
-            let number: number = parseInt(text.charAt(i + 1));
-
-            const tabstopStart = i;
-            let tabstopEnd = tabstopStart + 2;
-            let tabstopReplacement = "";
-
-            if (isNaN(number)) {
-                // Check for selection tabstops of the form ${\d+:XXX} where \d+ is some number of
-                // digits and XXX is the replacement string, separated by a colon
-                if (!(text.charAt(i + 1) === "{")) continue;
-
-                // Find the index of the matching closing bracket
-                const closingIndex = findMatchingBracket(
-                    text,
-                    i + 1,
-                    "{",
-                    "}",
-                    false,
-                    start + this.insert.length
-                );
-
-                // Create a copy of the entire tabstop string from the document
-                const tabstopString = text.slice(i, closingIndex + 1);
-
-                // If there is not a colon in the tabstop string, it is incorrectly formatted
-                if (!tabstopString.includes(":")) continue;
-
-                // Get the first index of a colon, which we will use as our number/replacement split point
-                const colonIndex = tabstopString.indexOf(":");
-
-                // Parse the number from the tabstop string, which is all characters after the {
-                // and before the colon index
-                number = parseInt(tabstopString.slice(2, colonIndex));
-                if (isNaN(number)) continue;
-
-                if (closingIndex === -1) continue;
-
-                // Isolate the replacement text from after the colon to the end of the tabstop bracket pair
-                tabstopReplacement = text.slice(
-                    i + colonIndex + 1,
-                    closingIndex
-                );
-                tabstopEnd = closingIndex + 1;
-                i = closingIndex;
-            }
-
-            // Replace the tabstop indicator "$X" with ""
-            const tabstop = {
-                number: number,
-                from: tabstopStart,
-                to: tabstopEnd,
-                replacement: tabstopReplacement,
-            };
-            tabstops.push(tabstop);
-        }
-
+        ).filter((val) => val);
         return tabstops;
     }
 

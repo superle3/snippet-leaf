@@ -15,7 +15,7 @@ export const runAutoFraction = (
     latexSuiteConfig: LatexSuiteFacet,
     syntaxTree: typeof syntaxTreeC,
     queueSnippet: ReturnType<typeof snippetQueues>["queueSnippet"],
-    expandSnippets: expandSnippetsC
+    expandSnippets: expandSnippetsC,
 ): boolean => {
     for (const range of ctx.ranges) {
         runAutoFractionCursor(
@@ -24,7 +24,7 @@ export const runAutoFraction = (
             range,
             latexSuiteConfig,
             syntaxTree,
-            queueSnippet
+            queueSnippet,
         );
     }
 
@@ -36,7 +36,7 @@ export const runAutoFraction = (
             latexSuiteConfig,
             syntaxTree,
             queueSnippet,
-            expandSnippets
+            expandSnippets,
         );
     }
 
@@ -49,7 +49,7 @@ export const runAutoFractionCursor = (
     range: SelectionRange,
     latexSuiteConfig: LatexSuiteFacet,
     syntaxTree: typeof syntaxTreeC,
-    queueSnippet: ReturnType<typeof snippetQueues>["queueSnippet"]
+    queueSnippet: ReturnType<typeof snippetQueues>["queueSnippet"],
 ): boolean => {
     const settings = getLatexSuiteConfig(view, latexSuiteConfig);
     const { from, to } = range;
@@ -98,7 +98,7 @@ export const runAutoFractionCursor = (
                     i,
                     openBracket,
                     closeBracket,
-                    true
+                    true,
                 );
 
                 if (j === -1) return false;
@@ -142,7 +142,10 @@ export const runAutoFractionCursor = (
         }
     }
 
-    const replacement = `${settings.autofractionSymbol}{${numerator}}{$0}$1`;
+    const replacement = `${settings.autofractionSymbol}{${numerator.replace(
+        /@/g,
+        "@@",
+    )}}{@0}@1`;
 
     queueSnippet(view, start, to, replacement, "/");
 
