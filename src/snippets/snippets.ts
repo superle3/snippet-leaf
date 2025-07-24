@@ -5,7 +5,9 @@ import type { Environment } from "./environment";
 /**
  * in visual snippets, if the replacement is a string, this is the magic substring to indicate the selection.
  */
-export const VISUAL_SNIPPET_MAGIC_SELECTION_PLACEHOLDER = "${VISUAL}";
+export const VISUAL_SNIPPET_MAGIC_SELECTION_PLACEHOLDER = new RegExp(
+    "^@\\{VISUAL\\}|[^@]@\\{VISUAL\\}"
+);
 
 /**
  * there are 3 distinct types of snippets:
@@ -163,6 +165,10 @@ export class VisualSnippet extends Snippet<"visual"> {
 }
 
 export class RegexSnippet extends Snippet<"regex"> {
+    capture_groups_regex: RegExp;
+    named_capture_groups_regex: RegExp;
+    version: 1 | 2;
+    uncaptured_group_replacement: "" | undefined;
     constructor({
         trigger,
         replacement,
@@ -170,7 +176,8 @@ export class RegexSnippet extends Snippet<"regex"> {
         priority,
         description,
         excludedEnvironments,
-    }: CreateSnippet<"regex">) {
+        version,
+    }: CreateSnippet<"regex"> & { version?: 1 | 2 }) {
         super(
             "regex",
             trigger,
@@ -180,6 +187,29 @@ export class RegexSnippet extends Snippet<"regex"> {
             description,
             excludedEnvironments
         );
+        this.uncaptured_group_replacement = version === 1 ? undefined : "";
+        const test_result = new RegExp(`|${this.trigger.source}`).exec("");
+        this.capture_groups_regex =
+            test_result.length - 1
+                ? new RegExp(
+                      `@(?:@|\\[(${new Uint8Array(test_result.length - 1)
+                          .map((_, i) => i)
+                          .join("|")})\\])`,
+                      "g"
+                  )
+                : new RegExp("");
+        const named_capture_groups = test_result.groups
+            ? Object.keys(test_result.groups)
+            : [];
+        const escapedNamedCaptureGroups = named_capture_groups.map((name) =>
+            name.replace(/\$/g, "\\$&")
+        );
+        this.named_capture_groups_regex = named_capture_groups.length
+            ? new RegExp(
+                  `@(?:@|\\[(${escapedNamedCaptureGroups.join("|")})\\])`,
+                  "g"
+              )
+            : new RegExp("");
     }
 
     process(
@@ -202,17 +232,21 @@ export class RegexSnippet extends Snippet<"regex"> {
 
         let replacement;
         if (typeof this.replacement === "string") {
-            // Compute the replacement string
-            // result.length - 1 = the number of capturing groups
-
-            const nCaptureGroups = result.length - 1;
-            replacement = Array.from({ length: nCaptureGroups })
-                .map((_, i) => i + 1)
-                .reduce(
-                    (replacement, i) =>
-                        replacement.replaceAll(`[[${i - 1}]]`, result[i]),
-                    this.replacement
-                );
+            replacement = this.replacement
+                .replace(this.capture_groups_regex, (match, p1) => {
+                    if (match === "@@") return match;
+                    return (
+                        result[parseInt(p1, 10) + 1]?.replace(/@/g, "@@") ??
+                        this.uncaptured_group_replacement
+                    );
+                })
+                .replace(this.named_capture_groups_regex, (match, p1) => {
+                    if (match === "@@") return match;
+                    return (
+                        result.groups?.[p1]?.replace(/@/g, "@@") ??
+                        this.uncaptured_group_replacement
+                    );
+                });
         } else {
             replacement = this.replacement(result);
 

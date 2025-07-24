@@ -15,7 +15,7 @@ export const runSnippets = (
     latexSuiteConfig: LatexSuiteFacet,
     queueSnippet: ReturnType<typeof snippetQueues>["queueSnippet"],
     expandSnippets: (view: EditorViewC) => boolean,
-    syntaxTree: typeof syntaxTreeC
+    syntaxTree: typeof syntaxTreeC,
 ): boolean => {
     let shouldAutoEnlargeBrackets = false;
 
@@ -27,7 +27,7 @@ export const runSnippets = (
             range,
             latexSuiteConfig,
             syntaxTree,
-            queueSnippet
+            queueSnippet,
         );
 
         if (result.shouldAutoEnlargeBrackets) shouldAutoEnlargeBrackets = true;
@@ -41,7 +41,7 @@ export const runSnippets = (
             latexSuiteConfig,
             syntaxTree,
             queueSnippet,
-            expandSnippets
+            expandSnippets,
         );
     }
 
@@ -55,7 +55,7 @@ const runSnippetCursor = (
     range: SelectionRange,
     latexSuiteConfig: LatexSuiteFacet,
     syntaxTree: typeof syntaxTreeC,
-    queueSnippet: ReturnType<typeof snippetQueues>["queueSnippet"]
+    queueSnippet: ReturnType<typeof snippetQueues>["queueSnippet"],
 ): { success: boolean; shouldAutoEnlargeBrackets: boolean } => {
     const settings = getLatexSuiteConfig(view, latexSuiteConfig);
     const { from, to } = range;
@@ -104,7 +104,7 @@ const runSnippetCursor = (
                     view.state,
                     triggerPos,
                     to,
-                    settings.wordDelimiters
+                    settings.wordDelimiters,
                 )
             )
                 continue;
@@ -122,7 +122,7 @@ const runSnippetCursor = (
         queueSnippet(view, start, to, replacement, key);
 
         const containsTrigger = settings.autoEnlargeBracketsTriggers.some(
-            (word) => replacement.includes("\\" + word)
+            (word) => replacement.includes("\\" + word),
         );
         return { success: true, shouldAutoEnlargeBrackets: containsTrigger };
     }
@@ -155,7 +155,7 @@ const isOnWordBoundary = (
     state: EditorState,
     triggerPos: number,
     to: number,
-    wordDelimiters: string
+    wordDelimiters: string,
 ) => {
     const prevChar = state.sliceDoc(triggerPos - 1, triggerPos);
     const nextChar = state.sliceDoc(to, to + 1);
@@ -176,11 +176,10 @@ const trimWhitespace = (replacement: string, ctx: Context) => {
         const lastThreeChars = replacement.slice(-3);
         const lastChar = lastThreeChars.slice(-1);
 
-        if (lastThreeChars.slice(0, 2) === " $" && !isNaN(parseInt(lastChar))) {
+        if (lastThreeChars.slice(0, 2) === " @" && !isNaN(parseInt(lastChar))) {
             spaceIndex = -3;
         }
     }
-
     if (spaceIndex != 0) {
         if (spaceIndex === -1) {
             replacement = replacement.trimEnd();
