@@ -1,5 +1,4 @@
-import type {
-    Output} from "valibot";
+import type { Output } from "valibot";
 import {
     optional,
     object,
@@ -9,14 +8,15 @@ import {
     parse,
     number,
     special,
+    literal,
 } from "valibot";
 import { encode } from "js-base64";
-import type {
-    Snippet} from "./snippets";
+import type { Snippet } from "./snippets";
 import {
     RegexSnippet,
     serializeSnippetLike,
     StringSnippet,
+    VISUAL_SNIPPET_MAGIC_SELECTION_PLACEHOLDER,
     VISUAL_SNIPPET_MAGIC_SELECTION_PLACEHOLDER,
     VisualSnippet,
 } from "./snippets";
@@ -24,6 +24,7 @@ import { Options } from "./options";
 import { sortSnippets } from "./sort";
 import type { Environment } from "./environment";
 import { EXCLUSIONS } from "./environment";
+import { convert_replacement_v1_to_v2 } from "src/convert_spec";
 
 export type SnippetVariables = Record<string, string>;
 
@@ -143,6 +144,7 @@ const RawSnippetSchema = object({
     flags: optional(string_()),
     priority: optional(number()),
     description: optional(string_()),
+    version: optional(union([literal(1), literal(2)])),
 });
 
 type RawSnippet = Output<typeof RawSnippetSchema>;
@@ -177,7 +179,9 @@ function parseSnippet(
     raw: RawSnippet,
     snippetVariables: SnippetVariables
 ): Snippet {
-    const { replacement, priority, description } = raw;
+    const { priority, description } = raw;
+    const version = raw.version ?? 2;
+    let replacement = raw.replacement;
     const options = Options.fromSource(raw.options);
     let trigger;
     let excludedEnvironments;
@@ -213,6 +217,9 @@ function parseSnippet(
         trigger = new RegExp(triggerStr, flags);
 
         options.regex = true;
+        if (version === 1) {
+            replacement = convert_replacement_v1_to_v2(trigger, replacement);
+        }
 
         const normalised = {
             trigger,
@@ -221,6 +228,7 @@ function parseSnippet(
             priority,
             description,
             excludedEnvironments,
+            version,
         };
 
         return new RegexSnippet(normalised);
@@ -233,9 +241,16 @@ function parseSnippet(
         excludedEnvironments = getExcludedEnvironments(trigger);
 
         // normalize visual replacements
+        if (version === 1) {
+            console.log(
+                "snippet-leaf VERSION 1 detected, converting replacement"
+            );
+            replacement = convert_replacement_v1_to_v2(trigger, replacement);
+            console.log("snippet-leaf:", replacement);
+        }
         if (
             typeof replacement === "string" &&
-            replacement.includes(VISUAL_SNIPPET_MAGIC_SELECTION_PLACEHOLDER)
+            VISUAL_SNIPPET_MAGIC_SELECTION_PLACEHOLDER.test(replacement)
         ) {
             options.visual = true;
         }
@@ -250,6 +265,7 @@ function parseSnippet(
         };
 
         if (options.visual) {
+            console.log("snippet-leaf: visual found");
             return new VisualSnippet(normalised);
         } else {
             return new StringSnippet(normalised);
