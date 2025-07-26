@@ -133,7 +133,7 @@ export const handleKeydown = (
         }
     }
 
-    if (key === "Tab" || key === "Enter") {
+    if (key === "Tab") {
         success = setSelectionToNextTabstop(view, tabstopsStateField);
 
         if (success) return true;
