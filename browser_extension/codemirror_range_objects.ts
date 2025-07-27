@@ -1,3 +1,11 @@
+/**
+ * This is copied code of @codemirror/state,
+ *  RangeValue and the derived classes don't get exported by overleaf
+ *  and since the objects don't depend on other parts we can include it as is.
+ */
+
+// @ts-nocheck
+/* eslint-disable */
 export enum MapMode {
     /// Map a position to a valid new position, even when its context
     /// was deleted.

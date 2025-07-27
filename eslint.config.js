@@ -44,7 +44,7 @@ export default tseslint.config(
             "no-prototype-builtins": "off",
             "@typescript-eslint/no-empty-function": "off",
             "@typescript-eslint/consistent-type-imports": "error",
-            quotes: ["warn", "double"],
+            quotes: ["warn", "double", { avoidEscape: true }],
         },
     }
 );

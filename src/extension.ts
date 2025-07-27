@@ -6,6 +6,9 @@ import type {
     Prec as PrecC,
     Facet as FacetC,
     ChangeSet as ChangeSetC,
+    RangeValue as RangeValueC,
+    RangeSet as RangeSetC,
+    RangeSetBuilder as RangeSetBuilderC,
 } from "@codemirror/state";
 import type {
     undo as undoC,
@@ -38,6 +41,8 @@ import { expandSnippets } from "./snippets/snippet_management";
 import { stateEffect_variables } from "./snippets/codemirror/history";
 import { create_tabstopsStateField } from "./snippets/codemirror/tabstops_state_field";
 import { snippetQueues } from "./snippets/codemirror/snippet_queue_state_field";
+import { mkConcealPlugin } from "./conceal_plugin/conceal";
+
 import type { RawSnippet, SnippetVariables } from "./snippets/parse";
 import type { TabstopGroupC } from "./snippets/tabstop";
 import type { ProcessSnippetResult, SnippetData } from "./snippets/snippets";
@@ -61,6 +66,9 @@ type CodeMirrorExt = {
     redo: typeof redoC;
     isolateHistory: typeof isolateHistoryC;
     Facet: typeof FacetC;
+    RangeSet: typeof RangeSetC;
+    RangeValue: typeof RangeValueC;
+    RangeSetBuilder: typeof RangeSetBuilderC;
 };
 
 export async function main(
@@ -70,9 +78,11 @@ export async function main(
     const {
         Prec,
         Facet,
+        ViewPlugin,
         EditorView,
         syntaxTree,
         Decoration,
+        WidgetType,
         EditorSelection,
         StateField,
         StateEffect,
@@ -81,6 +91,9 @@ export async function main(
         isolateHistory,
         undo,
         redo,
+        RangeSet,
+        RangeSetBuilder,
+        RangeValue,
     } = codemirror_objects;
     const CMSettings: LatexSuiteCMSettings =
         processLatexSuiteSettings(settings);
@@ -170,6 +183,22 @@ export async function main(
             ),
         ];
         extensions.push(...snippet_leaf_extension);
+        if (settings.concealEnabled) {
+            const conceal_plugin = mkConcealPlugin(
+                settings.concealRevealTimeout,
+                ViewPlugin,
+                EditorView,
+                Decoration,
+                WidgetType,
+                RangeSet,
+                RangeSetBuilder,
+                RangeValue,
+                syntaxTree,
+                latexSuiteConfig
+            ).extension;
+
+            extensions.push(conceal_plugin);
+        }
     }
     return { latexSuiteConfig, extension: extensions };
 }

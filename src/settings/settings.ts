@@ -24,6 +24,8 @@ interface LatexSuiteBasicSettings {
     suppressSnippetTriggerOnIME: boolean;
     removeSnippetWhitespace: boolean;
     autoDelete$: boolean;
+    concealEnabled: boolean;
+    concealRevealTimeout: number;
     autofractionEnabled: boolean;
     autofractionSymbol: string;
     autofractionBreakingChars: string;
@@ -74,6 +76,8 @@ export const DEFAULT_SETTINGS: LatexSuitePluginSettings = {
     suppressSnippetTriggerOnIME: true,
     removeSnippetWhitespace: true,
     autoDelete$: true,
+    concealEnabled: true,
+    concealRevealTimeout: 1000,
     autofractionEnabled: true,
     autofractionSymbol: "\\frac",
     autofractionBreakingChars: "+-=\t",
@@ -346,5 +350,19 @@ export const SETTINGS_EXPLANATIONS: LatexSuitePluginSettingsExplanations = {
             "Whether to automatically enlarge brackets containing e.g. sum, int, frac.",
         type: "string",
         defaultValue: DEFAULT_SETTINGS.autoEnlargeBracketsTriggers,
+    },
+    concealEnabled: {
+        title: "Enabled",
+        description:
+            " Make equations more readable by hiding LaTeX syntax and instead displaying it in a pretty format.\n e.g. <code>\\dot{x}^{2} + \\dot{y}^{2}</code> will display as ẋ² + ẏ², and <code>\\sqrt{ 1-\\beta^{2} }</code> will display as √{ 1-β² }.\n LaTeX beneath the cursor will be revealed.\n Disabled by default to not confuse new users. However, I recommend turning this on once you are comfortable with the plugin!.",
+        type: "boolean",
+        defaultValue: DEFAULT_SETTINGS.concealEnabled,
+    },
+    concealRevealTimeout: {
+        title: "Reveal delay (ms)",
+        description:
+            " How long to delay the reveal of LaTeX for, in milliseconds, when the cursor moves over LaTeX. Defaults to 0 (LaTeX under the cursor is revealed immediately).\n Can be set to a positive number, e.g. 300, to delay the reveal of LaTeX, making it much easier to navigate equations using arrow keys.\n Must be an integer ≥ 0. ",
+        type: "string",
+        defaultValue: DEFAULT_SETTINGS.concealRevealTimeout,
     },
 } as const;
