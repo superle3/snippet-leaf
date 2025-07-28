@@ -7,7 +7,7 @@ import { tabout, shouldTaboutByCloseBracket } from "./features/tabout";
 import { runMatrixShortcuts } from "./features/matrix_shortcuts";
 
 import { Context } from "./utils/context";
-import { getCharacterAtPos, replaceRange } from "./utils/editor_utils";
+import { replaceRange } from "./utils/editor_utils";
 import {
     type expandSnippetsC,
     setSelectionToNextTabstop,

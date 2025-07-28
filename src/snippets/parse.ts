@@ -24,8 +24,7 @@ import { sortSnippets } from "./sort";
 import type { Environment } from "./environment";
 import { EXCLUSIONS } from "./environment";
 import { convert_replacement_v1_to_v2 } from "src/convert_spec";
-import * as json5 from "json5";
-
+import json5 from "json5";
 export type SnippetVariables = Record<`$\{${string}}`, string>;
 
 export async function importRaw(maybeJavaScriptCode: string) {

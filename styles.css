@@ -1,0 +1,58 @@
+:root {
+    --acent-h: 170;
+    --accent-s: 50;
+}
+/* Highlight brackets */
+.theme-light .latex-suite-highlighted-bracket,
+.theme-light
+    .latex-suite-highlighted-bracket
+    [class^="latex-suite-color-bracket-"] {
+    background-color: hsl(var(--accent-h), var(--accent-s), 40%, 0.3);
+    background-color: black;
+}
+
+.theme-dark .latex-suite-highlighted-bracket,
+.theme-dark
+    .latex-suite-highlighted-bracket
+    [class^="latex-suite-color-bracket-"] {
+    background-color: hsl(var(--accent-h), var(--accent-s), 70%, 0.6);
+}
+/* .latex-suite-highlighted-bracket {
+    background-color: black;
+} */
+
+/* Color matching brackets */
+
+.theme-light .latex-suite-color-bracket-0,
+.theme-light .latex-suite-color-bracket-0 .cm-bracket {
+    color: #527aff;
+}
+
+.theme-light .latex-suite-color-bracket-1,
+.theme-light .latex-suite-color-bracket-1 .cm-bracket {
+    color: #ff50b7;
+}
+
+.theme-light .latex-suite-color-bracket-2,
+.theme-light .latex-suite-color-bracket-2 .cm-bracket {
+    color: #69ba00;
+}
+
+.theme-dark .latex-suite-color-bracket-0,
+.theme-dark .latex-suite-color-bracket-0 .cm-bracket {
+    color: #47b8ff;
+}
+
+.theme-dark .latex-suite-color-bracket-1,
+.theme-dark .latex-suite-color-bracket-1 .cm-bracket {
+    color: #ff55cd;
+}
+
+.theme-dark .latex-suite-color-bracket-2,
+.theme-dark .latex-suite-color-bracket-2 .cm-bracket {
+    color: #73ff63;
+}
+
+/* .latex-suite-color-bracket-3 {
+    color: #8de15c;
+} */

@@ -278,6 +278,7 @@ class LatexSuiteSettingTab {
     display() {
         this.displaySnippetSettings();
         this.displayConcealSettings();
+        this.displayColorHighlightBracketsSettings();
         this.displayAutofractionSettings();
         this.displayMatrixShortcutsSettings();
         this.displayTaboutSettings();
@@ -408,6 +409,60 @@ class LatexSuiteSettingTab {
                             this.plugin.saveSettings();
                         }
                     }),
+            );
+    }
+
+    displayColorHighlightBracketsSettings() {
+        const containerEl = this.containerEl;
+        this.addHeading(
+            containerEl,
+            "Highlight and color brackets",
+            "parentheses",
+        );
+
+        new Setting(containerEl)
+            .setName("Color paired brackets")
+            .setDesc("Whether to colorize matching brackets.")
+            .addToggle((toggle) =>
+                toggle
+                    .setValue(this.plugin.settings.colorPairedBracketsEnabled)
+                    .onChange(async (value) => {
+                        this.plugin.settings.colorPairedBracketsEnabled = value;
+                        await this.plugin.saveSettings();
+                    }),
+            );
+        new Setting(containerEl)
+            .setName("Highlight matching bracket beneath cursor")
+            .setDesc(
+                "When the cursor is adjacent to a bracket, highlight the matching bracket.",
+            )
+            .addToggle((toggle) =>
+                toggle
+                    .setValue(
+                        this.plugin.settings.highlightCursorBracketsEnabled,
+                    )
+                    .onChange(async (value) => {
+                        this.plugin.settings.highlightCursorBracketsEnabled =
+                            value;
+                        await this.plugin.saveSettings();
+                    }),
+            );
+
+        new Setting(containerEl)
+            .setName("Highlighting theme")
+            .setDesc(
+                "Whether to use a dark or light theme to highlight/color the brackets.",
+            )
+            .addDropdown((dropdown) =>
+                dropdown
+                    .setValue(this.plugin.settings.theme)
+                    .onChange(async (value) => {
+                        this.plugin.settings.theme =
+                            value as LatexSuitePluginSettingsRaw["theme"];
+                        await this.plugin.saveSettings();
+                    })
+                    .addOption("light", "Light")
+                    .addOption("dark", "Dark"),
             );
     }
 

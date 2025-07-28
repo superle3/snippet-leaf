@@ -26,6 +26,8 @@ interface LatexSuiteBasicSettings {
     autoDelete$: boolean;
     concealEnabled: boolean;
     concealRevealTimeout: number;
+    colorPairedBracketsEnabled: boolean;
+    highlightCursorBracketsEnabled: boolean;
     autofractionEnabled: boolean;
     autofractionSymbol: string;
     autofractionBreakingChars: string;
@@ -33,6 +35,7 @@ interface LatexSuiteBasicSettings {
     taboutEnabled: boolean;
     autoEnlargeBrackets: boolean;
     wordDelimiters: string;
+    theme: "light" | "dark";
 }
 
 /**
@@ -79,6 +82,8 @@ export const DEFAULT_SETTINGS: LatexSuitePluginSettings &
     autoDelete$: true,
     concealEnabled: true,
     concealRevealTimeout: 0,
+    colorPairedBracketsEnabled: true,
+    highlightCursorBracketsEnabled: true,
     autofractionEnabled: true,
     autofractionSymbol: "\\frac",
     autofractionBreakingChars: "+-=\t",
@@ -86,6 +91,7 @@ export const DEFAULT_SETTINGS: LatexSuitePluginSettings &
     taboutEnabled: true,
     autoEnlargeBrackets: true,
     wordDelimiters: "., +-\\n\t:;!?\\/{}[]()=~$",
+    theme: "light",
 
     // Raw settings
     autofractionExcludedEnvs: '[\n\t["^{", "}"],\n\t["\\\\pu{", "}"]\n]',
@@ -362,5 +368,25 @@ export const SETTINGS_EXPLANATIONS: LatexSuitePluginSettingsExplanations = {
             " How long to delay the reveal of LaTeX for, in milliseconds, when the cursor moves over LaTeX. Defaults to 0 (LaTeX under the cursor is revealed immediately).\n Can be set to a positive number, e.g. 300, to delay the reveal of LaTeX, making it much easier to navigate equations using arrow keys.\n Must be an integer ≥ 0. ",
         type: "string",
         defaultValue: DEFAULT_SETTINGS.concealRevealTimeout,
+    },
+    colorPairedBracketsEnabled: {
+        title: "Color paired brackets",
+        description: "Whether to colorize matching brackets.",
+        type: "boolean",
+        defaultValue: DEFAULT_SETTINGS.colorPairedBracketsEnabled,
+    },
+    highlightCursorBracketsEnabled: {
+        title: "Highlight matching bracket beneath cursor",
+        description:
+            "When the cursor is adjacent to a bracket, highlight the matching bracket.",
+        type: "boolean",
+        defaultValue: DEFAULT_SETTINGS.highlightCursorBracketsEnabled,
+    },
+    theme: {
+        title: "Highlighting theme",
+        description:
+            "Whether to use a dark or light theme to highlight/color the brackets.",
+        type: ["light", "dark"],
+        defaultValue: DEFAULT_SETTINGS.theme,
     },
 } as const;
