@@ -1,4 +1,4 @@
-export const DEFAULT_SNIPPETS = [
+export default [
     // Math mode
     { trigger: "mk", replacement: "\\( $0 \\)$1", options: "tA" },
     { trigger: "dm", replacement: "\\[\n$0\n\\]$1", options: "tAw" },
@@ -553,10 +553,10 @@ export const DEFAULT_SNIPPETS = [
     // See the documentation for more information.
     {
         trigger: /iden(\d)/,
-        replacement: (match: RegExpMatchArray) => {
-            const n = parseInt(match[1], 10);
+        replacement: (match) => {
+            const n = match[1];
 
-            const arr = [];
+            let arr = [];
             for (let j = 0; j < n; j++) {
                 arr[j] = [];
                 for (let i = 0; i < n; i++) {

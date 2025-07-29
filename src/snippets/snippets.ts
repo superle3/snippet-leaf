@@ -74,6 +74,7 @@ export abstract class Snippet<T extends SnippetType = SnippetType> {
         this.priority = priority;
         this.description = description;
         this.excludedEnvironments = excludedEnvironments ?? [];
+        this[ARE_SETTINGS_PARSED] = true;
     }
 
     // we need to explicitly type the return value here so the derived classes,

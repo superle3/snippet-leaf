@@ -13,5 +13,10 @@
 
         "lib": ["DOM", "ES5", "ES6", "ES7", "ES2021.String"]
     },
-    "include": ["**/*.ts"]
+    "include": [
+        "src/**/*.ts",
+        "src/*.ts",
+        "codemirror_extension/**/*.ts",
+        "browser_extension/**/*.ts"
+    ]
 }

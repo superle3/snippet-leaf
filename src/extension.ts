@@ -22,13 +22,11 @@ import type {
     hoverTooltip as hoverTooltipC,
 } from "@codemirror/view";
 import type { syntaxTree as syntaxTreeC } from "@codemirror/language";
-import type {
-    CodeMirror as CodeMirrorVimC,
-    Vim as VimC,
-    getCM as getCMC,
-} from "@replit/codemirror-vim";
 import { handleUpdate, onKeydown } from "./latex_suite";
-import type { LatexSuiteCMSettings } from "./settings/settings";
+import type {
+    LatexSuiteCMSettings,
+    LatexSuiteFacet,
+} from "./settings/settings";
 import type { LatexSuitePluginSettings } from "./settings/settings";
 import { create_snippet_extensions } from "./snippets/codemirror/extensions";
 import type { invertedEffects as invertedEffectsC } from "@codemirror/commands";
@@ -40,6 +38,9 @@ import { expandSnippets } from "./snippets/snippet_management";
 import { stateEffect_variables } from "./snippets/codemirror/history";
 import { create_tabstopsStateField } from "./snippets/codemirror/tabstops_state_field";
 import { snippetQueues } from "./snippets/codemirror/snippet_queue_state_field";
+import type { RawSnippet, SnippetVariables } from "./snippets/parse";
+import type { TabstopGroupC } from "./snippets/tabstop";
+import type { ProcessSnippetResult, SnippetData } from "./snippets/snippets";
 
 type CodeMirrorExt = {
     Decoration: typeof DecorationC;
@@ -62,15 +63,8 @@ type CodeMirrorExt = {
     Facet: typeof FacetC;
 };
 
-type CodeMirrorVimExt = {
-    Vim: typeof VimC;
-    getCM: typeof getCMC;
-    CodeMirror: typeof CodeMirrorVimC;
-};
-
 export async function main(
     codemirror_objects: CodeMirrorExt,
-    vim_objects: CodeMirrorVimExt,
     settings: LatexSuitePluginSettings = DEFAULT_SETTINGS
 ) {
     const {
@@ -90,14 +84,16 @@ export async function main(
     } = codemirror_objects;
     const CMSettings: LatexSuiteCMSettings =
         processLatexSuiteSettings(settings);
-    const latexSuiteConfig = Facet.define<
-        LatexSuiteCMSettings,
+    const latexSuiteConfig: LatexSuiteFacet = Facet.define<
+        Partial<LatexSuitePluginSettings>,
         LatexSuiteCMSettings
     >({
         combine: (input) => {
             const settings =
                 input.length > 0
-                    ? input[0]
+                    ? processLatexSuiteSettings(
+                          Object.assign({}, DEFAULT_SETTINGS, ...input)
+                      )
                     : processLatexSuiteSettings(DEFAULT_SETTINGS);
             return settings;
         },
@@ -177,3 +173,13 @@ export async function main(
     }
     return { latexSuiteConfig, extension: extensions };
 }
+
+export type {
+    LatexSuiteCMSettings,
+    LatexSuitePluginSettings,
+    RawSnippet,
+    SnippetVariables,
+    TabstopGroupC,
+    ProcessSnippetResult,
+    SnippetData,
+};

@@ -76,12 +76,12 @@ type Overleaf_event = CustomEvent<OverleafEventDetail>;
 
 window.addEventListener("UNSTABLE_editor:extensions", async (e) => {
     const evt = e as unknown as Overleaf_event;
-    const { CodeMirror, CodeMirrorVim, extensions } = evt.detail;
+    const { CodeMirror, extensions } = evt.detail;
     const { keymap } = CodeMirror;
     const Facet = Object.getPrototypeOf(keymap).constructor as typeof FacetC;
-    const { latexSuiteConfig, extension: latex_suite_extensions } = await main(
-        { ...CodeMirror, Facet },
-        CodeMirrorVim
-    );
+    const { extension: latex_suite_extensions } = await main({
+        ...CodeMirror,
+        Facet,
+    });
     extensions.push(latex_suite_extensions);
 });

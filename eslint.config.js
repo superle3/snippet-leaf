@@ -4,7 +4,6 @@ import importPlugin from "eslint-plugin-import";
 import globals from "globals";
 
 export default tseslint.config(
-    // Global ignores
     {
         ignores: [
             "dist/",
@@ -36,33 +35,16 @@ export default tseslint.config(
         languageOptions: {
             globals: {
                 ...globals.browser,
-                ...globals.node, // Add node globals for files like esbuild.config.mjs
             },
         },
         rules: {
-            // Your existing rules
-            // "no-unused-vars": "off",
-            // "@typescript-eslint/no-unused-vars": ["error", { args: "none" }],
-            // "@typescript-eslint/ban-ts-comment": "off",
-            // "no-prototype-builtins": "off",
-            // "@typescript-eslint/no-empty-function": "off",
-            // "@typescript-eslint/consistent-type-imports": "error",
-            // quotes: ["warn", "double"],
-
-            // // Rules for enforcing relative paths
-            // "import/no-absolute-path": "error",
-            "import/no-restricted-paths": [
-                "error",
-                {
-                    zones: [
-                        {
-                            target: "./src",
-                            from: "./src",
-                            except: ["./", "../"],
-                        },
-                    ],
-                },
-            ],
+            "no-unused-vars": "off",
+            "@typescript-eslint/no-unused-vars": ["error", { args: "none" }],
+            "@typescript-eslint/ban-ts-comment": "off",
+            "no-prototype-builtins": "off",
+            "@typescript-eslint/no-empty-function": "off",
+            "@typescript-eslint/consistent-type-imports": "error",
+            quotes: ["warn", "double"],
         },
     }
 );

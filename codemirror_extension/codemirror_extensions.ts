@@ -22,9 +22,14 @@ import {
     keymap,
 } from "@codemirror/view";
 import { syntaxTree } from "@codemirror/language";
-import { CodeMirror, Vim, getCM } from "@replit/codemirror-vim";
 
 import { main } from "../src/extension";
+import type { LatexSuitePluginSettings } from "src/settings/settings";
+import {
+    DEFAULT_SETTINGS,
+    getSettingsSnippets,
+    getSettingsSnippetVariables,
+} from "src/settings/settings";
 
 const codeMirrorExt = {
     Decoration,
@@ -47,12 +52,15 @@ const codeMirrorExt = {
     Facet,
 };
 
-const codeMirrorVimExt = {
-    Vim,
-    getCM,
-    CodeMirror,
-};
-
-export async function latex_suite(options: Parameters<typeof main>[2]) {
-    return main(codeMirrorExt, codeMirrorVimExt, options);
+export function latex_suite(
+    options: LatexSuitePluginSettings = DEFAULT_SETTINGS
+) {
+    return main(codeMirrorExt, options);
 }
+
+export default {
+    latex_suite,
+    DEFAULT_SETTINGS,
+    getSettingsSnippetVariables,
+    getSettingsSnippets,
+};
