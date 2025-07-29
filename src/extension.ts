@@ -27,12 +27,7 @@ import type {
     Vim as VimC,
     getCM as getCMC,
 } from "@replit/codemirror-vim";
-import logger from "./logger";
 import { handleUpdate, onKeydown } from "./latex_suite";
-import type { SnippetVariables } from "./snippets/parse";
-import { parseSnippets, parseSnippetVariables } from "./snippets/parse";
-import { DEFAULT_SNIPPET_VARIABLES } from "./utils/DEFAULT_SNIPPET_VARIABLES";
-import { DEFAULT_SNIPPETS } from "./utils/default_snippets";
 import type { LatexSuiteCMSettings } from "./settings/settings";
 import type { LatexSuitePluginSettings } from "./settings/settings";
 import { create_snippet_extensions } from "./snippets/codemirror/extensions";

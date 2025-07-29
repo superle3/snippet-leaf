@@ -41,7 +41,7 @@ export const DEFAULT_SNIPPETS = [
 
     // Text environment
     { trigger: "text", replacement: "\\text{$0}$1", options: "mA" },
-    { trigger: "\"", replacement: "\\text{$0}$1", options: "mA" },
+    { trigger: '"', replacement: "\\text{$0}$1", options: "mA" },
 
     // Basic operations
     { trigger: "sr", replacement: "^{2}", options: "mA" },
@@ -553,8 +553,8 @@ export const DEFAULT_SNIPPETS = [
     // See the documentation for more information.
     {
         trigger: /iden(\d)/,
-        replacement: (match) => {
-            const n = match[1];
+        replacement: (match: RegExpMatchArray) => {
+            const n = parseInt(match[1], 10);
 
             const arr = [];
             for (let j = 0; j < n; j++) {
