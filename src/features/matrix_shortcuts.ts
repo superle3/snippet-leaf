@@ -1,7 +1,7 @@
 import type { EditorView } from "@codemirror/view";
 import { setCursor } from "src/utils/editor_utils";
-import type { LatexSuiteFacet } from "src/snippets/codemirror/config";
-import { getLatexSuiteConfig } from "src/snippets/codemirror/config";
+import type { LatexSuiteFacet } from "src/settings/settings";
+import { getLatexSuiteConfig } from "src/settings/settings";
 import type { Context } from "src/utils/context";
 import { tabout } from "src/features/tabout";
 import type { syntaxTree as syntaxTreeC } from "@codemirror/language";

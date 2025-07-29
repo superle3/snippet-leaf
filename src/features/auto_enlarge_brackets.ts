@@ -2,8 +2,8 @@ import type { EditorView as EditorViewC } from "@codemirror/view";
 import { findMatchingBracket } from "src/utils/editor_utils";
 import type { snippetQueues } from "src/snippets/codemirror/snippet_queue_state_field";
 import { Context } from "src/utils/context";
-import type { LatexSuiteFacet } from "src/snippets/codemirror/config";
-import { getLatexSuiteConfig } from "src/snippets/codemirror/config";
+import type { LatexSuiteFacet } from "src/settings/settings";
+import { getLatexSuiteConfig } from "src/settings/settings";
 import type { syntaxTree as syntaxTreeC } from "@codemirror/language";
 
 export const autoEnlargeBrackets = (
@@ -37,9 +37,7 @@ export const autoEnlargeBrackets = (
         "\\lfloor": "\\rfloor",
     } as const;
     const openBrackets = Object.keys(brackets);
-    console.log(text);
     for (let i = 0; i < text.length; i++) {
-        console.log("enlarge iteration: ", i);
         let found = false;
         let open = "";
 

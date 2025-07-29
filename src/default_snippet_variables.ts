@@ -1,4 +1,6 @@
-export default {
+import type { SnippetVariables } from "./snippets/parse";
+
+export const DEFAULT_SNIPPET_VARIABLES: SnippetVariables = {
     "${GREEK}":
         "alpha|beta|gamma|Gamma|delta|Delta|epsilon|varepsilon|zeta|eta|theta|vartheta|Theta|iota|kappa|lambda|Lambda|mu|nu|xi|omicron|pi|rho|varrho|sigma|Sigma|tau|upsilon|Upsilon|phi|varphi|Phi|chi|psi|omega|Omega",
     "${SYMBOL}":

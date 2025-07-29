@@ -42,6 +42,8 @@ export type ProcessSnippetResult = {
     replacement: string;
 } | null;
 
+export const ARE_SETTINGS_PARSED = Symbol("areSettingsParsed");
+
 /**
  * a snippet instance contains all the information necessary to run a snippet.
  * snippet data specific to a certain type of snippet is in its `data` property.
@@ -54,6 +56,7 @@ export abstract class Snippet<T extends SnippetType = SnippetType> {
     description?: string;
 
     excludedEnvironments: Environment[];
+    [ARE_SETTINGS_PARSED]: true;
 
     constructor(
         type: T,
@@ -62,7 +65,7 @@ export abstract class Snippet<T extends SnippetType = SnippetType> {
         options: Options,
         priority?: number | undefined,
         description?: string | undefined,
-        excludedEnvironments?: Environment[],
+        excludedEnvironments?: Environment[]
     ) {
         this.type = type;
         // @ts-ignore
@@ -85,7 +88,7 @@ export abstract class Snippet<T extends SnippetType = SnippetType> {
     abstract process(
         effectiveLine: string,
         range: SelectionRange,
-        sel: string,
+        sel: string
     ): ProcessSnippetResult;
 
     toString() {
@@ -117,14 +120,14 @@ export class VisualSnippet extends Snippet<"visual"> {
             options,
             priority,
             description,
-            excludedEnvironments,
+            excludedEnvironments
         );
     }
 
     process(
         effectiveLine: string,
         range: SelectionRange,
-        sel: string,
+        sel: string
     ): ProcessSnippetResult {
         const hasSelection = !!sel;
         // visual snippets only run when there is a selection
@@ -142,7 +145,7 @@ export class VisualSnippet extends Snippet<"visual"> {
         if (typeof this.replacement === "string") {
             replacement = this.replacement.replace(
                 VISUAL_SNIPPET_MAGIC_SELECTION_PLACEHOLDER,
-                sel,
+                sel
             );
         } else {
             replacement = this.replacement(sel);
@@ -174,14 +177,14 @@ export class RegexSnippet extends Snippet<"regex"> {
             options,
             priority,
             description,
-            excludedEnvironments,
+            excludedEnvironments
         );
     }
 
     process(
         effectiveLine: string,
         range: SelectionRange,
-        sel: string,
+        sel: string
     ): ProcessSnippetResult {
         const hasSelection = !!sel;
         // non-visual snippets only run when there is no selection
@@ -207,7 +210,7 @@ export class RegexSnippet extends Snippet<"regex"> {
                 .reduce(
                     (replacement, i) =>
                         replacement.replaceAll(`[[${i - 1}]]`, result[i]),
-                    this.replacement,
+                    this.replacement
                 );
         } else {
             replacement = this.replacement(result);
@@ -241,14 +244,14 @@ export class StringSnippet extends Snippet<"string"> {
             options,
             priority,
             description,
-            excludeIn,
+            excludeIn
         );
     }
 
     process(
         effectiveLine: string,
         range: SelectionRange,
-        sel: string,
+        sel: string
     ): ProcessSnippetResult {
         const hasSelection = !!sel;
         // non-visual snippets only run when there is no selection

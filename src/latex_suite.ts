@@ -13,8 +13,8 @@ import {
     setSelectionToNextTabstop,
 } from "./snippets/snippet_management";
 import type { create_tabstopsStateField } from "./snippets/codemirror/tabstops_state_field";
-import type { LatexSuiteFacet } from "./snippets/codemirror/config";
-import { getLatexSuiteConfig } from "./snippets/codemirror/config";
+import type { LatexSuiteFacet } from "./settings/settings";
+import { getLatexSuiteConfig } from "./settings/settings";
 import type { snippetQueues } from "./snippets/codemirror/snippet_queue_state_field";
 import type { stateEffect_variables } from "./snippets/codemirror/history";
 

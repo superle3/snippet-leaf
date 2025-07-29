@@ -4,11 +4,12 @@
     "description": "Make typesetting LaTeX math as fast as handwriting through snippets, text expansion, and editor enhancements",
     "main": "dist/extension.js",
     "scripts": {
-        "dev": "node esbuild.config.mjs",
+        "web": "node esbuild.config.mjs web",
         "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
-        "version": "node version-bump.mjs && git add manifest.json versions.json",
-        "dev:full": "concurrently \"npm run dev:web\" \"npm run dev\"",
-        "dev:web": "dotenv -e .env -- web-ext run"
+        "version": "node version-bump.mjs && git add browser.manifest.json versions.json",
+        "web:full": "concurrently \"npm run web:ext\" \"npm run web\"",
+        "web:ext": "env --chdir=./browser_extension -S web-ext run",
+        "lint": "eslint --ext .ts,.js src browser_extension --fix"
     },
     "keywords": [],
     "author": "",

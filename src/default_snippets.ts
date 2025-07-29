@@ -1,4 +1,4 @@
-export default [
+export const DEFAULT_SNIPPETS = [
     // Math mode
     { trigger: "mk", replacement: "\\( $0 \\)$1", options: "tA" },
     { trigger: "dm", replacement: "\\[\n$0\n\\]$1", options: "tAw" },
@@ -41,7 +41,7 @@ export default [
 
     // Text environment
     { trigger: "text", replacement: "\\text{$0}$1", options: "mA" },
-    { trigger: '"', replacement: "\\text{$0}$1", options: "mA" },
+    { trigger: "\"", replacement: "\\text{$0}$1", options: "mA" },
 
     // Basic operations
     { trigger: "sr", replacement: "^{2}", options: "mA" },
@@ -556,7 +556,7 @@ export default [
         replacement: (match) => {
             const n = match[1];
 
-            let arr = [];
+            const arr = [];
             for (let j = 0; j < n; j++) {
                 arr[j] = [];
                 for (let i = 0; i < n; i++) {

@@ -1,19 +1,6 @@
-import { stateEffect_variables } from "./history";
-import { create_tabstopsStateField } from "./tabstops_state_field";
-import { snippetQueues } from "./snippet_queue_state_field";
-import type {
-    StateEffect as StateEffectC,
-    StateField as StateFieldC,
-} from "@codemirror/state";
-import type {
-    invertedEffects as invertedEffectsC,
-    redo as redoC,
-    undo as undoC,
-} from "@codemirror/commands";
-import type {
-    Decoration as DecorationC,
-    EditorView as EditorViewC,
-} from "@codemirror/view";
+import type { stateEffect_variables } from "./history";
+import type { create_tabstopsStateField } from "./tabstops_state_field";
+import type { snippetQueues } from "./snippet_queue_state_field";
 
 export function create_snippet_extensions(
     tabstopsStateField: ReturnType<

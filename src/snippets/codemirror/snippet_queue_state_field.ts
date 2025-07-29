@@ -9,7 +9,6 @@ export function snippetQueues(
     StateEffect: typeof StateEffectC,
     StateField: typeof StateFieldC
 ) {
-    console.log("snippetQueues called");
     const queueSnippetEffect = StateEffect.define<SnippetChangeSpec>();
     const clearSnippetQueueEffect = StateEffect.define();
 

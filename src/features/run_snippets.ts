@@ -1,7 +1,7 @@
 import type { EditorView as EditorViewC } from "@codemirror/view";
 import type { EditorState, SelectionRange } from "@codemirror/state";
-import type { LatexSuiteFacet } from "src/snippets/codemirror/config";
-import { getLatexSuiteConfig } from "src/snippets/codemirror/config";
+import type { LatexSuiteFacet } from "src/settings/settings";
+import { getLatexSuiteConfig } from "src/settings/settings";
 import type { snippetQueues } from "src/snippets/codemirror/snippet_queue_state_field";
 import type { Mode, Options } from "src/snippets/options";
 import type { Context } from "src/utils/context";
