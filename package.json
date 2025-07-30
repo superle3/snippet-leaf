@@ -28,6 +28,7 @@
         "@popperjs/core": "2.11.5",
         "@replit/codemirror-vim": "^6.3.0",
         "@rollup/plugin-commonjs": "^28.0.6",
+        "@rollup/plugin-node-resolve": "^16.0.1",
         "@rollup/plugin-terser": "^0.4.4",
         "@rollup/plugin-typescript": "^12.1.4",
         "@types/node": "^24.1.0",
@@ -43,7 +44,6 @@
         "eslint-import-resolver-typescript": "^4.4.4",
         "eslint-plugin-import": "^2.32.0",
         "eslint-plugin-relative-imports-when-same-folder": "^0.1.1",
-        "js-base64": "^3.7.5",
         "obsidian": "^0.15.0",
         "rollup": "^4.46.1",
         "rollup-plugin-dts": "^6.2.1",
@@ -54,6 +54,7 @@
         "web-ext": "^8.8.0"
     },
     "dependencies": {
+        "js-base64": "^3.7.7",
         "set.prototype.difference": "^1.1.5",
         "set.prototype.intersection": "^1.1.5",
         "valibot": "^0.24.1"

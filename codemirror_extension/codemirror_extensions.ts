@@ -24,13 +24,13 @@ import {
 import { syntaxTree } from "@codemirror/language";
 
 import { main } from "../src/extension";
-import type { LatexSuitePluginSettings } from "src/settings/settings";
+import type { LatexSuitePluginSettings } from "../src/settings/settings";
 import {
     DEFAULT_SETTINGS,
     getSettingsSnippets,
     getSettingsSnippetVariables,
     SETTINGS_EXPLANATIONS,
-} from "src/settings/settings";
+} from "../src/settings/settings";
 
 const codeMirrorExt = {
     Decoration,
@@ -75,4 +75,4 @@ export type {
     LatexSuiteFacet,
     LatexSuitePluginSettingsExplanations,
 } from "../src/settings/settings";
-export type { Snippet } from "../src/snippets/snippets";
+export type { Snippet } from "../src/snippets/snippets.ts";

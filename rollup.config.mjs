@@ -2,6 +2,7 @@
 import typescript from "@rollup/plugin-typescript";
 import { dts } from "rollup-plugin-dts";
 import inlineCode from "rollup-plugin-inline-code";
+import { nodeResolve } from "@rollup/plugin-node-resolve";
 
 export default [
     {
@@ -23,7 +24,11 @@ export default [
             "@lezer/lr",
             "tslib",
         ],
-        plugins: [typescript(), inlineCode.default({ prefix: "inline:" })],
+        plugins: [
+            typescript(),
+            inlineCode.default({ prefix: "inline:" }),
+            nodeResolve(),
+        ],
     },
     {
         input: "codemirror_extension/codemirror_extensions.ts",
@@ -31,6 +36,6 @@ export default [
             format: "es",
             file: "dist/index.d.ts",
         },
-        plugins: [dts()],
+        plugins: [dts(), nodeResolve()],
     },
 ];

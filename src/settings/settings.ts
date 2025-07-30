@@ -3,11 +3,11 @@ import type { Environment } from "../snippets/environment";
 import {
     DEFAULT_SNIPPETS,
     DEFAULT_SNIPPETS_str,
-} from "src/utils/default_snippets";
+} from "../utils/default_snippets";
 import {
     DEFAULT_SNIPPET_VARIABLES,
     DEFAULT_SNIPPET_VARIABLES_str,
-} from "src/utils/default_snippet_variables";
+} from "../utils/default_snippet_variables";
 import {
     parseSnippets,
     parseSnippetsSync,
