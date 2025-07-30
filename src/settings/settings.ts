@@ -233,7 +233,7 @@ export type LatexSuitePluginSettingsExplanations = {
         title: string;
         description: string;
         type: "boolean" | "string" | "array" | Array<string>;
-        defaultValue?: LatexSuitePluginSettingsRaw[P];
+        defaultValue: LatexSuitePluginSettingsRaw[P];
     };
 };
 
@@ -303,6 +303,7 @@ export const SETTINGS_EXPLANATIONS: LatexSuitePluginSettingsExplanations = {
         description:
             'A list of characters that denote the start/end of a fraction. e.g. if + is included in the list, "a+b/c" will expand to "a+\\frac{b}{c}". If + is not in the list, it will expand to "\\frac{a+b}{c}".',
         type: "string",
+        defaultValue: DEFAULT_SETTINGS.autofractionBreakingChars,
     },
     matrixShortcutsEnabled: {
         title: "Enabled",

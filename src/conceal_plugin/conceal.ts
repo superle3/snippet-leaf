@@ -382,7 +382,7 @@ export const mkConcealPlugin = (
                     //@ts-ignore
                     const cm = view.cm;
                     if (cm && typeof cm.signal === "function") {
-                        cm.signa("vim-command-done");
+                        cm.signal("vim-command-done");
                     }
                 },
                 revealTimeout,

@@ -71,7 +71,7 @@ type CodeMirrorExt = {
     RangeSetBuilder: typeof RangeSetBuilderC;
 };
 
-export async function main(
+export function main(
     codemirror_objects: CodeMirrorExt,
     settings = DEFAULT_SETTINGS
 ) {

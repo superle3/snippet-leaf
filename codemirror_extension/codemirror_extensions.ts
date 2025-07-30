@@ -65,8 +65,7 @@ export function latex_suite(
     return main(codeMirrorExt, options);
 }
 
-export default {
-    latex_suite,
+export {
     DEFAULT_SETTINGS,
     SETTINGS_EXPLANATIONS,
     getSettingsSnippetVariables,

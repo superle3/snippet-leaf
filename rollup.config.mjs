@@ -3,6 +3,7 @@ import typescript from "@rollup/plugin-typescript";
 import { dts } from "rollup-plugin-dts";
 import inlineCode from "rollup-plugin-inline-code";
 import { nodeResolve } from "@rollup/plugin-node-resolve";
+import { readFile } from "fs/promises";
 
 const prefix = "inline:";
 
@@ -19,24 +20,21 @@ const inlin_plugin = {
                 options
             );
             // target - name
-            paths.add(name.id);
+            // const moduleInfo = await this.load(name);
+            // moduleInfo.moduleSideEffects = true;
 
-            return name.id;
+            return { id: `${prefix}${name.id}`, moduleSideEffects: true };
         }
         return null;
     },
-    transform: function (codeContent, id) {
-        if (!paths.has(id)) {
-            return null;
+    load: async function (id) {
+        if (id.startsWith(prefix)) {
+            const sourceArray = id.split(prefix);
+            const filePath = sourceArray[sourceArray.length - 1];
+            const code = await readFile(filePath, "utf-8");
+            return `export default ${JSON.stringify(code)};`;
         }
-
-        const code = `export default ${JSON.stringify(codeContent.trim())};`;
-        const map = { mappings: "" };
-
-        return {
-            code,
-            map,
-        };
+        return null;
     },
 };
 
