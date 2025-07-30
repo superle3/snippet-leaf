@@ -45,6 +45,8 @@ export class Mode {
     parenInlineMath: boolean;
     bracketBlockMath: boolean;
     textEnv: boolean;
+    equation: boolean;
+    array: boolean;
 
     /** Whether the state is inside an inline math environment. */
     get inlineMath(): boolean {
@@ -53,13 +55,12 @@ export class Mode {
 
     /** Whether the state is inside a block math environment. */
     get blockMath(): boolean {
-        return this.dollarBlockMath || this.bracketBlockMath;
-    }
-    /**
-     * Whether the state is inside an equation bounded by $ or $$ delimeters.
-     */
-    inEquation(): boolean {
-        return this.inlineMath || this.blockMath;
+        return (
+            this.dollarBlockMath ||
+            this.bracketBlockMath ||
+            this.equation ||
+            this.array
+        );
     }
 
     /**
@@ -87,6 +88,8 @@ export class Mode {
         this.dollarInlineMath = false;
         this.dollarBlockMath = false;
         this.parenInlineMath = false;
+        this.equation = false;
+        this.array = false;
     }
 
     invert() {
@@ -108,6 +111,8 @@ export class Mode {
                     mode.dollarBlockMath = true;
                     mode.parenInlineMath = true;
                     mode.dollarInlineMath = true;
+                    mode.equation = true;
+                    mode.array = true;
                     break;
                 case "n":
                     mode.dollarInlineMath = true;
@@ -116,6 +121,8 @@ export class Mode {
                 case "M":
                     mode.bracketBlockMath = true;
                     mode.dollarBlockMath = true;
+                    mode.equation = true;
+                    mode.array = true;
                     break;
                 case "t":
                     mode.text = true;

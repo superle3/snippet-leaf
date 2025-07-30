@@ -17,20 +17,10 @@ export const runMatrixShortcuts = (
     const settings = getLatexSuiteConfig(view, latexSuiteConfig);
 
     // Check whether we are inside a matrix / align / case environment
-    let isInsideAnEnv = false;
-
-    for (const envName of settings.matrixShortcutsEnvNames) {
-        const env = {
-            openSymbol: "\\begin{" + envName + "}",
-            closeSymbol: "\\end{" + envName + "}",
-        };
-
-        isInsideAnEnv = ctx.isWithinEnvironment(ctx.pos, env, syntaxTree);
-        if (isInsideAnEnv) break;
+    const envName = ctx.getEnvironmentName(syntaxTree);
+    if (!envName || !settings.matrixShortcutsEnvNames.includes(envName)) {
+        return false;
     }
-
-    if (!isInsideAnEnv) return false;
-
     // Take main cursor since ctx.mode takes the main cursor, weird behaviour is expected with multicursor because of this.
     if (key === "Tab" && view.state.selection.main.empty) {
         view.dispatch(view.state.replaceSelection(" & "));

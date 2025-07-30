@@ -45,6 +45,8 @@ export class Context {
             ctx.mode.dollarBlockMath = mathMode.type === MathMode.DollarDisplay;
             ctx.mode.dollarInlineMath = mathMode.type === MathMode.DollarInline;
             ctx.mode.parenInlineMath = mathMode.type === MathMode.ParenInline;
+            ctx.mode.equation = MathMode.Equation === mathMode.type;
+            ctx.mode.array = MathMode.Array === mathMode.type;
             ctx.mode.text = false;
             ctx.boundsCache.set(ctx.pos, mathMode);
         } else {
@@ -181,11 +183,11 @@ export class Context {
         // yes, I also want the cache to work over the produced range instead of just that one through
         // a BTree or the like, but that'd be probably overkill
         if (this.boundsCache.has(pos)) {
-            return this.boundsCache.get(pos).bounds;
+            return this.boundsCache.get(pos).inner_bounds;
         }
 
-        const mathMode = equationType(this.state, syntaxTree);
-        const bounds = mathMode?.bounds;
+        const mathMode = equationType(this.state, syntaxTree, pos);
+        const bounds = mathMode?.inner_bounds;
 
         this.boundsCache.set(pos, mathMode);
         return bounds;
@@ -196,20 +198,9 @@ export class Context {
     ): Bounds {
         const mathMode = this.boundsCache.has(pos)
             ? this.boundsCache.get(pos)
-            : equationType(this.state, syntaxTree);
+            : equationType(this.state, syntaxTree, pos);
         if (!mathMode) return;
-        const offSets = {
-            [MathMode.BracketDisplay]: BracketMathOffset,
-            [MathMode.DollarDisplay]: DisplayMathOffset,
-            [MathMode.ParenInline]: ParenMathOffset,
-            [MathMode.DollarInline]: InlineMathOffset,
-            [MathMode.Array]: ArrayMathOffset,
-            [MathMode.TextEnv]: TextEnvOffset,
-        };
-        return {
-            start: mathMode.bounds.start - offSets[mathMode.type].start,
-            end: mathMode.bounds.end - offSets[mathMode.type].end,
-        };
+        return mathMode.outer_bounds;
     }
 
     // Accounts for equations within text environments, e.g. $$\text{... $...$}$$
@@ -217,8 +208,19 @@ export class Context {
         syntaxTree: typeof syntaxTreeC,
         pos: number = this.pos
     ): Bounds {
-        const bounds = getInnerEquationBounds(this.state, syntaxTree);
+        const bounds = getInnerEquationBounds(this.state, syntaxTree, pos);
         return bounds;
+    }
+
+    getEnvironmentName(
+        syntaxTree: typeof syntaxTreeC,
+        pos: number = this.pos
+    ): string | null {
+        const mathMode = this.boundsCache.has(pos)
+            ? this.boundsCache.get(pos)
+            : equationType(this.state, syntaxTree, pos);
+        if (!mathMode || !("EnvName" in mathMode)) return null;
+        return mathMode.EnvName;
     }
 }
 
@@ -227,6 +229,7 @@ export enum MathMode {
     DollarDisplay,
     ParenInline,
     BracketDisplay,
+    Equation,
     Array,
     TextEnv,
 }
@@ -249,93 +252,134 @@ const ParenMathOffset: Bounds = {
 };
 
 // TODO: implement this properly somehow
-const ArrayMathOffset: Bounds = {
-    start: 0,
-    end: 0,
-};
-// TODO: implement this properly somehow
 const TextEnvOffset: Bounds = {
     start: 0,
     end: 0,
 };
 
-type EquationInfo = {
-    type: MathMode;
-    bounds: Bounds;
-} | null;
+type EquationInfo =
+    | {
+          type: Exclude<MathMode, MathMode.Equation | MathMode.Array>;
+          inner_bounds: Bounds;
+          outer_bounds: Bounds;
+      }
+    | {
+          type: MathMode.Equation | MathMode.Array;
+          inner_bounds: Bounds;
+          outer_bounds: Bounds;
+          EnvName: string;
+      }
+    | null;
 
+const mathContext: Record<
+    string,
+    (node: SyntaxNode, state?: EditorStateC) => EquationInfo | false
+> = {
+    InlineMath: (node: SyntaxNode): EquationInfo => ({
+        type: MathMode.DollarInline,
+        inner_bounds: addBounds(boundsFromNode(node), InlineMathOffset),
+        outer_bounds: boundsFromNode(node),
+    }),
+    ParenMath: (node: SyntaxNode): EquationInfo => ({
+        type: MathMode.ParenInline,
+        inner_bounds: addBounds(boundsFromNode(node), ParenMathOffset),
+        outer_bounds: boundsFromNode(node),
+    }),
+    BracketMath: (node: SyntaxNode): EquationInfo => ({
+        type: MathMode.BracketDisplay,
+        inner_bounds: addBounds(boundsFromNode(node), BracketMathOffset),
+        outer_bounds: boundsFromNode(node),
+    }),
+    DisplayMath: (node: SyntaxNode): EquationInfo => {
+        return {
+            type: MathMode.DollarDisplay,
+            inner_bounds: addBounds(boundsFromNode(node), DisplayMathOffset),
+            outer_bounds: boundsFromNode(node),
+        };
+    },
+    /**
+     * Handles the special case where the grammar returns displaymath for `$|$` when that should be inline math.
+     * @param node the node to check
+     * @returns inline math bounds or null if its not the special case.
+     */
+    DollarMath: (node: SyntaxNode): EquationInfo => {
+        if (node.to - node.from < 4) {
+            return {
+                type: MathMode.DollarInline,
+                inner_bounds: addBounds(boundsFromNode(node), InlineMathOffset),
+                outer_bounds: boundsFromNode(node),
+            };
+        }
+        return null;
+    },
+    TextArgument: (node: SyntaxNode): EquationInfo => ({
+        type: MathMode.TextEnv,
+        inner_bounds: addBounds(boundsFromNode(node), TextEnvOffset),
+        outer_bounds: boundsFromNode(node),
+    }),
+    EquationEnvironment: (
+        node: SyntaxNode & { name: "EquationEnvironment" },
+        state: EditorStateC
+    ) => {
+        const { EnvName, inner_bounds } = getInnerBoundsFromEquation(
+            node,
+            state
+        );
+        if (!inner_bounds) {
+            console.warn("No bounds found for EquationEnvironment");
+            return false;
+        }
+        return {
+            type: MathMode.Equation,
+            inner_bounds,
+            outer_bounds: boundsFromNode(node),
+            EnvName,
+        };
+    },
+    EquationArrayEnvironment: (
+        node: SyntaxNode & { name: "EquationArrayEnvironment" },
+        state: EditorStateC
+    ) => {
+        const { EnvName, inner_bounds } = getInnerBoundsFromEquation(
+            node,
+            state
+        );
+        if (!inner_bounds) {
+            console.warn(
+                "No bounds found for EquationArrayEnvironment",
+                EnvName,
+                inner_bounds
+            );
+            return false;
+        }
+        return {
+            type: MathMode.Array,
+            inner_bounds,
+            outer_bounds: boundsFromNode(node),
+            EnvName,
+        };
+    },
+} as const;
 const equationType = (
     state: EditorStateC,
     syntaxTree: typeof syntaxTreeC,
-    direction: 1 | -1 = 1,
-    iterations: number = 0
+    pos: number = state.selection.main.to,
+    direction: 1 | -1 = 1
 ): EquationInfo => {
-    const pos = state.selection.main.to;
     const tree: Tree = syntaxTree(state);
 
     // Traverse up the tree to find math context
     let currentNode: NodeIterator = tree.resolveStack(pos, direction);
-    let type: MathMode;
-    let bounds: Bounds;
-    let offset: Bounds;
     while (currentNode) {
-        if (currentNode.node.name === "InlineMath") {
-            type = MathMode.DollarInline;
-            bounds = boundsFromNode(currentNode.node);
-            offset = InlineMathOffset;
-            break;
-        } else if (currentNode.node.name === "ParenMath") {
-            type = MathMode.ParenInline;
-            bounds = boundsFromNode(currentNode.node);
-            offset = ParenMathOffset;
-            break;
-        } else if (currentNode.node.name === "BracketMath") {
-            type = MathMode.BracketDisplay;
-            bounds = boundsFromNode(currentNode.node);
-            offset = BracketMathOffset;
-            break;
-        } else if (currentNode.node.name === "DisplayMath") {
-            if (pos === currentNode.node.from || pos === currentNode.node.to) {
-                return null;
+        const context = mathContext[currentNode.node.name];
+        if (context !== undefined) {
+            const result = context(currentNode.node, state);
+            if (result !== false) {
+                return result;
             }
-            type = MathMode.DollarDisplay;
-            bounds = boundsFromNode(currentNode.node);
-            offset = DisplayMathOffset;
-            break;
-        } else if (currentNode.node.name === "ArrayMath") {
-            type = MathMode.Array;
-            bounds = boundsFromNode(currentNode.node);
-            offset = ArrayMathOffset;
-            break;
-        } else if (currentNode.node.name === "DollarMath") {
-            if (currentNode.node.to - currentNode.node.from < 4) {
-                type = MathMode.DollarInline;
-                bounds = boundsFromNode(currentNode.node);
-                offset = InlineMathOffset;
-                break;
-            }
-            return equationType(
-                state,
-                syntaxTree,
-                -direction as 1 | -1,
-                iterations
-            );
-        } else if (currentNode.node.name === "TextArgument") {
-            type = MathMode.TextEnv;
-            bounds = boundsFromNode(currentNode.node);
-            offset = TextEnvOffset;
-            break;
         }
-        iterations++;
         currentNode = currentNode.next;
     }
-    if (type) {
-        return {
-            type,
-            bounds: addBounds(bounds, offset),
-        };
-    }
-
     return null;
 };
 
@@ -351,6 +395,35 @@ const addBounds = (...bounds: Bounds[]) => {
     });
 };
 
+const getInnerBoundsFromEquation = (
+    node: SyntaxNode & {
+        name: "EquationEnvironment" | "EquationArrayEnvironment";
+    },
+    state: EditorStateC
+): { EnvName: string; inner_bounds: Bounds } | null => {
+    const hash_map: Record<string, string> = {
+        EquationEnvironment: "EquationEnvName",
+        EquationArrayEnvironment: "EquationArrayEnvName",
+    };
+    const equation_name_node = node
+        .getChild("EndEnv")
+        .getChild("EnvNameGroup")
+        ?.getChild(hash_map[node.name]);
+    const content = node.getChild("Content");
+    if (!content || !equation_name_node) {
+        console.warn(
+            `No content or equation name found for ${node.name} at position ${node.from}-${node.to}`,
+            content,
+            equation_name_node
+        );
+        return null;
+    }
+    return {
+        EnvName: state.sliceDoc(equation_name_node.from, equation_name_node.to),
+        inner_bounds: boundsFromNode(content),
+    };
+};
+
 /**
  * Figures out where this equation starts and where it ends.
  *
@@ -362,7 +435,7 @@ export const getEquationBounds = (
     pos?: number
 ): Bounds | null => {
     if (!pos) pos = state.selection.main.to;
-    return equationType(state, syntaxTree)?.bounds ?? null;
+    return equationType(state, syntaxTree)?.inner_bounds ?? null;
 };
 
 // Accounts for equations within text environments, e.g. $$\text{... $...$}$$
@@ -372,7 +445,7 @@ const getInnerEquationBounds = (
     pos?: number
 ): Bounds => {
     if (!pos) pos = state.selection.main.to;
-    return equationType(state, syntaxTree, 1, 0)?.bounds;
+    return equationType(state, syntaxTree, pos, 1)?.inner_bounds;
 };
 
 const boundsFromNode = (node: SyntaxNode): Bounds | null => {
