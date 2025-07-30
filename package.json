@@ -2,7 +2,7 @@
     "name": "obsidian-latex-suite",
     "version": "1.9.8",
     "description": "Make typesetting LaTeX math as fast as handwriting through snippets, text expansion, and editor enhancements",
-    "main": "dist/extension.js",
+    "main": "dist/index.js",
     "scripts": {
         "web": "node esbuild.config.mjs web",
         "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
@@ -10,7 +10,8 @@
         "web:full": "concurrently \"npm run web:ext\" \"npm run web\"",
         "web:ext": "env --chdir=./browser_extension -S web-ext run",
         "lint": "eslint --ext .ts,.js src browser_extension --fix",
-        "build:rollup": "rollup -c"
+        "build:rollup": "rollup -c",
+        "prepare": "npm run build:rollup"
     },
     "keywords": [],
     "author": "",
