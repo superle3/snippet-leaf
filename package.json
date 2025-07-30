@@ -39,7 +39,7 @@
         "dotenv": "^17.0.1",
         "esbuild": "^0.20.2",
         "esbuild-plugin-inline-import": "^1.0.2",
-        "eslint": "^8.56.0",
+        "eslint": "^9.32.0",
         "eslint-import-resolver-typescript": "^4.4.4",
         "eslint-plugin-import": "^2.32.0",
         "eslint-plugin-relative-imports-when-same-folder": "^0.1.1",
