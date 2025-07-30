@@ -5,8 +5,8 @@ import type { snippetQueues } from "src/snippets/codemirror/snippet_queue_state_
 import type { expandSnippetsC } from "../snippets/snippet_management";
 import { autoEnlargeBrackets } from "./auto_enlarge_brackets";
 import type { Context } from "../utils/context";
-import type { LatexSuiteFacet } from "../snippets/codemirror/config";
-import { getLatexSuiteConfig } from "../snippets/codemirror/config";
+import type { LatexSuiteFacet } from "src/settings/settings";
+import { getLatexSuiteConfig } from "src/settings/settings";
 import type { syntaxTree as syntaxTreeC } from "@codemirror/language";
 
 export const runAutoFraction = (

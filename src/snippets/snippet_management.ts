@@ -1,5 +1,5 @@
-import { Decoration as DecorationC, EditorView } from "@codemirror/view";
-import {
+import type { Decoration as DecorationC, EditorView } from "@codemirror/view";
+import type {
     EditorSelection as EditorSelectionC,
     ChangeSet as ChangeSetC,
 } from "@codemirror/state";

@@ -4,11 +4,13 @@
     "description": "Make typesetting LaTeX math as fast as handwriting through snippets, text expansion, and editor enhancements",
     "main": "dist/extension.js",
     "scripts": {
-        "dev": "node esbuild.config.mjs",
+        "web": "node esbuild.config.mjs web",
         "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
-        "version": "node version-bump.mjs && git add manifest.json versions.json",
-        "dev:full": "concurrently \"npm run dev:web\" \"npm run dev\"",
-        "dev:web": "dotenv -e .env -- web-ext run"
+        "version": "node version-bump.mjs && git add browser.manifest.json versions.json",
+        "web:full": "concurrently \"npm run web:ext\" \"npm run web\"",
+        "web:ext": "env --chdir=./browser_extension -S web-ext run",
+        "lint": "eslint --ext .ts,.js src browser_extension --fix",
+        "build:rollup": "rollup -c"
     },
     "keywords": [],
     "author": "",
@@ -25,26 +27,38 @@
         "@lezer/common": "^1.0.3",
         "@popperjs/core": "2.11.5",
         "@replit/codemirror-vim": "^6.3.0",
+        "@rollup/plugin-commonjs": "^28.0.6",
+        "@rollup/plugin-node-resolve": "^16.0.1",
+        "@rollup/plugin-terser": "^0.4.4",
+        "@rollup/plugin-typescript": "^12.1.4",
         "@types/node": "^24.1.0",
-        "@typescript-eslint/eslint-plugin": "^6.18.0",
-        "@typescript-eslint/parser": "^6.18.0",
+        "@typescript-eslint/eslint-plugin": "^8.38.0",
+        "@typescript-eslint/parser": "^8.38.0",
         "builtin-modules": "^3.2.0",
         "codemirror": "^6.0.0",
         "concurrently": "^9.2.0",
         "dotenv": "^17.0.1",
         "esbuild": "^0.20.2",
         "esbuild-plugin-inline-import": "^1.0.2",
-        "eslint": "^8.56.0",
-        "js-base64": "^3.7.5",
+        "eslint": "^9.32.0",
+        "eslint-import-resolver-typescript": "^4.4.4",
+        "eslint-plugin-import": "^2.32.0",
+        "eslint-plugin-relative-imports-when-same-folder": "^0.1.1",
         "obsidian": "^0.15.0",
+        "rollup": "^4.46.1",
+        "rollup-plugin-dts": "^6.2.1",
+        "rollup-plugin-inline-code": "^1.2.7",
         "tslib": "2.3.1",
         "typescript": "^5.8.3",
+        "typescript-eslint": "^8.38.0",
         "web-ext": "^8.8.0"
     },
     "dependencies": {
+        "js-base64": "^3.7.7",
         "set.prototype.difference": "^1.1.5",
         "set.prototype.intersection": "^1.1.5",
-        "valibot": "^0.24.1",
-        "winston": "^3.17.0"
-    }
+        "valibot": "^0.24.1"
+    },
+    "type": "module",
+    "types": "dist/index.d.ts"
 }

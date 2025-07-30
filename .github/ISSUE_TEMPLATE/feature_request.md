@@ -6,14 +6,21 @@ labels: enhancement
 ---
 
 # Description of the Problem
+
 <!-- A clear and concise description of what the problem is. For example: "It's annoying when [...]" -->
 
 # Description of the Solution
+
 <!-- A clear and concise description of your solution and what you want to happen. -->
 
 # Additional
+
 <!-- # Considered Alternatives  -->
 <!-- A list of any alternative solutions or features you've considered. What makes your solution to the problem the best?  -->
 
 <!-- # Additional context -->
 <!-- Add any other context or screenshots about the feature request here. -->
+
+<!-- **Note:** This extensions will try to be as close the the original plugin as is reasonable.
+As such it is primarily focused on enhancing the writing of LaTeX.
+-->

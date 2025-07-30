@@ -1,5 +1,4 @@
-import type {
-    Output} from "valibot";
+import type { Output } from "valibot";
 import {
     optional,
     object,
@@ -11,8 +10,7 @@ import {
     special,
 } from "valibot";
 import { encode } from "js-base64";
-import type {
-    Snippet} from "./snippets";
+import type { Snippet } from "./snippets";
 import {
     RegexSnippet,
     serializeSnippetLike,
@@ -25,7 +23,7 @@ import { sortSnippets } from "./sort";
 import type { Environment } from "./environment";
 import { EXCLUSIONS } from "./environment";
 
-export type SnippetVariables = Record<string, string>;
+export type SnippetVariables = Record<`$\{${string}}`, string>;
 
 export async function importRaw(maybeJavaScriptCode: string) {
     let raw;
@@ -46,7 +44,7 @@ export async function importRaw(maybeJavaScriptCode: string) {
             );
         }
     } catch (e) {
-        throw "Invalid format.";
+        throw `Invalid format: ${e}`;
     }
     return raw;
 }
@@ -55,7 +53,11 @@ export async function parseSnippetVariables(snippetVariablesStr: string) {
     const rawSnippetVariables = (await importRaw(
         snippetVariablesStr
     )) as SnippetVariables;
-
+    return parseSnippetVariablesSync(rawSnippetVariables);
+}
+export function parseSnippetVariablesSync(
+    rawSnippetVariables: SnippetVariables | Record<string, string>
+) {
     if (Array.isArray(rawSnippetVariables))
         throw "Cannot parse an array as a variables object";
 
@@ -65,12 +67,13 @@ export async function parseSnippetVariables(snippetVariablesStr: string) {
             if (!variable.endsWith("}")) {
                 throw `Invalid snippet variable name '${variable}': Starts with '\${' but does not end with '}'. You need to have both or neither.`;
             }
-            snippetVariables[variable] = value;
+            snippetVariables[variable as `$\{${string}}`] = value;
         } else {
             if (variable.endsWith("}")) {
                 throw `Invalid snippet variable name '${variable}': Ends with '}' but does not start with '\${'. You need to have both or neither.`;
             }
-            snippetVariables["${" + variable + "}"] = value;
+            snippetVariables[("${" + variable + "}") as `$\{${string}}`] =
+                value;
         }
     }
     return snippetVariables;
@@ -80,8 +83,14 @@ export async function parseSnippets(
     snippetsStr: string,
     snippetVariables: SnippetVariables
 ) {
-    let rawSnippets = (await importRaw(snippetsStr)) as RawSnippet[];
+    const rawSnippets = (await importRaw(snippetsStr)) as RawSnippet[];
+    return parseSnippetsSync(rawSnippets, snippetVariables);
+}
 
+export function parseSnippetsSync(
+    rawSnippets: RawSnippet[],
+    snippetVariables: SnippetVariables
+) {
     let parsedSnippets;
     try {
         // validate the shape of the raw snippets
@@ -119,7 +128,7 @@ async function importModuleDefault(module: string): Promise<unknown> {
     try {
         data = await import(module);
     } catch (e) {
-        throw `failed to import module ${module}`;
+        throw `failed to import module ${module}: ${e}`;
     }
 
     // it's safe to use `in` here - it has a null prototype, so `Object.hasOwnProperty` isn't available,
@@ -145,7 +154,7 @@ const RawSnippetSchema = object({
     description: optional(string_()),
 });
 
-type RawSnippet = Output<typeof RawSnippetSchema>;
+export type RawSnippet = Output<typeof RawSnippetSchema>;
 
 /**
  * tries to parse an unknown value as an array of raw snippets
@@ -158,7 +167,7 @@ function validateRawSnippets(snippets: unknown): RawSnippet[] {
     return snippets.map((raw) => {
         try {
             return parse(RawSnippetSchema, raw);
-        } catch (e) {
+        } catch {
             throw `Value does not resemble snippet.\nErroring snippet:\n${serializeSnippetLike(
                 raw
             )}`;

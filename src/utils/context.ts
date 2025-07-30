@@ -6,7 +6,7 @@ import type { EditorView } from "@codemirror/view";
 import { findMatchingBracket, getCloseBracket } from "./editor_utils";
 import { Mode } from "../snippets/options";
 import type { Environment } from "../snippets/environment";
-import type { LatexSuiteFacet } from "../snippets/codemirror/config";
+import type { LatexSuiteFacet } from "src/settings/settings";
 import type { syntaxTree as syntaxTreeC } from "@codemirror/language";
 import type { SyntaxNode, Tree, NodeIterator } from "@lezer/common";
 
@@ -51,15 +51,6 @@ export class Context {
             ctx.mode.text = true;
         }
 
-        const mode_hashmap: Record<string, string> = {
-            default: "text",
-            [MathMode.DollarInline]: "inlineMath",
-            [MathMode.DollarDisplay]: "blockMath",
-            [MathMode.ParenInline]: "parenInline",
-            [MathMode.BracketDisplay]: "bracketDisplay",
-            [MathMode.Array]: "arrayMath",
-        };
-        console.log("mode_hashmap:", mode_hashmap[mathMode?.type ?? "default"]);
         return ctx;
     }
 
