@@ -5,6 +5,9 @@ import {
     Prec,
     Facet,
     ChangeSet,
+    RangeValue,
+    RangeSet,
+    RangeSetBuilder,
 } from "@codemirror/state";
 import {
     undo,
@@ -51,6 +54,9 @@ const codeMirrorExt = {
     redo,
     isolateHistory,
     Facet,
+    RangeValue,
+    RangeSet,
+    RangeSetBuilder,
 };
 
 export function latex_suite(

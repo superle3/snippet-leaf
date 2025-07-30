@@ -33,6 +33,12 @@ import type {
 } from "@replit/codemirror-vim";
 
 import { main } from "../src/extension";
+import {
+    RangeSet,
+    RangeSetBuilder,
+    RangeValue,
+} from "./codemirror_range_objects";
+import { DEFAULT_SETTINGS } from "src/settings/settings";
 
 type CodeMirrorExt = {
     Decoration: typeof DecorationC;
@@ -79,9 +85,17 @@ window.addEventListener("UNSTABLE_editor:extensions", async (e) => {
     const { CodeMirror, extensions } = evt.detail;
     const { keymap } = CodeMirror;
     const Facet = Object.getPrototypeOf(keymap).constructor as typeof FacetC;
-    const { extension: latex_suite_extensions } = await main({
-        ...CodeMirror,
-        Facet,
-    });
+    const { extension: latex_suite_extensions } = await main(
+        {
+            ...CodeMirror,
+            Facet,
+            //@ts-ignore
+            RangeSet,
+            //@ts-ignore
+            RangeSetBuilder,
+            RangeValue,
+        },
+        DEFAULT_SETTINGS
+    );
     extensions.push(latex_suite_extensions);
 });

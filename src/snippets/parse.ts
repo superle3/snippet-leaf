@@ -17,7 +17,6 @@ import {
     serializeSnippetLike,
     StringSnippet,
     VISUAL_SNIPPET_MAGIC_SELECTION_PLACEHOLDER,
-    VISUAL_SNIPPET_MAGIC_SELECTION_PLACEHOLDER,
     VisualSnippet,
 } from "./snippets";
 import { Options } from "./options";
