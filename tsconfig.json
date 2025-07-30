@@ -10,6 +10,7 @@
         "noImplicitAny": true,
         "moduleResolution": "node",
         "importHelpers": true,
+        "declaration": true,
 
         "lib": ["DOM", "ES5", "ES6", "ES7", "ES2021.String"]
     },

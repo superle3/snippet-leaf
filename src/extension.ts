@@ -65,7 +65,7 @@ type CodeMirrorExt = {
 
 export async function main(
     codemirror_objects: CodeMirrorExt,
-    settings: LatexSuitePluginSettings = DEFAULT_SETTINGS
+    settings = DEFAULT_SETTINGS
 ) {
     const {
         Prec,

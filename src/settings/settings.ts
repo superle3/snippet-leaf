@@ -1,7 +1,13 @@
 import { ARE_SETTINGS_PARSED, type Snippet } from "../snippets/snippets";
 import type { Environment } from "../snippets/environment";
-import { DEFAULT_SNIPPETS_str } from "src/utils/default_snippets";
-import { DEFAULT_SNIPPET_VARIABLES_str } from "src/utils/default_snippet_variables";
+import {
+    DEFAULT_SNIPPETS,
+    DEFAULT_SNIPPETS_str,
+} from "src/utils/default_snippets";
+import {
+    DEFAULT_SNIPPET_VARIABLES,
+    DEFAULT_SNIPPET_VARIABLES_str,
+} from "src/utils/default_snippet_variables";
 import {
     parseSnippets,
     parseSnippetsSync,
@@ -43,6 +49,11 @@ interface LatexSuiteParsedSettings {
 }
 
 export type LatexSuitePluginSettings = {
+    snippets: Array<RawSnippet | Snippet>;
+    snippetVariables: SnippetVariables;
+} & LatexSuiteBasicSettings &
+    LatexSuiteRawSettings;
+export type LatexSuitePluginSettingsRaw = {
     snippets: Array<RawSnippet | Snippet> | string;
     snippetVariables: SnippetVariables | string;
 } & LatexSuiteBasicSettings &
@@ -54,8 +65,8 @@ export type LatexSuiteCMSettings = {
     LatexSuiteParsedSettings;
 
 export const DEFAULT_SETTINGS: LatexSuitePluginSettings = {
-    snippets: DEFAULT_SNIPPETS_str,
-    snippetVariables: DEFAULT_SNIPPET_VARIABLES_str,
+    snippets: DEFAULT_SNIPPETS,
+    snippetVariables: DEFAULT_SNIPPET_VARIABLES,
 
     // Basic settings
     snippetsEnabled: true,
@@ -213,12 +224,12 @@ function validateSnippetVariables(
     return snippetVariables;
 }
 
-type LatexSuitePluginSettingsExplanations = {
-    [P in keyof LatexSuitePluginSettings]: {
+export type LatexSuitePluginSettingsExplanations = {
+    [P in keyof LatexSuitePluginSettingsRaw]: {
         title: string;
         description: string;
         type: "boolean" | "string" | "array" | Array<string>;
-        defaultValue?: LatexSuitePluginSettings[P];
+        defaultValue?: LatexSuitePluginSettingsRaw[P];
     };
 };
 

@@ -1,6 +1,7 @@
 // rollup.config.js
-import typescript from "rollup-plugin-ts";
-import dts from "rollup-plugin-dts";
+import typescript from "@rollup/plugin-typescript";
+import { dts } from "rollup-plugin-dts";
+import inlineCode from "rollup-plugin-inline-code";
 
 export default [
     {
@@ -12,6 +13,7 @@ export default [
         },
         external: [
             "@codemirror/autocomplete",
+            "@codemirror/commands",
             "@codemirror/language",
             "@codemirror/lint",
             "@codemirror/state",
@@ -21,7 +23,7 @@ export default [
             "@lezer/lr",
             "tslib",
         ],
-        plugins: [typescript()],
+        plugins: [typescript(), inlineCode.default({ prefix: "inline:" })],
     },
     {
         input: "codemirror_extension/codemirror_extensions.ts",

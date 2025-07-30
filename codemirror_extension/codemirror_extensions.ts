@@ -29,6 +29,7 @@ import {
     DEFAULT_SETTINGS,
     getSettingsSnippets,
     getSettingsSnippetVariables,
+    SETTINGS_EXPLANATIONS,
 } from "src/settings/settings";
 
 const codeMirrorExt = {
@@ -61,6 +62,17 @@ export function latex_suite(
 export default {
     latex_suite,
     DEFAULT_SETTINGS,
+    SETTINGS_EXPLANATIONS,
     getSettingsSnippetVariables,
     getSettingsSnippets,
 };
+
+export type { RawSnippet, SnippetVariables } from "../src/extension";
+export type {
+    LatexSuitePluginSettingsRaw,
+    LatexSuiteCMSettings,
+    LatexSuitePluginSettings,
+    LatexSuiteFacet,
+    LatexSuitePluginSettingsExplanations,
+} from "../src/settings/settings";
+export type { Snippet } from "../src/snippets/snippets";
