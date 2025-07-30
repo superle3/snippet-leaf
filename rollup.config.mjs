@@ -4,6 +4,42 @@ import { dts } from "rollup-plugin-dts";
 import inlineCode from "rollup-plugin-inline-code";
 import { nodeResolve } from "@rollup/plugin-node-resolve";
 
+const prefix = "inline:";
+
+const paths = new Set();
+
+const inlin_plugin = {
+    name: "rollup-plugin-inline-code-fix",
+    resolveId: async function (sourcePath, importer, options) {
+        if (sourcePath.includes(prefix)) {
+            const sourceArray = sourcePath.split(prefix);
+            const name = await this.resolve(
+                sourceArray[sourceArray.length - 1],
+                importer,
+                options
+            );
+            // target - name
+            paths.add(name.id);
+
+            return name.id;
+        }
+        return null;
+    },
+    transform: function (codeContent, id) {
+        if (!paths.has(id)) {
+            return null;
+        }
+
+        const code = `export default ${JSON.stringify(codeContent.trim())};`;
+        const map = { mappings: "" };
+
+        return {
+            code,
+            map,
+        };
+    },
+};
+
 export default [
     {
         input: "codemirror_extension/codemirror_extensions.ts",
@@ -24,11 +60,7 @@ export default [
             "@lezer/lr",
             "tslib",
         ],
-        plugins: [
-            typescript(),
-            inlineCode.default({ prefix: "inline:" }),
-            nodeResolve(),
-        ],
+        plugins: [typescript(), nodeResolve(), inlin_plugin],
     },
     {
         input: "codemirror_extension/codemirror_extensions.ts",
