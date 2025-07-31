@@ -18,7 +18,7 @@ function getMarkerDecoration(
     from: number,
     to: number,
     color: number,
-    Decoration: typeof DecorationC
+    Decoration: typeof DecorationC,
 ) {
     const className = `${LATEX_SUITE_TABSTOP_DECO_CLASS} ${LATEX_SUITE_TABSTOP_DECO_CLASS}-${color}`;
 
@@ -32,7 +32,7 @@ function getMarkerDecoration(
 export function TabstopGroup(
     endSnippet: ReturnType<typeof stateEffect_variables>["endSnippet"],
     EditorSelection: typeof EditorSelectionC,
-    Decoration: typeof DecorationC
+    Decoration: typeof DecorationC,
 ) {
     return class TabstopGroup1 {
         decos: DecorationSet;
@@ -41,7 +41,7 @@ export function TabstopGroup(
 
         constructor(tabstopSpecs: TabstopSpec[], color: number) {
             const decos = tabstopSpecs.map((spec) =>
-                getMarkerDecoration(spec.from, spec.to, color, Decoration)
+                getMarkerDecoration(spec.from, spec.to, color, Decoration),
             );
             this.decos = Decoration.set(decos, true);
             this.color = color;
@@ -51,7 +51,7 @@ export function TabstopGroup(
         select(
             view: EditorView,
             selectEndpoints: boolean,
-            isEndSnippet: boolean
+            isEndSnippet: boolean,
         ) {
             const sel = this.toEditorSelection();
             const toSelect = selectEndpoints
@@ -88,7 +88,7 @@ export function TabstopGroup(
         containsSelection(selection: EditorSelectionC) {
             function rangeLiesWithinSelection(
                 range: SelectionRange,
-                sel: SelectionRange[]
+                sel: SelectionRange[],
             ) {
                 for (const selRange of sel) {
                     if (
@@ -143,7 +143,7 @@ export function tabstopSpecsToTabstopGroups(
     color: number,
     endSnippet: ReturnType<typeof stateEffect_variables>["endSnippet"],
     EditorSelection: typeof EditorSelectionC,
-    Decoration: typeof DecorationC
+    Decoration: typeof DecorationC,
 ): TabstopGroupC[] {
     const tabstopsByNumber: { [n: string]: TabstopSpec[] } = {};
 
@@ -164,7 +164,7 @@ export function tabstopSpecsToTabstopGroups(
     for (const number of numbers) {
         const grp = new (TabstopGroup(endSnippet, EditorSelection, Decoration))(
             tabstopsByNumber[number],
-            color
+            color,
         );
         result.push(grp);
     }
@@ -175,7 +175,7 @@ export function tabstopSpecsToTabstopGroups(
 export function getEditorSelectionEndpoints(sel: EditorSelectionC) {
     const EditorSelection = sel.constructor as typeof EditorSelectionC;
     const endpoints = sel.ranges.map((range) =>
-        EditorSelection.range(range.to, range.to)
+        EditorSelection.range(range.to, range.to),
     );
 
     return EditorSelection.create(endpoints);

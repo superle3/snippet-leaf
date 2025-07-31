@@ -4,8 +4,7 @@ import type { syntaxTree as syntaxTreeC } from "@codemirror/language";
 import type { EditorView as EditorViewC } from "@codemirror/view";
 // import { getEquationBounds } from "src/utils/context";
 // import { findMatchingBracket } from "src/utils/editor_utils";
-import type { ConcealSpec } from "./conceal";
-import { mkConcealSpec } from "./conceal";
+import type { ConcealSpec, Replacement } from "./conceal";
 import {
     greek,
     cmd_symbols,
@@ -19,6 +18,14 @@ import {
 } from "./conceal_maps";
 import type { Bounds } from "src/utils/context";
 
+/**
+ * Make a ConcealSpec from the given list of Replacements.
+ * This function essentially does nothing but improves readability.
+ */
+function mkConcealSpec(...replacements: Replacement[]) {
+    return replacements;
+}
+
 function reverse(s: string) {
     return s.split("").reverse().join("");
 }
@@ -28,7 +35,7 @@ function findMatchingBracket(
     openBracket: string,
     closeBracket: string,
     searchBackwards: boolean,
-    end?: number
+    end?: number,
 ): number {
     if (searchBackwards) {
         const reversedIndex = findMatchingBracket(
@@ -36,7 +43,7 @@ function findMatchingBracket(
             text.length - (start + closeBracket.length),
             reverse(closeBracket),
             reverse(openBracket),
-            false
+            false,
         );
 
         if (reversedIndex === -1) return -1;
@@ -94,7 +101,7 @@ function concealSymbols(
     suffix: string,
     symbolMap: { [key: string]: string },
     className?: string,
-    allowSucceedingLetters = true
+    allowSucceedingLetters = true,
 ): ConcealSpec[] {
     const symbolNames = Object.keys(symbolMap);
 
@@ -126,7 +133,7 @@ function concealSymbols(
                 end: end,
                 text: symbolMap[symbol],
                 class: className,
-            })
+            }),
         );
     }
 
@@ -136,7 +143,7 @@ function concealSymbols(
 function concealModifier(
     eqn: string,
     modifier: string,
-    combiningCharacter: string
+    combiningCharacter: string,
 ): ConcealSpec[] {
     const regexStr = "\\\\" + modifier + "{([A-Za-z])}";
     const symbolRegex = new RegExp(regexStr, "g");
@@ -154,7 +161,7 @@ function concealModifier(
                 end: match.index + match[0].length,
                 text: symbol + combiningCharacter,
                 class: "latex-suite-unicode",
-            })
+            }),
         );
     }
 
@@ -164,7 +171,7 @@ function concealModifier(
 function concealSupSub(
     eqn: string,
     superscript: boolean,
-    symbolMap: { [key: string]: string }
+    symbolMap: { [key: string]: string },
 ): ConcealSpec[] {
     const prefix = superscript ? "\\^" : "_";
     const conceal_regex = /[A-Za-z0-9()[\]/+-=<>'|#:;\\ *]/;
@@ -202,7 +209,7 @@ function concealSupSub(
                 text: replacement,
                 class: "cm-number",
                 elementType: elementType,
-            })
+            }),
         );
     }
 
@@ -211,7 +218,7 @@ function concealSupSub(
 
 function concealModified_A_to_Z_0_to_9(
     eqn: string,
-    mathBBsymbolMap: { [key: string]: string }
+    mathBBsymbolMap: { [key: string]: string },
 ): ConcealSpec[] {
     const regexStr =
         "\\\\(mathbf|boldsymbol|underline|mathrm|text|mathbb){([A-Za-z0-9 ]+)}";
@@ -235,7 +242,7 @@ function concealModified_A_to_Z_0_to_9(
                     end: end,
                     text: value,
                     class: "cm-concealed-bold",
-                })
+                }),
             );
         } else if (type === "underline") {
             specs.push(
@@ -244,7 +251,7 @@ function concealModified_A_to_Z_0_to_9(
                     end: end,
                     text: value,
                     class: "cm-concealed-underline",
-                })
+                }),
             );
         } else if (type === "mathrm") {
             specs.push(
@@ -253,7 +260,7 @@ function concealModified_A_to_Z_0_to_9(
                     end: end,
                     text: value,
                     class: "cm-concealed-mathrm",
-                })
+                }),
             );
         } else if (type === "text") {
             // Conceal _\text{}
@@ -265,7 +272,7 @@ function concealModified_A_to_Z_0_to_9(
                         text: value,
                         class: "cm-concealed-mathrm",
                         elementType: "sub",
-                    })
+                    }),
                 );
             }
         } else if (type === "mathbb") {
@@ -274,7 +281,7 @@ function concealModified_A_to_Z_0_to_9(
                 .map((el) => mathBBsymbolMap[el])
                 .join("");
             specs.push(
-                mkConcealSpec({ start: start, end: end, text: replacement })
+                mkConcealSpec({ start: start, end: end, text: replacement }),
             );
         }
     }
@@ -284,7 +291,7 @@ function concealModified_A_to_Z_0_to_9(
 
 function concealModifiedGreekLetters(
     eqn: string,
-    greekSymbolMap: { [key: string]: string }
+    greekSymbolMap: { [key: string]: string },
 ): ConcealSpec[] {
     const greekSymbolNames = Object.keys(greekSymbolMap);
     const regexStr =
@@ -311,7 +318,7 @@ function concealModifiedGreekLetters(
                     end: end,
                     text: greekSymbolMap[value],
                     class: "cm-concealed-underline",
-                })
+                }),
             );
         } else if (type === "boldsymbol") {
             specs.push(
@@ -320,7 +327,7 @@ function concealModifiedGreekLetters(
                     end: end,
                     text: greekSymbolMap[value],
                     class: "cm-concealed-bold",
-                })
+                }),
             );
         }
     }
@@ -348,7 +355,7 @@ function concealText(eqn: string): ConcealSpec[] {
                 end: end,
                 text: value,
                 class: "cm-concealed-mathrm cm-variable-2",
-            })
+            }),
         );
     }
 
@@ -375,7 +382,7 @@ function concealOperators(eqn: string, symbols: string[]): ConcealSpec[] {
                 end: end,
                 text: value,
                 class: "cm-concealed-mathrm cm-variable-2",
-            })
+            }),
         );
     }
 
@@ -387,7 +394,7 @@ function concealAtoZ(
     prefix: string,
     suffix: string,
     symbolMap: { [key: string]: string },
-    className?: string
+    className?: string,
 ): ConcealSpec[] {
     const regexStr = prefix + "([A-Z]+)" + suffix;
     const symbolRegex = new RegExp(regexStr, "g");
@@ -407,7 +414,7 @@ function concealAtoZ(
                 end: match.index + match[0].length,
                 text: replacement,
                 class: className,
-            })
+            }),
         );
     }
 
@@ -428,7 +435,7 @@ function concealBraKet(eqn: string): ConcealSpec[] {
             match.index,
             "{",
             "}",
-            false
+            false,
         );
         if (contentEnd === -1) continue;
 
@@ -457,8 +464,8 @@ function concealBraKet(eqn: string): ConcealSpec[] {
                     end: contentEnd + 1,
                     text: right,
                     class: "cm-bracket",
-                }
-            )
+                },
+            ),
         );
     }
 
@@ -479,7 +486,7 @@ function concealSet(eqn: string): ConcealSpec[] {
             commandStart,
             "{",
             "}",
-            false
+            false,
         );
         if (contentEnd === -1) continue;
 
@@ -500,8 +507,8 @@ function concealSet(eqn: string): ConcealSpec[] {
                     end: contentEnd + 1,
                     text: "}",
                     class: "cm-bracket",
-                }
-            )
+                },
+            ),
         );
     }
 
@@ -518,7 +525,7 @@ function concealFraction(eqn: string): ConcealSpec[] {
             match.index,
             "{",
             "}",
-            false
+            false,
         );
         if (numeratorEnd === -1) continue;
 
@@ -532,7 +539,7 @@ function concealFraction(eqn: string): ConcealSpec[] {
             numeratorEnd + 1,
             "{",
             "}",
-            false
+            false,
         );
         if (denominatorEnd === -1) continue;
 
@@ -576,8 +583,8 @@ function concealFraction(eqn: string): ConcealSpec[] {
                     end: denominatorEnd + 1,
                     text: ")",
                     class: "cm-bracket",
-                }
-            )
+                },
+            ),
         );
     }
 
@@ -601,7 +608,7 @@ function concealOperatorname(eqn: string): ConcealSpec[] {
                 end: end2,
                 text: value,
                 class: "cm-concealed-mathrm cm-variable-2",
-            })
+            }),
         );
     }
 
@@ -610,7 +617,7 @@ function concealOperatorname(eqn: string): ConcealSpec[] {
 
 export function conceal(
     view: EditorViewC,
-    syntaxTree: typeof syntaxTreeC
+    syntaxTree: typeof syntaxTreeC,
 ): ConcealSpec[] {
     const specs: ConcealSpec[] = [];
     for (const { from, to } of view.visibleRanges) {
@@ -648,7 +655,7 @@ export function conceal(
                     "",
                     ALL_SYMBOLS,
                     undefined,
-                    false
+                    false,
                 ),
                 ...concealSupSub(eqn, true, ALL_SYMBOLS),
                 ...concealSupSub(eqn, false, ALL_SYMBOLS),

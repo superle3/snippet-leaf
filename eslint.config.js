@@ -46,5 +46,5 @@ export default tseslint.config(
             "@typescript-eslint/consistent-type-imports": "error",
             quotes: ["warn", "double", { avoidEscape: true }],
         },
-    }
+    },
 );

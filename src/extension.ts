@@ -71,9 +71,9 @@ type CodeMirrorExt = {
     RangeSetBuilder: typeof RangeSetBuilderC;
 };
 
-export async function main(
+export function main(
     codemirror_objects: CodeMirrorExt,
-    settings = DEFAULT_SETTINGS
+    settings = DEFAULT_SETTINGS,
 ) {
     const {
         Prec,
@@ -105,7 +105,7 @@ export async function main(
             const settings =
                 input.length > 0
                     ? processLatexSuiteSettings(
-                          Object.assign({}, DEFAULT_SETTINGS, ...input)
+                          Object.assign({}, DEFAULT_SETTINGS, ...input),
                       )
                     : processLatexSuiteSettings(DEFAULT_SETTINGS);
             return settings;
@@ -119,7 +119,7 @@ export async function main(
             redo,
             StateField,
             Decoration,
-            EditorView
+            EditorView,
         );
     const {
         addTabstops,
@@ -131,7 +131,7 @@ export async function main(
         StateEffect,
         StateField,
         Decoration,
-        EditorView
+        EditorView,
     );
     const { clearSnippetQueue, queueSnippet, snippetQueueStateField } =
         snippetQueues(StateEffect, StateField);
@@ -143,7 +143,7 @@ export async function main(
                 EditorView.domEventHandlers({
                     keydown: function (
                         event: KeyboardEvent,
-                        view: EditorViewC
+                        view: EditorViewC,
                     ) {
                         return onKeydown(
                             event,
@@ -167,19 +167,19 @@ export async function main(
                                     startSnippet,
                                     endSnippet,
                                     EditorSelection,
-                                    Decoration
-                                )
+                                    Decoration,
+                                ),
                         );
                     },
-                })
+                }),
             ),
             EditorView.updateListener.of((update: ViewUpdateC) =>
-                handleUpdate(update, latexSuiteConfig, handleUndoRedo)
+                handleUpdate(update, latexSuiteConfig, handleUndoRedo),
             ),
             create_snippet_extensions(
                 tabstopsStateField,
                 snippetQueueStateField,
-                snippetInvertedEffects
+                snippetInvertedEffects,
             ),
         ];
         extensions.push(...snippet_leaf_extension);
@@ -194,7 +194,7 @@ export async function main(
                 RangeSetBuilder,
                 RangeValue,
                 syntaxTree,
-                latexSuiteConfig
+                latexSuiteConfig,
             ).extension;
 
             extensions.push(conceal_plugin);

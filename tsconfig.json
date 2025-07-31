@@ -16,7 +16,6 @@
     },
     "include": [
         "src/**/*.ts",
-        "src/*.ts",
         "codemirror_extension/**/*.ts",
         "browser_extension/**/*.ts"
     ]

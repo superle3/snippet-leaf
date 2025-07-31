@@ -11,7 +11,7 @@ export const autoEnlargeBrackets = (
     latexSuiteConfig: LatexSuiteFacet,
     syntaxTree: typeof syntaxTreeC,
     queueSnippet: ReturnType<typeof snippetQueues>["queueSnippet"],
-    expandSnippets: (view: EditorViewC) => boolean
+    expandSnippets: (view: EditorViewC) => boolean,
 ) => {
     const settings = getLatexSuiteConfig(view, latexSuiteConfig);
     if (!settings.autoEnlargeBrackets) return;
@@ -67,7 +67,7 @@ export const autoEnlargeBrackets = (
         // Check whether the brackets contain sum, int or frac
         const bracketContents = text.slice(i + 1, j);
         const containsTrigger = settings.autoEnlargeBracketsTriggers.some(
-            (word) => bracketContents.includes("\\" + word)
+            (word) => bracketContents.includes("\\" + word),
         );
 
         if (!containsTrigger) {
@@ -80,13 +80,13 @@ export const autoEnlargeBrackets = (
             view,
             start + i,
             start + i + bracketSize,
-            left + open + " "
+            left + open + " ",
         );
         queueSnippet(
             view,
             start + j,
             start + j + bracketSize,
-            " " + right + close
+            " " + right + close,
         );
     }
 

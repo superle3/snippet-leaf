@@ -100,7 +100,7 @@ export function processLatexSuiteSettings(
     settings: LatexSuitePluginSettings & {
         snippets: Array<RawSnippet | Snippet>;
         snippetVariables: Record<string, string>;
-    }
+    },
 ): LatexSuiteCMSettings {
     function strToArray(str: string | string[]) {
         return Array.isArray(str)
@@ -109,7 +109,7 @@ export function processLatexSuiteSettings(
     }
 
     function getAutofractionExcludedEnvs(
-        envsStr: string | Environment[]
+        envsStr: string | Environment[],
     ): Environment[] {
         if (Array.isArray(envsStr)) {
             for (const env of envsStr) {
@@ -119,7 +119,7 @@ export function processLatexSuiteSettings(
                     !("closeSymbol" in env)
                 ) {
                     throw new Error(
-                        "Invalid environment format in autofractionExcludedEnvs. Expected an array of objects with openSymbol and closeSymbol properties."
+                        "Invalid environment format in autofractionExcludedEnvs. Expected an array of objects with openSymbol and closeSymbol properties.",
                     );
                 }
             }
@@ -139,17 +139,17 @@ export function processLatexSuiteSettings(
         return envs;
     }
     const snippetVariables = validateSnippetVariables(
-        settings.snippetVariables
+        settings.snippetVariables,
     );
     const snippets = [
         ...settings.snippets.filter(
-            (snippet) => ARE_SETTINGS_PARSED in snippet
+            (snippet) => ARE_SETTINGS_PARSED in snippet,
         ),
         ...parseSnippetsSync(
             settings.snippets.filter(
-                (snippet) => !(ARE_SETTINGS_PARSED in snippet)
+                (snippet) => !(ARE_SETTINGS_PARSED in snippet),
             ) as RawSnippet[],
-            snippetVariables
+            snippetVariables,
         ),
     ];
     return {
@@ -159,11 +159,11 @@ export function processLatexSuiteSettings(
         snippets,
         snippetVariables,
         autofractionExcludedEnvs: getAutofractionExcludedEnvs(
-            settings.autofractionExcludedEnvs
+            settings.autofractionExcludedEnvs,
         ),
         matrixShortcutsEnvNames: strToArray(settings.matrixShortcutsEnvNames),
         autoEnlargeBracketsTriggers: strToArray(
-            settings.autoEnlargeBracketsTriggers
+            settings.autoEnlargeBracketsTriggers,
         ),
     };
 }
@@ -174,7 +174,7 @@ export type LatexSuiteFacet = FacetC<
 
 export function getLatexSuiteConfig(
     viewOrState: EditorView | EditorState,
-    latexSuiteConfig: LatexSuiteFacet
+    latexSuiteConfig: LatexSuiteFacet,
 ): LatexSuiteCMSettings {
     const state = (viewOrState as EditorView).state
         ? (viewOrState as EditorView).state
@@ -194,7 +194,7 @@ export async function getSettingsSnippetVariables(snippetVariables: string) {
 
 export async function getSettingsSnippets(
     snippets: string,
-    snippetVariables: SnippetVariables
+    snippetVariables: SnippetVariables,
 ) {
     try {
         return await parseSnippets(snippets, snippetVariables);
@@ -205,12 +205,12 @@ export async function getSettingsSnippets(
 }
 
 function validateSnippetVariables(
-    snippetVariables: Record<string, string>
+    snippetVariables: Record<string, string>,
 ): SnippetVariables {
     for (const [key, value] of Object.entries(snippetVariables)) {
         if (typeof value !== "string") {
             throw new Error(
-                `Invalid snippet variable value: ${value}. Value must be strings.`
+                `Invalid snippet variable value: ${value}. Value must be strings.`,
             );
         }
         if (
@@ -221,7 +221,7 @@ function validateSnippetVariables(
             )
         ) {
             throw new Error(
-                `Invalid snippet variable key: ${key}. Keys must be enclosed in \${}.`
+                `Invalid snippet variable key: ${key}. Keys must be enclosed in \${}.`,
             );
         }
     }
@@ -233,7 +233,7 @@ export type LatexSuitePluginSettingsExplanations = {
         title: string;
         description: string;
         type: "boolean" | "string" | "array" | Array<string>;
-        defaultValue?: LatexSuitePluginSettingsRaw[P];
+        defaultValue: LatexSuitePluginSettingsRaw[P];
     };
 };
 
@@ -303,6 +303,7 @@ export const SETTINGS_EXPLANATIONS: LatexSuitePluginSettingsExplanations = {
         description:
             'A list of characters that denote the start/end of a fraction. e.g. if + is included in the list, "a+b/c" will expand to "a+\\frac{b}{c}". If + is not in the list, it will expand to "\\frac{a+b}{c}".',
         type: "string",
+        defaultValue: DEFAULT_SETTINGS.autofractionBreakingChars,
     },
     matrixShortcutsEnabled: {
         title: "Enabled",

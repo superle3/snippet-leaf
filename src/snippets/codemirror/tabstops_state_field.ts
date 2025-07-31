@@ -13,7 +13,7 @@ export function create_tabstopsStateField(
     StateEffect: typeof StateEffectC,
     StateField: typeof StateFieldC,
     Decoration: typeof DecorationC,
-    EditorView: typeof EditorViewC
+    EditorView: typeof EditorViewC,
 ) {
     const addTabstopsEffect = StateEffect.define<TabstopGroupC[]>();
     const removeAllTabstopsEffect = StateEffect.define();
@@ -40,7 +40,7 @@ export function create_tabstopsStateField(
             if (transaction.selection) {
                 const currTabstopGroupIndex = getCurrentTabstopGroupIndex(
                     tabstopGroups,
-                    transaction.selection
+                    transaction.selection,
                 );
                 tabstopGroups = tabstopGroups.slice(currTabstopGroupIndex);
 
@@ -73,7 +73,7 @@ export function create_tabstopsStateField(
 
     function getCurrentTabstopGroupIndex(
         tabstopGroups: TabstopGroupC[],
-        sel: EditorSelectionC
+        sel: EditorSelectionC,
     ): number {
         for (let i = 0; i < tabstopGroups.length; i++) {
             const tabstopGroup = tabstopGroups[i];

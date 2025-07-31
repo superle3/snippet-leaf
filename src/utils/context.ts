@@ -26,7 +26,7 @@ export class Context {
     static fromState(
         state: EditorStateC,
         latexSuiteConfig: LatexSuiteFacet,
-        syntaxTree: typeof syntaxTreeC
+        syntaxTree: typeof syntaxTreeC,
     ): Context {
         const ctx = new Context();
         const sel = state.selection;
@@ -59,7 +59,7 @@ export class Context {
     static fromView(
         view: EditorView,
         latexSuiteConfig: LatexSuiteFacet,
-        syntaxTree: typeof syntaxTreeC
+        syntaxTree: typeof syntaxTreeC,
     ): Context {
         return Context.fromState(view.state, latexSuiteConfig, syntaxTree);
     }
@@ -67,7 +67,7 @@ export class Context {
     isWithinEnvironment(
         pos: number,
         env: Environment,
-        syntaxTree: typeof syntaxTreeC
+        syntaxTree: typeof syntaxTreeC,
     ): boolean {
         if (!this.mode.inMath()) return false;
 
@@ -107,7 +107,7 @@ export class Context {
                 left + offset,
                 openSearchSymbol,
                 env.closeSymbol,
-                false
+                false,
             );
 
             if (right === -1) return false;
@@ -134,7 +134,7 @@ export class Context {
                     openSymbol: "\\text{",
                     closeSymbol: "}",
                 },
-                syntaxTree
+                syntaxTree,
             ) ||
             this.isWithinEnvironment(
                 this.pos,
@@ -142,7 +142,7 @@ export class Context {
                     openSymbol: "\\tag{",
                     closeSymbol: "}",
                 },
-                syntaxTree
+                syntaxTree,
             ) ||
             this.isWithinEnvironment(
                 this.pos,
@@ -150,7 +150,7 @@ export class Context {
                     openSymbol: "\\begin{",
                     closeSymbol: "}",
                 },
-                syntaxTree
+                syntaxTree,
             ) ||
             this.isWithinEnvironment(
                 this.pos,
@@ -158,7 +158,7 @@ export class Context {
                     openSymbol: "\\end{",
                     closeSymbol: "}",
                 },
-                syntaxTree
+                syntaxTree,
             ) ||
             this.isWithinEnvironment(
                 this.pos,
@@ -166,7 +166,7 @@ export class Context {
                     openSymbol: "\\mathrm{",
                     closeSymbol: "}",
                 },
-                syntaxTree
+                syntaxTree,
             ) ||
             this.isWithinEnvironment(
                 this.pos,
@@ -174,7 +174,7 @@ export class Context {
                     openSymbol: "\\color{",
                     closeSymbol: "}",
                 },
-                syntaxTree
+                syntaxTree,
             )
         );
     }
@@ -194,7 +194,7 @@ export class Context {
     }
     getOuterBounds(
         syntaxTree: typeof syntaxTreeC,
-        pos: number = this.pos
+        pos: number = this.pos,
     ): Bounds {
         const mathMode = this.boundsCache.has(pos)
             ? this.boundsCache.get(pos)
@@ -206,7 +206,7 @@ export class Context {
     // Accounts for equations within text environments, e.g. $$\text{... $...$}$$
     getInnerBounds(
         syntaxTree: typeof syntaxTreeC,
-        pos: number = this.pos
+        pos: number = this.pos,
     ): Bounds {
         const bounds = getInnerEquationBounds(this.state, syntaxTree, pos);
         return bounds;
@@ -214,7 +214,7 @@ export class Context {
 
     getEnvironmentName(
         syntaxTree: typeof syntaxTreeC,
-        pos: number = this.pos
+        pos: number = this.pos,
     ): string | null {
         const mathMode = this.boundsCache.has(pos)
             ? this.boundsCache.get(pos)
@@ -319,11 +319,11 @@ const mathContext: Record<
     }),
     EquationEnvironment: (
         node: SyntaxNode & { name: "EquationEnvironment" },
-        state: EditorStateC
+        state: EditorStateC,
     ) => {
         const { EnvName, inner_bounds } = getInnerBoundsFromEquation(
             node,
-            state
+            state,
         );
         if (!inner_bounds) {
             console.warn("No bounds found for EquationEnvironment");
@@ -338,17 +338,17 @@ const mathContext: Record<
     },
     EquationArrayEnvironment: (
         node: SyntaxNode & { name: "EquationArrayEnvironment" },
-        state: EditorStateC
+        state: EditorStateC,
     ) => {
         const { EnvName, inner_bounds } = getInnerBoundsFromEquation(
             node,
-            state
+            state,
         );
         if (!inner_bounds) {
             console.warn(
                 "No bounds found for EquationArrayEnvironment",
                 EnvName,
-                inner_bounds
+                inner_bounds,
             );
             return false;
         }
@@ -364,7 +364,7 @@ const equationType = (
     state: EditorStateC,
     syntaxTree: typeof syntaxTreeC,
     pos: number = state.selection.main.to,
-    direction: 1 | -1 = 1
+    direction: 1 | -1 = 1,
 ): EquationInfo => {
     const tree: Tree = syntaxTree(state);
 
@@ -399,7 +399,7 @@ const getInnerBoundsFromEquation = (
     node: SyntaxNode & {
         name: "EquationEnvironment" | "EquationArrayEnvironment";
     },
-    state: EditorStateC
+    state: EditorStateC,
 ): { EnvName: string; inner_bounds: Bounds } | null => {
     const hash_map: Record<string, string> = {
         EquationEnvironment: "EquationEnvName",
@@ -414,7 +414,7 @@ const getInnerBoundsFromEquation = (
         console.warn(
             `No content or equation name found for ${node.name} at position ${node.from}-${node.to}`,
             content,
-            equation_name_node
+            equation_name_node,
         );
         return null;
     }
@@ -432,7 +432,7 @@ const getInnerBoundsFromEquation = (
 export const getEquationBounds = (
     state: EditorStateC,
     syntaxTree: typeof syntaxTreeC,
-    pos?: number
+    pos?: number,
 ): Bounds | null => {
     if (!pos) pos = state.selection.main.to;
     return equationType(state, syntaxTree)?.inner_bounds ?? null;
@@ -442,7 +442,7 @@ export const getEquationBounds = (
 const getInnerEquationBounds = (
     state: EditorStateC,
     syntaxTree: typeof syntaxTreeC,
-    pos?: number
+    pos?: number,
 ): Bounds => {
     if (!pos) pos = state.selection.main.to;
     return equationType(state, syntaxTree, pos, 1)?.inner_bounds;

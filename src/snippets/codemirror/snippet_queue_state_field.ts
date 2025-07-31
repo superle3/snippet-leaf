@@ -7,7 +7,7 @@ import { SnippetChangeSpec } from "./snippet_change_spec";
 
 export function snippetQueues(
     StateEffect: typeof StateEffectC,
-    StateField: typeof StateFieldC
+    StateField: typeof StateFieldC,
 ) {
     const queueSnippetEffect = StateEffect.define<SnippetChangeSpec>();
     const clearSnippetQueueEffect = StateEffect.define();
@@ -37,7 +37,7 @@ export function snippetQueues(
         from: number,
         to: number,
         insert: string,
-        keyPressed?: string
+        keyPressed?: string,
     ) {
         const snippet = new SnippetChangeSpec(from, to, insert, keyPressed);
 

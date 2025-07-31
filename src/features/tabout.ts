@@ -10,7 +10,7 @@ import type { syntaxTree as syntaxTreeC } from "@codemirror/language";
 export const tabout = (
     view: EditorView,
     ctx: Context,
-    syntaxTree: typeof syntaxTreeC
+    syntaxTree: typeof syntaxTreeC,
 ): boolean => {
     if (!ctx.mode.inMath()) {
         return false;
@@ -74,7 +74,7 @@ export const tabout = (
 
 export const shouldTaboutByCloseBracket = (
     view: EditorView,
-    keyPressed: string
+    keyPressed: string,
 ) => {
     const sel = view.state.selection.main;
     if (!sel.empty) return;
