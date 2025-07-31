@@ -1,34 +1,26 @@
 // rollup.config.js
 import typescript from "@rollup/plugin-typescript";
 import { dts } from "rollup-plugin-dts";
-import inlineCode from "rollup-plugin-inline-code";
 import { nodeResolve } from "@rollup/plugin-node-resolve";
 import { readFile } from "fs/promises";
 
 const prefix = "inline:";
-
-const paths = new Set();
 
 const inlin_plugin = {
     name: "rollup-plugin-inline-code-fix",
     resolveId: async function (sourcePath, importer, options) {
         if (sourcePath.includes(prefix)) {
             const sourceArray = sourcePath.split(prefix);
-            const name = await this.resolve(
-                sourceArray[sourceArray.length - 1],
-                importer,
-                options
-            );
-            // target - name
-            // const moduleInfo = await this.load(name);
-            // moduleInfo.moduleSideEffects = true;
-
-            return { id: `${prefix}${name.id}`, moduleSideEffects: true };
+            const filePath = sourceArray[sourceArray.length - 1];
+            const name = (await this.resolve(filePath, importer, options)) ?? {
+                id: filePath,
+            };
+            return { id: `\0${prefix}${name.id}`, moduleSideEffects: true };
         }
         return null;
     },
     load: async function (id) {
-        if (id.startsWith(prefix)) {
+        if (id.startsWith(`\0${prefix}`)) {
             const sourceArray = id.split(prefix);
             const filePath = sourceArray[sourceArray.length - 1];
             const code = await readFile(filePath, "utf-8");
@@ -58,7 +50,15 @@ export default [
             "@lezer/lr",
             "tslib",
         ],
-        plugins: [typescript(), nodeResolve(), inlin_plugin],
+        plugins: [
+            typescript({
+                tsconfig: "./tsconfig.json",
+            }),
+            nodeResolve({
+                tsconfig: "./tsconfig.json",
+            }),
+            inlin_plugin,
+        ],
     },
     {
         input: "codemirror_extension/codemirror_extensions.ts",
@@ -66,6 +66,10 @@ export default [
             format: "es",
             file: "dist/index.d.ts",
         },
-        plugins: [dts(), nodeResolve()],
+        plugins: [
+            dts({
+                tsconfig: "./tsconfig.json",
+            }),
+        ],
     },
 ];

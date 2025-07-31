@@ -8,9 +8,9 @@ Inspired by [Gilles Castel&#39;s setup using UltiSnips](https://castel.dev/post/
 
 The plugin's main feature is **snippets**, which help you write LaTeX quicker through shortcuts and text expansion! For example, type
 
--   "sqx" instead of "\sqrt{x}"
--   "a/b" instead of "\frac{a}{b}"
--   "par x y " instead of "\frac{\partial x}{\partial y}"
+- "sqx" instead of "\sqrt{x}"
+- "a/b" instead of "\frac{a}{b}"
+- "par x y " instead of "\frac{\partial x}{\partial y}"
 
 See [Gilles Castel&#39;s writeup](https://castel.dev/post/lecture-notes-1/) for more information.
 
@@ -20,16 +20,16 @@ The plugin comes with a [set of default snippets](https://github.com/superle3/sn
 
 To get started, type "dm" to enter display math mode. Try typing the following:
 
--   "xsr" → "x^{2}".
--   "x/y <kbd>Tab</kbd>" → "\\frac{x}{y}".
--   "sin @t" → "\\sin \\theta".
+- "xsr" → "x^{2}".
+- "x/y <kbd>Tab</kbd>" → "\\frac{x}{y}".
+- "sin @t" → "\\sin \\theta".
 
 **Have a look at the [cheatsheet](#cheatsheet)** for a list of commonly used default snippets.
 
 Once these feel familiar, you can check out the [**default snippets**](https://github.com/artisticat1/obsidian-latex-suite/blob/main/src/default_snippets.js) for more commands. e.g.
 
--   "par <kbd>Tab</kbd> f <kbd>Tab</kbd> x <kbd>Tab</kbd>" → "\\frac{\\partial f}{\\partial x}".
--   "dint <kbd>Tab</kbd> 2pi <kbd>Tab</kbd> sin @t <kbd>Tab</kbd> @t <kbd>Tab</kbd>" → "\\int\_{0}^{2\pi} \\sin \\theta \\, d\\theta".
+- "par <kbd>Tab</kbd> f <kbd>Tab</kbd> x <kbd>Tab</kbd>" → "\\frac{\\partial f}{\\partial x}".
+- "dint <kbd>Tab</kbd> 2pi <kbd>Tab</kbd> sin @t <kbd>Tab</kbd> @t <kbd>Tab</kbd>" → "\\int\_{0}^{2\pi} \\sin \\theta \\, d\\theta".
 
 You can also add your own snippets! [For more info on writing snippets, see **here**](#snippets). You can [view snippets written by others and share your own snippets here](https://github.com/artisticat1/obsidian-latex-suite/discussions/50).
 
@@ -43,8 +43,8 @@ Lets you type "1/x" instead of "\frac{1}{x}".
 
 For example, it makes the following expansions:
 
--   `x/` → `\frac{x}{}`
--   `(a + b(c + d))/` → `\frac{a + b(c + d)}{}`
+- `x/` → `\frac{x}{}`
+- `(a + b(c + d))/` → `\frac{a + b(c + d)}{}`
 
 and moves the cursor inside the brackets.
 
@@ -56,9 +56,9 @@ Once done typing the denominator, press <kbd>Tab</kbd> to exit the fraction.
 
 While inside a matrix, array, align, or cases environment,
 
--   Pressing <kbd>Tab</kbd> will insert the "&" symbol.
--   Pressing <kbd>Enter</kbd> will insert "\\\\" and move to a new line.
--   Pressing <kbd>Shift + Enter</kbd> will move to the end of the next line (which you can use to exit the matrix).
+- Pressing <kbd>Tab</kbd> will insert the "&" symbol.
+- Pressing <kbd>Enter</kbd> will insert "\\\\" and move to a new line.
+- Pressing <kbd>Shift + Enter</kbd> will move to the end of the next line (which you can use to exit the matrix).
 
 ![matrix shortcuts](https://raw.githubusercontent.com/artisticat1/obsidian-latex-suite/main/gifs/matrix_shortcuts.gif)
 
@@ -66,18 +66,18 @@ While inside a matrix, array, align, or cases environment,
 
 To make it easier to navigate and exit equations,
 
--   Pressing <kbd>Tab</kbd> while the cursor is at the end of an equation will move the cursor outside the `$` symbols.
--   Otherwise, pressing <kbd>Tab</kbd> will advance the cursor to the next closing bracket: `)`, `]`, `}`, `>`, or `|`.
+- Pressing <kbd>Tab</kbd> while the cursor is at the end of an equation will move the cursor outside the `$` symbols.
+- Otherwise, pressing <kbd>Tab</kbd> will advance the cursor to the next closing bracket: `)`, `]`, `}`, `>`, or `|`.
 
 ### Visual snippets
 
 Sometimes you want to annotate math, or cancel or cross out terms. Selecting some math with the cursor and typing
 
--   "U" will surround it with "\\underbrace".
--   "O" will surround it with "\\overbrace".
--   "C" will surround it with "\\cancel".
--   "K" will surround it with "\\cancelto".
--   "B" will surround it with "\\underset".
+- "U" will surround it with "\\underbrace".
+- "O" will surround it with "\\overbrace".
+- "C" will surround it with "\\cancel".
+- "K" will surround it with "\\cancelto".
+- "B" will surround it with "\\underset".
 
 ![visual snippets](https://raw.githubusercontent.com/artisticat1/obsidian-latex-suite/main/gifs/visual_snippets.gif)
 
@@ -111,26 +111,26 @@ Snippets can be edited in the plugin settings. The structure of a snippet is as 
 }
 ```
 
--   `trigger` : The text that triggers this snippet.
-    -   Triggers can also be regular expressions. [See here for more info.](./DOCS.md#regex-snippets)
--   `replacement` : The text to replace the `trigger` with.
-    -   Replacements can also be JavaScript functions. [See here for more info.](./DOCS.md#function-snippets)
--   `options` : See below.
--   `priority` (optional): This snippet's priority. Snippets with higher priority are run first. Can be negative. Defaults to 0.
--   `description` (optional): A description for this snippet.
--   `flags` (optional): Flags for regex snippets.
--   `version` (optional): version number for snippet syntax. [See here for more info](./DOCS.md#versions)
+- `trigger` : The text that triggers this snippet.
+    - Triggers can also be regular expressions. [See here for more info.](./DOCS.md#regex-snippets)
+- `replacement` : The text to replace the `trigger` with.
+    - Replacements can also be JavaScript functions. [See here for more info.](./DOCS.md#function-snippets)
+- `options` : See below.
+- `priority` (optional): This snippet's priority. Snippets with higher priority are run first. Can be negative. Defaults to 0.
+- `description` (optional): A description for this snippet.
+- `flags` (optional): Flags for regex snippets.
+- `version` (optional): version number for snippet syntax. [See here for more info](./DOCS.md#versions)
 
 #### Options
 
--   `t` : Text mode. Only run this snippet outside math
--   `m` : Math mode. Only run this snippet inside math. Shorthand for both `M` and `n`
--   `M` : Block math mode. Only run this snippet inside a `$$ ... $$` or `\[ ... \]` block
--   `n` : Inline math mode. Only run this snippet inside a `$ ... $` or `\( ... \)` block
--   `A` : Auto. Expand this snippet as soon as the trigger is typed. If omitted, the <kbd>Tab</kbd> key must be pressed to expand the snippet
--   `r` : [Regex](./DOCS.md#regex-snippets). The `trigger` will be treated as a regular expression
--   `v` : [Visual](./DOCS.md#visual-snippets). Only run this snippet on a selection. The trigger should be a single character
--   `w` : Word boundary. Only run this snippet when the trigger is preceded (and followed by) a word delimiter, such as `.`, `,`, or `-`.
+- `t` : Text mode. Only run this snippet outside math
+- `m` : Math mode. Only run this snippet inside math. Shorthand for both `M` and `n`
+- `M` : Block math mode. Only run this snippet inside a `$$ ... $$` or `\[ ... \]` block
+- `n` : Inline math mode. Only run this snippet inside a `$ ... $` or `\( ... \)` block
+- `A` : Auto. Expand this snippet as soon as the trigger is typed. If omitted, the <kbd>Tab</kbd> key must be pressed to expand the snippet
+- `r` : [Regex](./DOCS.md#regex-snippets). The `trigger` will be treated as a regular expression
+- `v` : [Visual](./DOCS.md#visual-snippets). Only run this snippet on a selection. The trigger should be a single character
+- `w` : Word boundary. Only run this snippet when the trigger is preceded (and followed by) a word delimiter, such as `.`, `,`, or `-`.
 
 Insert **tabstops** for the cursor to jump to by writing "@0", "@1", etc. in the `replacement`.
 
@@ -199,11 +199,11 @@ e.g. "pi" → "\\pi".
 
 ## Acknowledgements
 
--   [@artisticat1](https://github.com/artisticat1)'s [Obsidian Latex Suite](https://github.com/artisticat1/obsidian-latex-suite) for the snippet engine.
--   [@TeXlyre](https://github.com/TeXlyre/codemirror-lang-latex) for the LaTeX language support.
--   [@tth05](https://github.com/tth05)'s [Obsidian Completr](https://github.com/tth05/obsidian-completr) for the basis of the tabstop code.
--   [Dynamic Highlights](https://github.com/nothingislost/obsidian-dynamic-highlights/blob/master/src/settings/ui.ts) for reference.
--   [Quick Latex for Obsidian](https://github.com/joeyuping/quick_latex_obsidian) for inspiration.
+- [@artisticat1](https://github.com/artisticat1)'s [Obsidian Latex Suite](https://github.com/artisticat1/obsidian-latex-suite) for the snippet engine.
+- [@TeXlyre](https://github.com/TeXlyre/codemirror-lang-latex) for the LaTeX language support.
+- [@tth05](https://github.com/tth05)'s [Obsidian Completr](https://github.com/tth05/obsidian-completr) for the basis of the tabstop code.
+- [Dynamic Highlights](https://github.com/nothingislost/obsidian-dynamic-highlights/blob/master/src/settings/ui.ts) for reference.
+- [Quick Latex for Obsidian](https://github.com/joeyuping/quick_latex_obsidian) for inspiration.
 
 ## Contributing
 

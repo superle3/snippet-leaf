@@ -11,7 +11,7 @@ export function create_snippet_extensions(
     >["snippetQueueStateField"],
     snippetInvertedEffects: ReturnType<
         typeof stateEffect_variables
-    >["snippetInvertedEffects"]
+    >["snippetInvertedEffects"],
 ) {
     return [
         tabstopsStateField.extension,

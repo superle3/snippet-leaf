@@ -24,7 +24,7 @@ import { isComposing } from "./utils/editor_utils";
 export const handleUpdate = (
     update: ViewUpdate,
     latexSuiteConfig: LatexSuiteFacet,
-    handleUndoRedo: ReturnType<typeof stateEffect_variables>["handleUndoRedo"]
+    handleUndoRedo: ReturnType<typeof stateEffect_variables>["handleUndoRedo"],
 ) => {
     // const settings = getLatexSuiteConfig(update.state, latexSuiteConfig);
 
@@ -50,7 +50,7 @@ export const onKeydown = (
     >["tabstopsStateField"],
     clearSnippetQueue: ReturnType<typeof snippetQueues>["clearSnippetQueue"],
     queueSnippet: ReturnType<typeof snippetQueues>["queueSnippet"],
-    expandSnippets: expandSnippetsC
+    expandSnippets: expandSnippetsC,
 ): boolean | void => {
     const success = handleKeydown(
         event.key,
@@ -64,7 +64,7 @@ export const onKeydown = (
         tabstopsStateField,
         clearSnippetQueue,
         queueSnippet,
-        expandSnippets
+        expandSnippets,
     );
 
     if (success) event.preventDefault();
@@ -86,7 +86,7 @@ export const handleKeydown = (
     >["tabstopsStateField"],
     clearSnippetQueue: ReturnType<typeof snippetQueues>["clearSnippetQueue"],
     queueSnippet: ReturnType<typeof snippetQueues>["queueSnippet"],
-    expandSnippets: expandSnippetsC
+    expandSnippets: expandSnippetsC,
 ) => {
     const settings = getLatexSuiteConfig(view, latexSuiteConfig);
     const ctx = Context.fromView(view, latexSuiteConfig, syntaxTree);
@@ -123,7 +123,7 @@ export const handleKeydown = (
                     latexSuiteConfig,
                     queueSnippet,
                     expandSnippets,
-                    syntaxTree
+                    syntaxTree,
                 );
                 if (success) return true;
             } catch (e) {
@@ -147,7 +147,7 @@ export const handleKeydown = (
                 latexSuiteConfig,
                 syntaxTree,
                 queueSnippet,
-                expandSnippets
+                expandSnippets,
             );
 
             if (success) return true;
@@ -162,7 +162,7 @@ export const handleKeydown = (
                 key,
                 shiftKey,
                 latexSuiteConfig,
-                syntaxTree
+                syntaxTree,
             );
 
             if (success) return true;

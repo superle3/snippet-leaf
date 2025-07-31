@@ -12,7 +12,7 @@ export const runMatrixShortcuts = (
     key: string,
     shiftKey: boolean,
     latexSuiteConfig: LatexSuiteFacet,
-    syntaxTree: typeof syntaxTreeC
+    syntaxTree: typeof syntaxTreeC,
 ): boolean => {
     const settings = getLatexSuiteConfig(view, latexSuiteConfig);
 
@@ -44,7 +44,7 @@ export const runMatrixShortcuts = (
             const leadingIndents = matchIndents ? matchIndents[0] : "";
 
             view.dispatch(
-                view.state.replaceSelection(` \\\\\n${leadingIndents}`)
+                view.state.replaceSelection(` \\\\\n${leadingIndents}`),
             );
         } else {
             view.dispatch(view.state.replaceSelection(" \\\\ "));

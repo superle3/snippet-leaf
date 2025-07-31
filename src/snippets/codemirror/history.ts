@@ -22,13 +22,13 @@ export function stateEffect_variables(
     redo: typeof redoC,
     StateField: typeof StateFieldC,
     Decoration: typeof DecorationC,
-    EditorView: typeof EditorViewC
+    EditorView: typeof EditorViewC,
 ) {
     const removeAllTabstops = create_tabstopsStateField(
         StateEffect,
         StateField,
         Decoration,
-        EditorView
+        EditorView,
     ).removeAllTabstops;
     const startSnippet = StateEffect.define();
     const endSnippet = StateEffect.define();

@@ -66,7 +66,7 @@ export class Range<T extends RangeValue> {
         /// Its end position.
         readonly to: number,
         /// The value associated with this range.
-        readonly value: T
+        readonly value: T,
     ) {}
 
     /// @internal
@@ -90,7 +90,7 @@ export interface RangeComparator<T extends RangeValue> {
         from: number,
         to: number,
         pointA: T | null,
-        pointB: T | null
+        pointB: T | null,
     ): void;
     /// Notification for a changed boundary between ranges. For example,
     /// if the same span is covered by two partial ranges before and one
@@ -111,7 +111,7 @@ export interface SpanIterator<T extends RangeValue> {
         from: number,
         to: number,
         active: readonly T[],
-        openStart: number
+        openStart: number,
     ): void;
     /// Called when going over a point decoration. The active range
     /// decorations that cover the point and have a higher precedence
@@ -125,7 +125,7 @@ export interface SpanIterator<T extends RangeValue> {
         value: T,
         active: readonly T[],
         openStart: number,
-        index: number
+        index: number,
     ): void;
 }
 
@@ -145,7 +145,7 @@ class Chunk<T extends RangeValue> {
         // in them (or -1 for no points), so that scans that are
         // only interested in points (such as the
         // heightmap-related logic) can skip range-only chunks.
-        readonly maxPoint: number
+        readonly maxPoint: number,
     ) {}
 
     get length() {
@@ -173,7 +173,7 @@ class Chunk<T extends RangeValue> {
         offset: number,
         from: number,
         to: number,
-        f: (from: number, to: number, value: T) => void | false
+        f: (from: number, to: number, value: T) => void | false,
     ): void | false {
         for (
             let i = this.findIndex(from, -C.Far, true),
@@ -204,7 +204,7 @@ class Chunk<T extends RangeValue> {
                 const mapped = changes.mapPos(
                     curFrom,
                     val.startSide,
-                    val.mapMode
+                    val.mapMode,
                 );
                 if (mapped == null) continue;
                 newFrom = newTo = mapped;
@@ -284,7 +284,7 @@ export class RangeSet<T extends RangeValue> {
         /// @internal
         readonly nextLayer: RangeSet<T>,
         /// @internal
-        readonly maxPoint: number
+        readonly maxPoint: number,
     ) {}
 
     /// @internal
@@ -292,7 +292,7 @@ export class RangeSet<T extends RangeValue> {
         chunkPos: readonly number[],
         chunk: readonly Chunk<T>[],
         nextLayer: RangeSet<T>,
-        maxPoint: number
+        maxPoint: number,
     ) {
         return new RangeSet<T>(chunkPos, chunk, nextLayer, maxPoint);
     }
@@ -362,7 +362,7 @@ export class RangeSet<T extends RangeValue> {
                     filterTo < this.chunkPos[cur.chunkIndex]) &&
                 builder.addChunk(
                     this.chunkPos[cur.chunkIndex],
-                    this.chunk[cur.chunkIndex]
+                    this.chunk[cur.chunkIndex],
                 )
             ) {
                 cur.nextChunk();
@@ -388,7 +388,7 @@ export class RangeSet<T extends RangeValue> {
                       filter,
                       filterFrom,
                       filterTo,
-                  })
+                  }),
         );
     }
 
@@ -429,7 +429,7 @@ export class RangeSet<T extends RangeValue> {
     between(
         from: number,
         to: number,
-        f: (from: number, to: number, value: T) => void | false
+        f: (from: number, to: number, value: T) => void | false,
     ): void {
         if (this.isEmpty) return;
         for (let i = 0; i < this.chunk.length; i++) {
@@ -460,7 +460,7 @@ export class RangeSet<T extends RangeValue> {
     /// starting from `from`.
     static iter<T extends RangeValue>(
         sets: readonly RangeSet<T>[],
-        from: number = 0
+        from: number = 0,
     ): RangeCursor<T> {
         return HeapCursor.from(sets).goto(from);
     }
@@ -476,17 +476,17 @@ export class RangeSet<T extends RangeValue> {
         comparator: RangeComparator<T>,
         /// Can be used to ignore all non-point ranges, and points below
         /// the given size. When -1, all ranges are compared.
-        minPointSize: number = -1
+        minPointSize: number = -1,
     ) {
         const a = oldSets.filter(
             (set) =>
                 set.maxPoint > 0 ||
-                (!set.isEmpty && set.maxPoint >= minPointSize!)
+                (!set.isEmpty && set.maxPoint >= minPointSize!),
         );
         const b = newSets.filter(
             (set) =>
                 set.maxPoint > 0 ||
-                (!set.isEmpty && set.maxPoint >= minPointSize!)
+                (!set.isEmpty && set.maxPoint >= minPointSize!),
         );
         const sharedChunks = findSharedChunks(a, b, textDiff);
 
@@ -494,7 +494,7 @@ export class RangeSet<T extends RangeValue> {
         const sideB = new SpanCursor(b, sharedChunks, minPointSize!);
 
         textDiff.iterGaps((fromA, fromB, length) =>
-            compare(sideA, fromA, sideB, fromB, length, comparator)
+            compare(sideA, fromA, sideB, fromB, length, comparator),
         );
         if (textDiff.empty && textDiff.length == 0)
             compare(sideA, 0, sideB, 0, 0, comparator);
@@ -506,14 +506,14 @@ export class RangeSet<T extends RangeValue> {
         oldSets: readonly RangeSet<T>[],
         newSets: readonly RangeSet<T>[],
         from = 0,
-        to?: number
+        to?: number,
     ) {
         if (to == null) to = C.Far - 1;
         const a = oldSets.filter(
-            (set) => !set.isEmpty && newSets.indexOf(set) < 0
+            (set) => !set.isEmpty && newSets.indexOf(set) < 0,
         );
         const b = newSets.filter(
-            (set) => !set.isEmpty && oldSets.indexOf(set) < 0
+            (set) => !set.isEmpty && oldSets.indexOf(set) < 0,
         );
         if (a.length != b.length) return false;
         if (!a.length) return true;
@@ -545,7 +545,7 @@ export class RangeSet<T extends RangeValue> {
         iterator: SpanIterator<T>,
         /// When given and greater than -1, only points of at least this
         /// size are taken into account.
-        minPointSize: number = -1
+        minPointSize: number = -1,
     ): number {
         let cursor = new SpanCursor(sets, null, minPointSize).goto(from),
             pos = from;
@@ -558,15 +558,15 @@ export class RangeSet<T extends RangeValue> {
                     cursor.pointFrom < from
                         ? active.length + 1
                         : cursor.point.startSide < 0
-                        ? active.length
-                        : Math.min(active.length, openRanges);
+                          ? active.length
+                          : Math.min(active.length, openRanges);
                 iterator.point(
                     pos,
                     curTo,
                     cursor.point,
                     active,
                     openCount,
-                    cursor.pointRank
+                    cursor.pointRank,
                 );
                 openRanges = Math.min(cursor.openEnd(curTo), active.length);
             } else if (curTo > pos) {
@@ -587,21 +587,21 @@ export class RangeSet<T extends RangeValue> {
     /// cause the method to sort them.
     static of<T extends RangeValue>(
         ranges: readonly Range<T>[] | Range<T>,
-        sort = false
+        sort = false,
     ): RangeSet<T> {
         const build = new RangeSetBuilder<T>();
         for (const range of ranges instanceof Range
             ? [ranges]
             : sort
-            ? lazySort(ranges)
-            : ranges)
+              ? lazySort(ranges)
+              : ranges)
             build.add(range.from, range.to, range.value);
         return build.finish();
     }
 
     /// Join an array of range sets into a single set.
     static join<T extends RangeValue>(
-        sets: readonly RangeSet<T>[]
+        sets: readonly RangeSet<T>[],
     ): RangeSet<T> {
         if (!sets.length) return RangeSet.empty;
         let result = sets[sets.length - 1];
@@ -615,7 +615,7 @@ export class RangeSet<T extends RangeValue> {
                     layer.chunkPos,
                     layer.chunk,
                     result,
-                    Math.max(layer.maxPoint, result.maxPoint)
+                    Math.max(layer.maxPoint, result.maxPoint),
                 );
         }
         return result;
@@ -626,7 +626,7 @@ export class RangeSet<T extends RangeValue> {
 }
 
 function lazySort<T extends RangeValue>(
-    ranges: readonly Range<T>[]
+    ranges: readonly Range<T>[],
 ): readonly Range<T>[] {
     if (ranges.length > 1)
         for (let prev = ranges[0], i = 1; i < ranges.length; i++) {
@@ -659,7 +659,7 @@ export class RangeSetBuilder<T extends RangeValue> {
 
     private finishChunk(newArrays: boolean) {
         this.chunks.push(
-            new Chunk(this.from, this.to, this.value, this.maxPoint)
+            new Chunk(this.from, this.to, this.value, this.maxPoint),
         );
         this.chunkPos.push(this.chunkStart);
         this.chunkStart = -1;
@@ -682,7 +682,7 @@ export class RangeSetBuilder<T extends RangeValue> {
             (this.nextLayer || (this.nextLayer = new RangeSetBuilder())).add(
                 from,
                 to,
-                value
+                value,
             );
     }
 
@@ -694,7 +694,7 @@ export class RangeSetBuilder<T extends RangeValue> {
             (from - this.lastFrom || value.startSide - this.last!.startSide) < 0
         )
             throw new Error(
-                "Ranges must be added sorted by `from` position and `startSide`"
+                "Ranges must be added sorted by `from` position and `startSide`",
             );
         if (diff < 0) return false;
         if (this.from.length == C.ChunkSize) this.finishChunk(true);
@@ -741,7 +741,7 @@ export class RangeSetBuilder<T extends RangeValue> {
             this.chunkPos,
             this.chunks,
             this.nextLayer ? this.nextLayer.finishInner(next) : next,
-            this.setMaxPoint
+            this.setMaxPoint,
         );
         this.from = null as any; // Make sure further `add` calls produce errors
         return result;
@@ -751,7 +751,7 @@ export class RangeSetBuilder<T extends RangeValue> {
 function findSharedChunks(
     a: readonly RangeSet<any>[],
     b: readonly RangeSet<any>[],
-    textDiff?: ChangeDesc
+    textDiff?: ChangeDesc,
 ) {
     const inA = new Map<Chunk<any>, number>();
     for (const set of a)
@@ -785,7 +785,7 @@ class LayerCursor<T extends RangeValue> {
         readonly layer: RangeSet<T>,
         readonly skip: Set<Chunk<T>> | null,
         readonly minPoint: number,
-        readonly rank = 0
+        readonly rank = 0,
     ) {}
 
     get startSide() {
@@ -819,7 +819,7 @@ class LayerCursor<T extends RangeValue> {
             const rangeIndex = this.layer.chunk[this.chunkIndex].findIndex(
                 pos - this.layer.chunkPos[this.chunkIndex],
                 side,
-                true
+                true,
             );
             if (!forward || this.rangeIndex < rangeIndex)
                 this.setRangeIndex(rangeIndex);
@@ -899,7 +899,7 @@ class HeapCursor<T extends RangeValue> {
     static from<T extends RangeValue>(
         sets: readonly RangeSet<T>[],
         skip: Set<Chunk<T>> | null = null,
-        minPoint: number = -1
+        minPoint: number = -1,
     ): HeapCursor<T> | LayerCursor<T> {
         const heap = [];
         for (let i = 0; i < sets.length; i++) {
@@ -949,7 +949,7 @@ class HeapCursor<T extends RangeValue> {
 
 function heapBubble<T extends RangeValue>(
     heap: LayerCursor<T>[],
-    index: number
+    index: number,
 ) {
     for (let cur = heap[index]; ; ) {
         let childIndex = (index << 1) + 1;
@@ -991,7 +991,7 @@ class SpanCursor<T extends RangeValue> {
     constructor(
         sets: readonly RangeSet<T>[],
         skip: Set<Chunk<T>> | null,
-        readonly minPoint: number
+        readonly minPoint: number,
     ) {
         this.cursor = HeapCursor.from(sets, skip, minPoint);
     }
@@ -1138,7 +1138,7 @@ function compare<T extends RangeValue>(
     b: SpanCursor<T>,
     startB: number,
     length: number,
-    comparator: RangeComparator<T>
+    comparator: RangeComparator<T>,
 ) {
     a.goto(startA);
     b.goto(startB);

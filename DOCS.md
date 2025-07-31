@@ -16,28 +16,28 @@ _Snippets_ are shortcuts that allow you to insert certain text based on certain 
 }
 ```
 
--   `trigger` : The text that triggers this snippet.
-    -   Triggers can also be regular expressions. See [regex snippets](#regex-snippets).
--   `replacement` : The text to replace the `trigger` with.
-    -   Replacements can also be JavaScript functions. See [function snippets](#function-snippets).
--   `options` : See below.
--   `priority` (optional): This snippet's priority. Snippets with higher priority are run first. Can be negative. Defaults to 0.
--   `description` (optional): A description for this snippet.
--   `flags` (optional): Flags for [regex snippets](#regex).
-    -   Not applicable to non-regex snippets.
-    -   The following flags are permitted: `i`, `m`, `s`, `u`, `v`.
--   `version` (optional): version number for snippet syntax. [See here for more info](#versions)
+- `trigger` : The text that triggers this snippet.
+    - Triggers can also be regular expressions. See [regex snippets](#regex-snippets).
+- `replacement` : The text to replace the `trigger` with.
+    - Replacements can also be JavaScript functions. See [function snippets](#function-snippets).
+- `options` : See below.
+- `priority` (optional): This snippet's priority. Snippets with higher priority are run first. Can be negative. Defaults to 0.
+- `description` (optional): A description for this snippet.
+- `flags` (optional): Flags for [regex snippets](#regex).
+    - Not applicable to non-regex snippets.
+    - The following flags are permitted: `i`, `m`, `s`, `u`, `v`.
+- `version` (optional): version number for snippet syntax. [See here for more info](#versions)
 
 ### Options
 
--   `t` : Text mode. Only run this snippet outside math
--   `m` : Math mode. Only run this snippet inside math. Shorthand for both `M` and `n`
--   `M` : Block math mode. Only run this snippet inside a `$$ ... $$` or `\[ ... \]` block
--   `n` : Inline math mode. Only run this snippet inside a `$ ... $` or `\( ... \)` block
--   `A` : Auto. Expand this snippet as soon as the trigger is typed. If omitted, the <kbd>Tab</kbd> key must be pressed to expand the snippet
--   `r` : [Regex](#regex-snippets). The `trigger` will be treated as a regular expression
--   `v` : [Visual](#visual-snippets). Only run this snippet on a selection. The trigger should be a single character
--   `w` : Word boundary. Only run this snippet when the trigger is preceded (and followed by) a word delimiter, such as `.`, `,`, or `-`.
+- `t` : Text mode. Only run this snippet outside math
+- `m` : Math mode. Only run this snippet inside math. Shorthand for both `M` and `n`
+- `M` : Block math mode. Only run this snippet inside a `$$ ... $$` or `\[ ... \]` block
+- `n` : Inline math mode. Only run this snippet inside a `$ ... $` or `\( ... \)` block
+- `A` : Auto. Expand this snippet as soon as the trigger is typed. If omitted, the <kbd>Tab</kbd> key must be pressed to expand the snippet
+- `r` : [Regex](#regex-snippets). The `trigger` will be treated as a regular expression
+- `v` : [Visual](#visual-snippets). Only run this snippet on a selection. The trigger should be a single character
+- `w` : Word boundary. Only run this snippet when the trigger is preceded (and followed by) a word delimiter, such as `.`, `,`, or `-`.
 
 Multiple options can be used at once. As an exception, regex and visual are mutually exclusive.
 
@@ -45,10 +45,10 @@ No mode specified means that this snippet can be triggered _at all times_. Multi
 
 ### Tabstops
 
--   Insert tabstops for the cursor to jump to using `@X` or `@{X}`, where X is a number starting from 0.
--   Pressing <kbd>Tab</kbd> will move the cursor to the next tabstop.
--   Tabstops can have placeholders. Use the format `@{X:text}`, where `text` is the text that will be selected by the cursor on moving to this tabstop.
--   Tabstops with the same number, X, will all be selected at the same time.
+- Insert tabstops for the cursor to jump to using `@X` or `@{X}`, where X is a number starting from 0.
+- Pressing <kbd>Tab</kbd> will move the cursor to the next tabstop.
+- Tabstops can have placeholders. Use the format `@{X:text}`, where `text` is the text that will be selected by the cursor on moving to this tabstop.
+- Tabstops with the same number, X, will all be selected at the same time.
 
 #### Examples
 
@@ -68,16 +68,16 @@ In Latex Suite, you can use regular expressions to write more general snippets t
 
 To create a regex snippet, you can
 
--   use the `r` option, or
--   make the `trigger` a RegExp literal (such as `/regex-goes-here/`).
+- use the `r` option, or
+- make the `trigger` a RegExp literal (such as `/regex-goes-here/`).
 
 When creating a regex snippet,
 
--   In the `trigger`, surround an expression with brackets `()` to create a capturing group or `(?<name>)` to create a named capturing group.
--   Inside a `replacement` string
-    -   strings of the form `@[X]` will be replaced by matches in increasing order of X, starting from 0.
-    -   strings of the form `@[name]` will be replaced if `name` is a group in the `trigger`.
--   You can also make the `replacement` a JavaScript function. See [function snippets](#function-snippets) for more details.
+- In the `trigger`, surround an expression with brackets `()` to create a capturing group or `(?<name>)` to create a named capturing group.
+- Inside a `replacement` string
+    - strings of the form `@[X]` will be replaced by matches in increasing order of X, starting from 0.
+    - strings of the form `@[name]` will be replaced if `name` is a group in the `trigger`.
+- You can also make the `replacement` a JavaScript function. See [function snippets](#function-snippets) for more details.
 
 #### Example
 
@@ -97,10 +97,10 @@ Using a RegExp literal and named groups, the same snippet can be written as
 
 > [!IMPORTANT]
 >
-> -   Some characters, such as `\`, `+`, and `.`, are special characters in regex. If you want to use these literally, remember to escape them by inserting two backslashes (`\\`) before them!
->     -   (One backslash to escape the special character, and another to escape that backslash)
-> -   `@` is a special syntax of this extension alone. If you don't want `@1` or `@[1]` to be tabstop or captured group, be sure to escape them by another `@` before them like `@@1` or `@@[1]`.
-> -   [Lookbehind regex is not supported on iOS.](https://github.com/bicarlsen/obsidian_image_caption/issues/4#issuecomment-982982629) Using lookbehind regex will cause snippets to break on iOS.
+> - Some characters, such as `\`, `+`, and `.`, are special characters in regex. If you want to use these literally, remember to escape them by inserting two backslashes (`\\`) before them!
+>     - (One backslash to escape the special character, and another to escape that backslash)
+> - `@` is a special syntax of this extension alone. If you don't want `@1` or `@[1]` to be tabstop or captured group, be sure to escape them by another `@` before them like `@@1` or `@@[1]`.
+> - [Lookbehind regex is not supported on iOS.](https://github.com/bicarlsen/obsidian_image_caption/issues/4#issuecomment-982982629) Using lookbehind regex will cause snippets to break on iOS.
 
 ### Snippet variables
 
@@ -108,7 +108,7 @@ Snippet variables are used as shortcuts when writing snippets. In the `trigger` 
 
 By default, the following variables are available for use in a `trigger`:
 
--   `${GREEK}` : Shorthand for the following by default:
+- `${GREEK}` : Shorthand for the following by default:
 
     ```
     alpha|beta|gamma|Gamma|delta|Delta|epsilon|varepsilon|zeta|eta|theta|vartheta|Theta|iota|kappa|lambda|Lambda|mu|nu|xi|omicron|pi|rho|varrho|sigma|Sigma|tau|upsilon|Upsilon|phi|varphi|Phi|chi|psi|omega|Omega
@@ -116,7 +116,7 @@ By default, the following variables are available for use in a `trigger`:
 
     Recommended for use with the regex option "r".
 
--   `${SYMBOL}` : Shorthand for the following by default:
+- `${SYMBOL}` : Shorthand for the following by default:
 
     ```
     parallel|perp|partial|nabla|hbar|ell|infty|oplus|ominus|otimes|oslash|square|star|dagger|vee|wedge|subseteq|subset|supseteq|supset|emptyset|exists|nexists|forall|implies|impliedby|iff|setminus|neg|lor|land|bigcup|bigcap|cdot|times|simeq|approx
@@ -124,7 +124,7 @@ By default, the following variables are available for use in a `trigger`:
 
     Recommended for use with the regex option "r".
 
--   `${MORE_SYMBOLS}` : Shorthand for the following by default:
+- `${MORE_SYMBOLS}` : Shorthand for the following by default:
 
     ```
     leq|geq|neq|gg|ll|equiv|sim|propto|rightarrow|leftarrow|Rightarrow|Leftarrow|leftrightarrow|to|mapsto|cap|cup|in|sum|prod|exp|ln|log|det|dots|vdots|ddots|pm|mp|int|iint|iiint|oint
@@ -150,8 +150,8 @@ will surround your selection with an `\underbrace` when "U" is typed.
 
 To create a visual snippet, you can
 
--   make the replacement a string containing the special string `@{VISUAL}`, or
--   use the `v` option, and make the replacement a function.
+- make the replacement a string containing the special string `@{VISUAL}`, or
+- use the `v` option, and make the replacement a function.
 
 When a visual snippet is expanded, the special string `@{VISUAL}` in its replacement is replaced with the current selection.
 
@@ -280,9 +280,9 @@ const replacement_regex = /\$\d|\$\{\d+:[^\}]\}/;
 
 It matches the following examples in `replacement`:
 
--   `$0`
--   `${0:example}`
--   `${10:example}`
+- `$0`
+- `${0:example}`
+- `${10:example}`
 
 Notably it doesn't match `$10` as the 11th tabstop but as the second tabstop and the number `0`.
 
@@ -349,11 +349,11 @@ const replacement_regex = /(?<!@)\@\d+|\@\{\d+\}|\@\{\d+:[^\}]\}/;
 
 It matches the following examples in `replacement`:
 
--   `@0`
--   `@{0:example}`
--   `@{10:example}`
--   `@{10}`
--   `@10`
+- `@0`
+- `@{0:example}`
+- `@{10:example}`
+- `@{10}`
+- `@10`
 
 This time it does match `@10` as the 11th tabstop and the number can be encapsulated to avoid conflicts such as `@22` when you want it to expand to `<third-tabstop>2`.
 

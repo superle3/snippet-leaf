@@ -95,7 +95,7 @@ window.addEventListener("UNSTABLE_editor:extensions", async (e) => {
             RangeSetBuilder,
             RangeValue,
         },
-        DEFAULT_SETTINGS
+        DEFAULT_SETTINGS,
     );
     extensions.push(latex_suite_extensions);
 });

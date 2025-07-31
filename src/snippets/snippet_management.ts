@@ -32,7 +32,7 @@ export function expandSnippets(
     startSnippet: ReturnType<typeof stateEffect_variables>["startSnippet"],
     endSnippet: ReturnType<typeof stateEffect_variables>["endSnippet"],
     EditorSelection: typeof EditorSelectionC,
-    Decoration: typeof DecorationC
+    Decoration: typeof DecorationC,
 ): boolean {
     const snippetsToExpand = view.state.field(snippetQueueStateField);
     if (snippetsToExpand.length === 0) return false;
@@ -44,14 +44,14 @@ export function expandSnippets(
         snippetsToExpand,
         ChangeSet,
         isolateHistory,
-        startSnippet
+        startSnippet,
     );
 
     const tabstopsToAdd = computeTabstops(
         view,
         snippetsToExpand,
         originalDocLength,
-        ChangeSet
+        ChangeSet,
     );
 
     // Insert any tabstops
@@ -67,7 +67,7 @@ export function expandSnippets(
         getNextTabstopColor,
         endSnippet,
         EditorSelection,
-        Decoration
+        Decoration,
     );
     expandTabstops(view, tabstopsToAdd, getTabstopGroupsFromView);
 
@@ -80,7 +80,7 @@ function handleUndoKeypresses(
     snippets: SnippetChangeSpec[],
     ChangeSet: typeof ChangeSetC,
     isolateHistory: typeof isolateHistoryC,
-    startSnippet: ReturnType<typeof stateEffect_variables>["startSnippet"]
+    startSnippet: ReturnType<typeof stateEffect_variables>["startSnippet"],
 ) {
     const originalDoc = view.state.doc;
     const originalDocLength = originalDoc.length;
@@ -91,7 +91,7 @@ function handleUndoKeypresses(
             // Use prevChar so that cursors are placed at the end of the added text
             const prevChar = view.state.doc.sliceString(
                 snippet.to - 1,
-                snippet.to
+                snippet.to,
             );
 
             const from = snippet.to === 0 ? 0 : snippet.to - 1;
@@ -113,7 +113,7 @@ function handleUndoKeypresses(
 
     // Undo the keypresses, and insert the replacements
     const undoKeyPresses = ChangeSet.of(keyPresses, originalDocLength).invert(
-        originalDoc
+        originalDoc,
     );
     const changesAsChangeSet = ChangeSet.of(snippets, originalDocLength);
     const combinedChanges = undoKeyPresses.compose(changesAsChangeSet);
@@ -129,7 +129,7 @@ function computeTabstops(
     view: EditorView,
     snippets: SnippetChangeSpec[],
     originalDocLength: number,
-    ChangeSet: typeof ChangeSetC
+    ChangeSet: typeof ChangeSetC,
 ) {
     // Find the positions of the cursors in the new document
     const changeSet = ChangeSet.of(snippets, originalDocLength);
@@ -153,7 +153,7 @@ function markTabstops(
     >["getNextTabstopColor"],
     endSnippet: ReturnType<typeof stateEffect_variables>["endSnippet"],
     EditorSelection: typeof EditorSelectionC,
-    Decoration: typeof DecorationC
+    Decoration: typeof DecorationC,
 ) {
     const color = getNextTabstopColor(view);
     const tabstopGroups = tabstopSpecsToTabstopGroups(
@@ -161,7 +161,7 @@ function markTabstops(
         color,
         endSnippet,
         EditorSelection,
-        Decoration
+        Decoration,
     );
 
     addTabstops(view, tabstopGroups);
@@ -172,7 +172,7 @@ function expandTabstops(
     tabstops: TabstopSpec[],
     getTabstopGroupsFromView: ReturnType<
         typeof create_tabstopsStateField
-    >["getTabstopGroupsFromView"]
+    >["getTabstopGroupsFromView"],
 ) {
     // Insert the replacements
     const changes = tabstops.map((tabstop: TabstopSpec) => {
@@ -197,7 +197,7 @@ export function setSelectionToNextTabstop(
     view: EditorView,
     tabstopsStateField: ReturnType<
         typeof create_tabstopsStateField
-    >["tabstopsStateField"]
+    >["tabstopsStateField"],
 ): boolean {
     const tabstopGroups = view.state.field(tabstopsStateField);
 

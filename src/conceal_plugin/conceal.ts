@@ -42,7 +42,7 @@ function debounce<T extends unknown[]>(
     // eslint-disable-next-line
     cb: (...args: [...T]) => any,
     timeout?: number,
-    resetTimer?: boolean
+    resetTimer?: boolean,
 ): Debouncer<T> {
     let timer: ReturnType<typeof setTimeout> | null = null;
 
@@ -77,14 +77,6 @@ export interface Debouncer<T extends unknown[]> {
 
 export type ConcealSpec = Replacement[];
 
-/**
- * Make a ConcealSpec from the given list of Replacements.
- * This function essentially does nothing but improves readability.
- */
-export function mkConcealSpec(...replacements: Replacement[]) {
-    return replacements;
-}
-
 export type Concealment = {
     spec: ConcealSpec;
     cursorPosType: "within" | "apart" | "edge";
@@ -103,7 +95,7 @@ function ConcealWidget(WidgetType: typeof WidgetTypeC) {
         constructor(
             readonly symbol: string,
             className?: string,
-            elementType?: string
+            elementType?: string,
         ) {
             super();
 
@@ -162,7 +154,7 @@ function TextWidget(WidgetType: typeof WidgetTypeC) {
 function atSamePosAfter(
     update: ViewUpdateC,
     oldConceal: ConcealSpec,
-    newConceal: ConcealSpec
+    newConceal: ConcealSpec,
 ): boolean {
     if (oldConceal.length !== newConceal.length) return false;
 
@@ -182,7 +174,7 @@ function atSamePosAfter(
 
 function determineCursorPosType(
     sel: EditorSelectionC,
-    concealSpec: ConcealSpec
+    concealSpec: ConcealSpec,
 ): Concealment["cursorPosType"] {
     // Priority: "within" > "edge" > "apart"
 
@@ -235,7 +227,7 @@ function determineAction(
     oldCursor: Concealment["cursorPosType"] | undefined,
     newCursor: Concealment["cursorPosType"],
     mousedown: boolean,
-    delayEnabled: boolean
+    delayEnabled: boolean,
 ): ConcealAction {
     if (mousedown) return "conceal";
 
@@ -253,7 +245,7 @@ function determineAction(
 function buildDecoSet(
     concealments: Concealment[],
     Decoration: typeof DecorationC,
-    WidgetType: typeof WidgetTypeC
+    WidgetType: typeof WidgetTypeC,
 ) {
     const decos: RangeC<DecorationC>[] = [];
     try {
@@ -267,7 +259,7 @@ function buildDecoSet(
                         Decoration.widget({
                             widget: new (TextWidget(WidgetType))(replace.text),
                             block: false,
-                        }).range(replace.start, replace.end)
+                        }).range(replace.start, replace.end),
                     );
                 } else {
                     // Improve selecting empty replacements such as "\frac" -> ""
@@ -280,12 +272,12 @@ function buildDecoSet(
                             widget: new (ConcealWidget(WidgetType))(
                                 replace.text,
                                 replace.class,
-                                replace.elementType
+                                replace.elementType,
                             ),
                             inclusiveStart,
                             inclusiveEnd,
                             block: false,
-                        }).range(replace.start, replace.end)
+                        }).range(replace.start, replace.end),
                     );
                 }
             }
@@ -305,7 +297,7 @@ function buildDecoSet(
 function buildAtomicRanges(
     concealments: Concealment[],
     RangeSetBuilder: typeof RangeSetBuilderC,
-    RangeValue: typeof RangeValueC
+    RangeValue: typeof RangeValueC,
 ) {
     const repls: Replacement[] = concealments
         .filter((c) => c.enable)
@@ -340,7 +332,7 @@ export const mkConcealPlugin = (
     RangeSetBuilder: typeof RangeSetBuilderC,
     RangeValue: typeof RangeValueC,
     syntaxTree: typeof syntaxTreeC,
-    latexSuiteConfig: LatexSuiteFacet
+    latexSuiteConfig: LatexSuiteFacet,
 ) =>
     ViewPlugin.fromClass(
         class {
@@ -368,12 +360,12 @@ export const mkConcealPlugin = (
                     this.decorations = buildDecoSet(
                         this.concealments,
                         Decoration,
-                        WidgetType
+                        WidgetType,
                     );
                     this.atomicRanges = buildAtomicRanges(
                         this.concealments,
                         RangeSetBuilder,
-                        RangeValue
+                        RangeValue,
                     );
 
                     // Invoke the update method to reflect the changes of this.decoration
@@ -386,13 +378,13 @@ export const mkConcealPlugin = (
                     }
                 },
                 revealTimeout,
-                true
+                true,
             );
 
             update(update: ViewUpdateC) {
                 const settings = getLatexSuiteConfig(
                     update.view,
-                    latexSuiteConfig
+                    latexSuiteConfig,
                 );
                 if (
                     !(
@@ -420,17 +412,17 @@ export const mkConcealPlugin = (
                 for (const spec of concealSpecs) {
                     const cursorPosType = determineCursorPosType(
                         selection,
-                        spec
+                        spec,
                     );
                     const oldConcealment = this.concealments.find((old) =>
-                        atSamePosAfter(update, old.spec, spec)
+                        atSamePosAfter(update, old.spec, spec),
                     );
 
                     const concealAction = determineAction(
                         oldConcealment?.cursorPosType,
                         cursorPosType,
                         mousedown,
-                        this.delayEnabled
+                        this.delayEnabled,
                     );
 
                     const concealment: Concealment = {
@@ -453,12 +445,12 @@ export const mkConcealPlugin = (
                 this.decorations = buildDecoSet(
                     this.concealments,
                     Decoration,
-                    WidgetType
+                    WidgetType,
                 );
                 this.atomicRanges = buildAtomicRanges(
                     this.concealments,
                     RangeSetBuilder,
-                    RangeValue
+                    RangeValue,
                 );
             }
         },
@@ -466,7 +458,7 @@ export const mkConcealPlugin = (
             decorations: (v) => v.decorations,
             provide: (plugin) =>
                 EditorView.atomicRanges.of(
-                    (view) => view.plugin(plugin).atomicRanges
+                    (view) => view.plugin(plugin).atomicRanges,
                 ),
-        }
+        },
     );

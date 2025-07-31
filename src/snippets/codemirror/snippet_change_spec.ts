@@ -56,7 +56,7 @@ export class SnippetChangeSpec {
     getTabstops(view: EditorView, start: number): TabstopSpec[] {
         const text = view.state.doc.sliceString(
             start,
-            start + this.insert.length
+            start + this.insert.length,
         );
 
         const matches = text.matchAll(tabstop_regex);
@@ -90,7 +90,7 @@ export class SnippetChangeSpec {
                         replacement: match[4],
                     };
                 }
-            }
+            },
         ).filter((val) => val);
         return tabstops;
     }

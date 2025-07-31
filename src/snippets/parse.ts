@@ -41,8 +41,8 @@ export async function importRaw(maybeJavaScriptCode: string) {
             // otherwise, try to import as a standalone js object
             raw = await importModuleDefault(
                 `data:text/javascript;base64,${encode(
-                    `export default ${maybeJavaScriptCode}`
-                )}`
+                    `export default ${maybeJavaScriptCode}`,
+                )}`,
             );
         }
     } catch (e) {
@@ -53,12 +53,12 @@ export async function importRaw(maybeJavaScriptCode: string) {
 
 export async function parseSnippetVariables(snippetVariablesStr: string) {
     const rawSnippetVariables = (await importRaw(
-        snippetVariablesStr
+        snippetVariablesStr,
     )) as SnippetVariables;
     return parseSnippetVariablesSync(rawSnippetVariables);
 }
 export function parseSnippetVariablesSync(
-    rawSnippetVariables: SnippetVariables | Record<string, string>
+    rawSnippetVariables: SnippetVariables | Record<string, string>,
 ) {
     if (Array.isArray(rawSnippetVariables))
         throw "Cannot parse an array as a variables object";
@@ -83,7 +83,7 @@ export function parseSnippetVariablesSync(
 
 export async function parseSnippets(
     snippetsStr: string,
-    snippetVariables: SnippetVariables
+    snippetVariables: SnippetVariables,
 ) {
     const rawSnippets = (await importRaw(snippetsStr)) as RawSnippet[];
     return parseSnippetsSync(rawSnippets, snippetVariables);
@@ -91,7 +91,7 @@ export async function parseSnippets(
 
 export function parseSnippetsSync(
     rawSnippets: RawSnippet[],
-    snippetVariables: SnippetVariables
+    snippetVariables: SnippetVariables,
 ) {
     let parsedSnippets;
     try {
@@ -172,7 +172,7 @@ function validateRawSnippets(snippets: unknown): RawSnippet[] {
             return parse(RawSnippetSchema, raw);
         } catch {
             throw `Value does not resemble snippet.\nErroring snippet:\n${serializeSnippetLike(
-                raw
+                raw,
             )}`;
         }
     });
@@ -187,7 +187,7 @@ function validateRawSnippets(snippets: unknown): RawSnippet[] {
  */
 function parseSnippet(
     raw: RawSnippet,
-    snippetVariables: SnippetVariables
+    snippetVariables: SnippetVariables,
 ): Snippet {
     const { priority, description } = raw;
     const version = raw.version ?? 2;
@@ -253,7 +253,7 @@ function parseSnippet(
         // normalize visual replacements
         if (version === 1) {
             console.log(
-                "snippet-leaf VERSION 1 detected, converting replacement"
+                "snippet-leaf VERSION 1 detected, converting replacement",
             );
             replacement = convert_replacement_v1_to_v2(trigger, replacement);
             console.log("snippet-leaf:", replacement);
