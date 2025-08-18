@@ -15,7 +15,7 @@ import {
     type RawSnippet,
     type SnippetVariables,
 } from "src/snippets/parse";
-import type { EditorState, Facet as FacetC } from "@codemirror/state";
+import type { EditorState } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
 
 interface LatexSuiteBasicSettings {
@@ -38,10 +38,10 @@ interface LatexSuiteBasicSettings {
 /**
  * Settings that require further processing (e.g. conversion to an array) before being used.
  */
-interface LatexSuiteRawSettings {
-    autofractionExcludedEnvs: string | Environment[];
-    matrixShortcutsEnvNames: string | string[];
-    autoEnlargeBracketsTriggers: string | string[];
+export interface LatexSuiteRawSettings {
+    autofractionExcludedEnvs: string;
+    matrixShortcutsEnvNames: string;
+    autoEnlargeBracketsTriggers: string;
 }
 
 interface LatexSuiteParsedSettings {
@@ -54,19 +54,20 @@ export type LatexSuitePluginSettings = {
     snippets: Array<RawSnippet | Snippet>;
     snippetVariables: SnippetVariables;
 } & LatexSuiteBasicSettings &
-    LatexSuiteRawSettings;
+    (LatexSuiteRawSettings | LatexSuiteParsedSettings);
 export type LatexSuitePluginSettingsRaw = {
-    snippets: Array<RawSnippet | Snippet> | string;
-    snippetVariables: SnippetVariables | string;
+    snippets: string;
+    snippetVariables: string;
 } & LatexSuiteBasicSettings &
     LatexSuiteRawSettings;
 export type LatexSuiteCMSettings = {
-    snippets: readonly Snippet[];
-    snippetVariables: Readonly<SnippetVariables>;
+    snippets: Snippet[];
+    snippetVariables: SnippetVariables;
 } & LatexSuiteBasicSettings &
     LatexSuiteParsedSettings;
 
-export const DEFAULT_SETTINGS: LatexSuitePluginSettings = {
+export const DEFAULT_SETTINGS: LatexSuitePluginSettings &
+    LatexSuiteRawSettings = {
     snippets: DEFAULT_SNIPPETS,
     snippetVariables: DEFAULT_SNIPPET_VARIABLES,
 
@@ -77,7 +78,7 @@ export const DEFAULT_SETTINGS: LatexSuitePluginSettings = {
     removeSnippetWhitespace: true,
     autoDelete$: true,
     concealEnabled: true,
-    concealRevealTimeout: 1000,
+    concealRevealTimeout: 0,
     autofractionEnabled: true,
     autofractionSymbol: "\\frac",
     autofractionBreakingChars: "+-=\t",
@@ -87,13 +88,16 @@ export const DEFAULT_SETTINGS: LatexSuitePluginSettings = {
     wordDelimiters: "., +-\\n\t:;!?\\/{}[]()=~$",
 
     // Raw settings
-    autofractionExcludedEnvs: `[
-		["^{", "}"],
-		["\\\\pu{", "}"]
-	]`,
+    autofractionExcludedEnvs: '[\n\t["^{", "}"],\n\t["\\\\pu{", "}"]\n]',
     matrixShortcutsEnvNames:
         "pmatrix, cases, align, gather, bmatrix, Bmatrix, vmatrix, Vmatrix, array, matrix",
     autoEnlargeBracketsTriggers: "sum, int, frac, prod, bigcup, bigcap",
+};
+
+export const DEFAULT_SETTINGS_RAW = {
+    ...DEFAULT_SETTINGS,
+    snippets: DEFAULT_SNIPPETS_str,
+    snippetVariables: DEFAULT_SNIPPET_VARIABLES_str,
 };
 
 export function processLatexSuiteSettings(
@@ -167,20 +171,13 @@ export function processLatexSuiteSettings(
         ),
     };
 }
-export type LatexSuiteFacet = FacetC<
-    Partial<LatexSuitePluginSettings> | Partial<LatexSuiteCMSettings>,
-    LatexSuiteCMSettings
->;
+export type LatexSuiteFacet = { value: LatexSuiteCMSettings };
 
 export function getLatexSuiteConfig(
     viewOrState: EditorView | EditorState,
     latexSuiteConfig: LatexSuiteFacet,
 ): LatexSuiteCMSettings {
-    const state = (viewOrState as EditorView).state
-        ? (viewOrState as EditorView).state
-        : (viewOrState as EditorState);
-
-    return state.facet(latexSuiteConfig);
+    return latexSuiteConfig.value;
 }
 
 export async function getSettingsSnippetVariables(snippetVariables: string) {

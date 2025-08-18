@@ -17,26 +17,33 @@ const inlin_plugin = (options) => {
     const { filter, namespace, transform } = Object.assign(
         {
             /**
-             *  A regex filter to match the desired import. Defaults to imports that start with `inline:`, e.g.
-             *  import 'inline:./file.ext';
+             *  A regex filter to match the desired import. Defaults to
+             * imports that start with `inline:`, e.g. import
+             * 'inline:./file.ext';
              */
             filter: /^inline:/,
 
             /**
-             * The namespace to use. If you use more than one instance of this plugin, each one should have a unique
-             * namespace. This is a random string by default, so you won't need to change it unless you're targeting a
-             * specific namespace.
+             * The namespace to use. If you use more than one instance of
+             * this plugin, each one should have a unique namespace. This is
+             * a random string by default, so you won't need to change it
+             * unless you're targeting a specific namespace.
              */
             namespace: "_" + Math.random().toString(36).substr(2, 9),
 
             /**
-             * A function to transform the contents of the imported file. This can be a simple string replace or a more
-             * complex operation, such as a call to PostCSS, Sass, etc. The function must return a string.
+             * A function to transform the contents of the imported file.
+             * This can be a simple string replace or a more complex
+             * operation, such as a call to PostCSS, Sass, etc. The function
+             * must return a string.
              *
-             * The contents argument will be a string containing the file's contents. The args argument is passed through from
-             * esbuild, but the most useful is probably args.path which references the file path.
+             * The contents argument will be a string containing the file's
+             * contents. The args argument is passed through from esbuild,
+             * but the most useful is probably args.path which references
+             * the file path.
              *
-             * Note that heavy operations here can impact esbuild's performance!
+             * Note that heavy operations here can impact esbuild's
+             * performance!
              */
             transform: async (contents, args) => contents,
         },
@@ -97,18 +104,24 @@ const sharedConfig = {
     },
     bundle: true,
     platform: "browser",
-    target: ["ES6"],
+    target: ["ES2017"],
     sourcemap: production ? false : "inline",
-    minify: production,
+    minify: true,
     plugins: [inlin_plugin()],
     logLevel: "info",
 };
 
 const browserConfig = {
     ...sharedConfig,
-    entryPoints: ["browser_extension/browser_extension.ts"],
+    entryPoints: [
+        "browser_extension/browser_extension.ts",
+        "browser_extension/settings/settings_tab.ts",
+        "browser_extension/settings/content_script.ts",
+    ],
     format: "iife",
     outdir: "browser_extension/dist",
+    external: ["path", "fs"],
+    metafile: true,
 };
 
 const codemirrorConfig = {
@@ -119,12 +132,12 @@ const codemirrorConfig = {
 };
 if (web) {
     const browserCtx = await esbuild.context(browserConfig);
-    browserCtx.build().catch(() => process.exit(1));
+    browserCtx.watch().catch(() => process.exit(1));
 } else if (codemirror) {
     console.log("Running in development mode, watching for changes...");
     const codemirrorCtx = await esbuild.context(codemirrorConfig);
     codemirrorCtx.watch().catch(() => process.exit(1));
 } else if (production) {
-    esbuild.build(browserConfig).catch(() => process.exit(1));
-    esbuild.build(codemirrorConfig).catch(() => process.exit(1));
+    console.log("Building for production...");
+    await esbuild.build(browserConfig);
 }

@@ -12,6 +12,7 @@ export default tseslint.config(
             "website/",
             "codemirror_extension/dist/",
             "eslint.config.js",
+            "browser_extension/settings/snippets/",
         ],
     },
 

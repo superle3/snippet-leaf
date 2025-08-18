@@ -38,7 +38,15 @@ import {
     RangeSetBuilder,
     RangeValue,
 } from "./codemirror_range_objects";
-import { DEFAULT_SETTINGS } from "src/settings/settings";
+import type {
+    LatexSuitePluginSettings,
+    LatexSuitePluginSettingsRaw,
+} from "src/settings/settings";
+import {
+    DEFAULT_SETTINGS,
+    getSettingsSnippets,
+    getSettingsSnippetVariables,
+} from "src/settings/settings";
 
 type CodeMirrorExt = {
     Decoration: typeof DecorationC;
@@ -80,22 +88,60 @@ type OverleafEventDetail = {
 
 type Overleaf_event = CustomEvent<OverleafEventDetail>;
 
-window.addEventListener("UNSTABLE_editor:extensions", async (e) => {
-    const evt = e as unknown as Overleaf_event;
-    const { CodeMirror, extensions } = evt.detail;
-    const { keymap } = CodeMirror;
-    const Facet = Object.getPrototypeOf(keymap).constructor as typeof FacetC;
-    const { extension: latex_suite_extensions } = await main(
-        {
-            ...CodeMirror,
-            Facet,
-            //@ts-ignore
-            RangeSet,
-            //@ts-ignore
-            RangeSetBuilder,
-            RangeValue,
-        },
-        DEFAULT_SETTINGS,
+async function browser_main() {
+    window.addEventListener("UNSTABLE_editor:extensions", async (e) => {
+        const evt = e as unknown as Overleaf_event;
+        const { CodeMirror, extensions } = evt.detail;
+        const { keymap } = CodeMirror;
+        const Facet = Object.getPrototypeOf(keymap)
+            .constructor as typeof FacetC;
+        const { extension: latex_suite_extensions, latexSuiteConfig } = main(
+            {
+                ...CodeMirror,
+                Facet,
+                //@ts-ignore
+                RangeSet,
+                //@ts-ignore
+                RangeSetBuilder,
+                RangeValue,
+            },
+            DEFAULT_SETTINGS,
+        );
+        extensions.push(latex_suite_extensions);
+        document.dispatchEvent(new CustomEvent("snippet_leaf_config_listen"));
+        document.addEventListener("snippet_leaf_config_send", (e) => {
+            const evt = e as CustomEvent<string>;
+            const config = JSON.parse(evt.detail);
+            processRawLatexSuiteSettings(config).then((parsed_settings) => {
+                if (parsed_settings) {
+                    latexSuiteConfig.processSettings(parsed_settings);
+                }
+            });
+        });
+    });
+}
+browser_main();
+
+async function processRawLatexSuiteSettings(
+    rawSettings: LatexSuitePluginSettingsRaw & {
+        snippetVariables: string;
+        snippets: string;
+    },
+): Promise<LatexSuitePluginSettings | null> {
+    const snippetVariables = getSettingsSnippetVariables(
+        rawSettings.snippetVariables,
     );
-    extensions.push(latex_suite_extensions);
-});
+    const snippets = await getSettingsSnippets(
+        rawSettings.snippets,
+        snippetVariables,
+    );
+    if (!snippets || !snippetVariables) {
+        console.error("Failed to process settings snippets or variables");
+        return null;
+    }
+    return {
+        ...rawSettings,
+        snippets,
+        snippetVariables,
+    };
+}

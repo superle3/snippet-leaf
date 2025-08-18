@@ -89,6 +89,17 @@ export const handleKeydown = (
     expandSnippets: expandSnippetsC,
 ) => {
     const settings = getLatexSuiteConfig(view, latexSuiteConfig);
+    if (
+        !(
+            settings.autoDelete$ ||
+            settings.snippetsEnabled ||
+            settings.autofractionEnabled ||
+            settings.matrixShortcutsEnabled ||
+            settings.taboutEnabled
+        )
+    ) {
+        return false;
+    }
     const ctx = Context.fromView(view, latexSuiteConfig, syntaxTree);
 
     let success = false;
@@ -98,13 +109,16 @@ export const handleKeydown = (
      * delete both $ symbols, not just the first one.
      */
     if (settings.autoDelete$ && key === "Backspace" && ctx.mode.inMath()) {
-        const charAtPos = getCharacterAtPos(view, ctx.pos);
-        const charAtPrevPos = getCharacterAtPos(view, ctx.pos - 1);
+        const characters = view.state.sliceDoc(ctx.pos - 2, ctx.pos + 2);
+        console.log(characters);
 
-        if (charAtPos === "$" && charAtPrevPos === "$") {
+        if (characters.slice(1, 3) === "$$") {
             replaceRange(view, ctx.pos - 1, ctx.pos + 1, "");
             // Note: not sure if removeAllTabstops is necessary
             removeAllTabstops(view);
+            return true;
+        } else if (characters === "\\(\\)" || characters === "\\[\\]") {
+            replaceRange(view, ctx.pos - 2, ctx.pos + 2, "");
             return true;
         }
     }

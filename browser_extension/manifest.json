@@ -6,16 +6,35 @@
     "author": "superle3",
     "content_scripts": [
         {
-            "matches": ["<all_urls>"],
             "js": ["dist/browser_extension.js"],
+            "matches": ["<all_urls>"],
             "world": "MAIN"
         },
         {
             "js": ["dist/settings/content_script.js"],
-            "matches": ["https://overleaf/project/*"],
-            "run_at": "document_start"
+            "matches": ["<all_urls>"]
         }
     ],
     "permissions": ["storage"],
-    "options_page": "settings.html"
+    "options_ui": {
+        "page": "settings.html",
+        "open_in_tab": true
+    },
+    "web_accessible_resources": [
+        {
+            "resources": [
+                "dist/browser_extension.js",
+                "dist/settings/content_script.js"
+            ],
+            "matches": ["<all_urls>"]
+        }
+    ],
+    "action": {
+        "default_popup": "settings.html"
+    },
+    "browser_specific_settings": {
+        "gecko": {
+            "id": "snippet-leaf@example.com"
+        }
+    }
 }
