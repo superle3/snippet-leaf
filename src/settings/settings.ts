@@ -180,9 +180,9 @@ export function getLatexSuiteConfig(
     return latexSuiteConfig.value;
 }
 
-export async function getSettingsSnippetVariables(snippetVariables: string) {
+export function getSettingsSnippetVariables(snippetVariables: string) {
     try {
-        return await parseSnippetVariables(snippetVariables);
+        return parseSnippetVariables(snippetVariables);
     } catch (e) {
         console.error(`Failed to load snippet variables from settings: ${e}`);
         return {};
