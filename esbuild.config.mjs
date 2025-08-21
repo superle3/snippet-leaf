@@ -106,7 +106,7 @@ const sharedConfig = {
     platform: "browser",
     target: ["ES2017"],
     sourcemap: production ? false : "inline",
-    minify: true,
+    minify: production,
     plugins: [inlin_plugin()],
     logLevel: "info",
 };

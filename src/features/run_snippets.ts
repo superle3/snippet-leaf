@@ -3,7 +3,7 @@ import type { EditorState, SelectionRange } from "@codemirror/state";
 import type { LatexSuiteFacet } from "src/settings/settings";
 import { getLatexSuiteConfig } from "src/settings/settings";
 import type { snippetQueues } from "src/snippets/codemirror/snippet_queue_state_field";
-import type { Mode, Options } from "src/snippets/options";
+import { Mode } from "src/snippets/options";
 import type { Context } from "src/utils/context";
 import { autoEnlargeBrackets } from "./auto_enlarge_brackets";
 import type { syntaxTree as syntaxTreeC } from "@codemirror/language";
@@ -65,7 +65,7 @@ const runSnippetCursor = (
     for (const snippet of settings.snippets) {
         let effectiveLine = line;
 
-        if (!snippetShouldRunInMode(snippet.options, ctx.mode)) {
+        if (!Mode.snippetShouldRunInMode(snippet.options, ctx.mode)) {
             continue;
         }
 
@@ -128,27 +128,6 @@ const runSnippetCursor = (
     }
 
     return { success: false, shouldAutoEnlargeBrackets: false };
-};
-
-const snippetShouldRunInMode = (options: Options, mode: Mode) => {
-    if (
-        (options.mode.inlineMath && mode.inlineMath) ||
-        (options.mode.blockMath && mode.blockMath) ||
-        options.mode.inlineMath ||
-        options.mode.blockMath
-    ) {
-        if (!mode.textEnv) {
-            return true;
-        }
-    }
-
-    if (mode.inMath() && mode.textEnv && options.mode.text) {
-        return true;
-    }
-
-    if (options.mode.text && mode.text) {
-        return true;
-    }
 };
 
 const isOnWordBoundary = (

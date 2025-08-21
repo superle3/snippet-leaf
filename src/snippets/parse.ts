@@ -52,7 +52,7 @@ export async function importRaw(maybeJavaScriptCode: string) {
     return raw;
 }
 
-export async function parseSnippetVariables(snippetVariablesStr: string) {
+export function parseSnippetVariables(snippetVariablesStr: string) {
     const rawSnippetVariables = json5.parse(snippetVariablesStr);
     return parseSnippetVariablesSync(rawSnippetVariables);
 }

@@ -81,6 +81,10 @@ export class Mode {
         return this.inMath() && !this.textEnv;
     }
 
+    inText(): boolean {
+        return this.textEnv || this.text;
+    }
+
     constructor() {
         this.text = false;
         this.textEnv = false;
@@ -138,4 +142,14 @@ export class Mode {
 
         return mode;
     }
+
+    static snippetShouldRunInMode = (options: Options, mode: Mode) => {
+        if (
+            (options.mode.inlineMath && mode.inlineMath) ||
+            (options.mode.blockMath && mode.blockMath) ||
+            (options.mode.inText() && mode.inText())
+        ) {
+            return true;
+        }
+    };
 }
