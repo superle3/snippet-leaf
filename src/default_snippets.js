@@ -1,6 +1,23 @@
+// typescript and thus the import below is supported for the official extension "snippet_leaf",
+// but may not be supported third-partys.
+// import {SnippetSignature, defineSnippets} from "./snippet_leaf";
+
+// See https://github.com/superle3/snippet_leaf for more information about writing snippets.
+/**
+ * @typedef {Object} SnippetSignature
+ * @property {string|RegExp} trigger
+ * @property {string|((match: string | RegExpExecArray) => string|false)} replacement
+ * @property {string} options t(ext), A(utomatic), w(ord-boundary), m(ath), M(display math), n(inline math)
+ * @property {string} [flags] regex flags
+ * @property {number} [priority]
+ * @property {string} [description]
+ * @property {number} [version] 1 | 2 for your first installation
+ */
+
+/** @type {SnippetSignature[]} */
 export default [
     // Math mode
-    { trigger: "mk", replacement: "\\( @0 \\)@1", options: "tA" },
+    { trigger: "mk", replacement: "\\(@0\\)@1", options: "tA" },
     { trigger: "dm", replacement: "\\[\n@0\n\\]@1", options: "tAw" },
     {
         trigger: "beg",

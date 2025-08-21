@@ -24,6 +24,7 @@ import { sortSnippets } from "./sort";
 import type { Environment } from "./environment";
 import { EXCLUSIONS } from "./environment";
 import { convert_replacement_v1_to_v2 } from "src/convert_spec";
+import * as json5 from "json5";
 
 export type SnippetVariables = Record<`$\{${string}}`, string>;
 
@@ -52,9 +53,7 @@ export async function importRaw(maybeJavaScriptCode: string) {
 }
 
 export async function parseSnippetVariables(snippetVariablesStr: string) {
-    const rawSnippetVariables = (await importRaw(
-        snippetVariablesStr,
-    )) as SnippetVariables;
+    const rawSnippetVariables = json5.parse(snippetVariablesStr);
     return parseSnippetVariablesSync(rawSnippetVariables);
 }
 export function parseSnippetVariablesSync(
@@ -252,11 +251,7 @@ function parseSnippet(
 
         // normalize visual replacements
         if (version === 1) {
-            console.log(
-                "snippet-leaf VERSION 1 detected, converting replacement",
-            );
             replacement = convert_replacement_v1_to_v2(trigger, replacement);
-            console.log("snippet-leaf:", replacement);
         }
         if (
             typeof replacement === "string" &&
@@ -275,7 +270,6 @@ function parseSnippet(
         };
 
         if (options.visual) {
-            console.log("snippet-leaf: visual found");
             return new VisualSnippet(normalised);
         } else {
             return new StringSnippet(normalised);

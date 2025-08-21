@@ -26,10 +26,7 @@ import type {
 } from "@codemirror/view";
 import type { syntaxTree as syntaxTreeC } from "@codemirror/language";
 import { handleUpdate, onKeydown } from "./latex_suite";
-import type {
-    LatexSuiteCMSettings,
-    LatexSuiteFacet,
-} from "./settings/settings";
+import type { LatexSuiteCMSettings } from "./settings/settings";
 import type { LatexSuitePluginSettings } from "./settings/settings";
 import { create_snippet_extensions } from "./snippets/codemirror/extensions";
 import type { invertedEffects as invertedEffectsC } from "@codemirror/commands";
@@ -73,11 +70,10 @@ type CodeMirrorExt = {
 
 export function main(
     codemirror_objects: CodeMirrorExt,
-    settings = DEFAULT_SETTINGS,
+    settings: LatexSuitePluginSettings = DEFAULT_SETTINGS,
 ) {
     const {
         Prec,
-        Facet,
         ViewPlugin,
         EditorView,
         syntaxTree,
@@ -97,20 +93,6 @@ export function main(
     } = codemirror_objects;
     const CMSettings: LatexSuiteCMSettings =
         processLatexSuiteSettings(settings);
-    const latexSuiteConfig: LatexSuiteFacet = Facet.define<
-        Partial<LatexSuitePluginSettings>,
-        LatexSuiteCMSettings
-    >({
-        combine: (input) => {
-            const settings =
-                input.length > 0
-                    ? processLatexSuiteSettings(
-                          Object.assign({}, DEFAULT_SETTINGS, ...input),
-                      )
-                    : processLatexSuiteSettings(DEFAULT_SETTINGS);
-            return settings;
-        },
-    });
     const { handleUndoRedo, endSnippet, startSnippet, snippetInvertedEffects } =
         stateEffect_variables(
             StateEffect,
@@ -136,70 +118,64 @@ export function main(
     const { clearSnippetQueue, queueSnippet, snippetQueueStateField } =
         snippetQueues(StateEffect, StateField);
     const extensions: ExtensionC[] = [];
-    extensions.push(latexSuiteConfig.of(CMSettings));
-    if (settings.snippetsEnabled) {
-        const snippet_leaf_extension = [
-            Prec.highest(
-                EditorView.domEventHandlers({
-                    keydown: function (
-                        event: KeyboardEvent,
-                        view: EditorViewC,
-                    ) {
-                        return onKeydown(
-                            event,
-                            view,
-                            latexSuiteConfig,
-                            syntaxTree,
-                            removeAllTabstops,
-                            tabstopsStateField,
-                            clearSnippetQueue,
-                            queueSnippet,
-                            (view: EditorViewC) =>
-                                expandSnippets(
-                                    view,
-                                    ChangeSet,
-                                    isolateHistory,
-                                    snippetQueueStateField,
-                                    clearSnippetQueue,
-                                    addTabstops,
-                                    getTabstopGroupsFromView,
-                                    getNextTabstopColor,
-                                    startSnippet,
-                                    endSnippet,
-                                    EditorSelection,
-                                    Decoration,
-                                ),
-                        );
-                    },
-                }),
-            ),
-            EditorView.updateListener.of((update: ViewUpdateC) =>
-                handleUpdate(update, latexSuiteConfig, handleUndoRedo),
-            ),
-            create_snippet_extensions(
-                tabstopsStateField,
-                snippetQueueStateField,
-                snippetInvertedEffects,
-            ),
-        ];
-        extensions.push(...snippet_leaf_extension);
-        if (settings.concealEnabled) {
-            const conceal_plugin = mkConcealPlugin(
-                settings.concealRevealTimeout,
-                ViewPlugin,
-                EditorView,
-                Decoration,
-                WidgetType,
-                RangeSet,
-                RangeSetBuilder,
-                RangeValue,
-                syntaxTree,
-                latexSuiteConfig,
-            ).extension;
 
-            extensions.push(conceal_plugin);
-        }
-    }
+    const latexSuiteConfig = new LatexSuiteConfig(CMSettings);
+    const snippet_leaf_extension = [
+        Prec.highest(
+            EditorView.domEventHandlers({
+                keydown: function (event: KeyboardEvent, view: EditorViewC) {
+                    return onKeydown(
+                        event,
+                        view,
+                        latexSuiteConfig,
+                        syntaxTree,
+                        removeAllTabstops,
+                        tabstopsStateField,
+                        clearSnippetQueue,
+                        queueSnippet,
+                        (view: EditorViewC) =>
+                            expandSnippets(
+                                view,
+                                ChangeSet,
+                                isolateHistory,
+                                snippetQueueStateField,
+                                clearSnippetQueue,
+                                addTabstops,
+                                getTabstopGroupsFromView,
+                                getNextTabstopColor,
+                                startSnippet,
+                                endSnippet,
+                                EditorSelection,
+                                Decoration,
+                            ),
+                    );
+                },
+            }),
+        ),
+        EditorView.updateListener.of((update: ViewUpdateC) =>
+            handleUpdate(update, latexSuiteConfig, handleUndoRedo),
+        ),
+        create_snippet_extensions(
+            tabstopsStateField,
+            snippetQueueStateField,
+            snippetInvertedEffects,
+        ),
+    ];
+    extensions.push(...snippet_leaf_extension);
+    const conceal_plugin = mkConcealPlugin(
+        settings.concealRevealTimeout,
+        ViewPlugin,
+        EditorView,
+        Decoration,
+        WidgetType,
+        RangeSet,
+        RangeSetBuilder,
+        RangeValue,
+        syntaxTree,
+        latexSuiteConfig,
+    ).extension;
+
+    extensions.push(conceal_plugin);
     return { latexSuiteConfig, extension: extensions };
 }
 
@@ -212,3 +188,18 @@ export type {
     ProcessSnippetResult,
     SnippetData,
 };
+class LatexSuiteConfig {
+    value: LatexSuiteCMSettings;
+    constructor(value: LatexSuiteCMSettings) {
+        this.value = value;
+    }
+    processSettings(settings: LatexSuitePluginSettings): this | null {
+        try {
+            const processedSettings = processLatexSuiteSettings(settings);
+            this.value = processedSettings;
+            return this;
+        } catch {
+            return null;
+        }
+    }
+}

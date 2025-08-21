@@ -2,6 +2,7 @@
 import typescript from "@rollup/plugin-typescript";
 import { dts } from "rollup-plugin-dts";
 import { nodeResolve } from "@rollup/plugin-node-resolve";
+import commonjs from "@rollup/plugin-commonjs";
 import { readFile } from "fs/promises";
 
 const prefix = "inline:";
@@ -30,7 +31,66 @@ const inlin_plugin = {
     },
 };
 
-export default [
+const browser_config = [
+    {
+        input: "browser_extension/browser_extension.ts",
+        output: {
+            format: "iife",
+            file: "dist/browser_extension.js",
+            sourcemap: true,
+        },
+        external: ["typescript", "@valtown/codemirror-ts", "path", "fs"],
+        plugins: [
+            typescript(),
+            nodeResolve({
+                browser: true,
+                preferBuiltins: false,
+            }),
+            commonjs(),
+            inlin_plugin,
+        ],
+    },
+    {
+        input: "browser_extension/settings/settings_tab.ts",
+        output: {
+            format: "iife",
+            name: "dist/settings_tab.js",
+            file: "dist/settings_tab.js",
+            sourcemap: true,
+        },
+        external: ["typescript", "@valtown/codemirror-ts", "path", "fs"],
+        plugins: [
+            typescript(),
+            nodeResolve({
+                browser: true,
+                preferBuiltins: false,
+            }),
+            commonjs(),
+            inlin_plugin,
+        ],
+    },
+    {
+        input: "browser_extension/settings/content_script.ts",
+        output: {
+            format: "iife",
+            file: "dist/content_script.js",
+            name: "dist/content_script.js",
+            sourcemap: true,
+        },
+        external: ["typescript", "@valtown/codemirror-ts", "path", "fs"],
+        plugins: [
+            typescript(),
+            nodeResolve({
+                browser: true,
+                preferBuiltins: false,
+            }),
+            commonjs(),
+            inlin_plugin,
+        ],
+    },
+];
+
+const codemirror_config = [
     {
         input: "codemirror_extension/codemirror_extensions.ts",
         output: {
@@ -56,7 +116,10 @@ export default [
             }),
             nodeResolve({
                 tsconfig: "./tsconfig.json",
+                browser: true,
+                preferBuiltins: false,
             }),
+            commonjs(),
             inlin_plugin,
         ],
     },
@@ -73,3 +136,5 @@ export default [
         ],
     },
 ];
+
+export default [...browser_config];
