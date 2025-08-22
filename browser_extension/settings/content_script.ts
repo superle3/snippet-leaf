@@ -2,6 +2,7 @@
 
 import { compressToUint8Array, decompressFromUint8Array } from "lz-string";
 import { DEFAULT_SETTINGS_RAW } from "../../src/settings/settings";
+import * as ts from "typescript";
 
 async function send_config(): Promise<void> {
     const config = await get_settings();
@@ -58,11 +59,87 @@ export async function get_settings() {
             {} as Record<string, string | boolean | number>,
         ),
     );
-    settings.snippets = await get_decompressed("snippets");
+    const snippets = await get_decompressed("snippets");
+    settings.snippets = compiler(snippets);
     settings.snippetVariables = await get_decompressed("snippetVariables");
 
     return settings;
 }
+
+const compiler = (source: string) => {
+    // Remove the `import {...} from "snippet_leaf"` statement as it should be its own module.
+    // Using the AST from the typescript compiler
+    // probably overkill, but safer and more functions can be added later
+    const variables: string[] = [];
+    const transformer: ts.TransformerFactory<ts.SourceFile> = (context) => {
+        return (sourceFile) => {
+            const visitor = (node: ts.Node): ts.Node => {
+                if (ts.isImportDeclaration(node) && node.moduleSpecifier) {
+                    const moduleSpecifier = node.moduleSpecifier;
+                    if (ts.isStringLiteral(moduleSpecifier)) {
+                        const moduleName = moduleSpecifier.text;
+                        if (
+                            moduleName === "snippet_leaf" ||
+                            moduleName === "./snippet_leaf" ||
+                            moduleName === "/snippet_leaf"
+                        ) {
+                            const importClause = node.importClause;
+
+                            if (importClause) {
+                                const namedBindings =
+                                    importClause.namedBindings;
+
+                                if (
+                                    namedBindings &&
+                                    ts.isNamedImports(namedBindings)
+                                ) {
+                                    namedBindings.elements.forEach(
+                                        (element) => {
+                                            if (element.propertyName) {
+                                                variables.push(
+                                                    element.propertyName.text,
+                                                );
+                                            } else {
+                                                variables.push(
+                                                    element.name.text,
+                                                );
+                                            }
+                                        },
+                                    );
+                                } else if (importClause.name) {
+                                    variables.push(importClause.name.text);
+                                }
+                            }
+                            return undefined;
+                        }
+                    }
+                }
+
+                return ts.visitEachChild(node, visitor, context);
+            };
+
+            return ts.visitNode(sourceFile, visitor) as ts.SourceFile;
+        };
+    };
+
+    let outputText = ts.transpileModule(source, {
+        compilerOptions: {
+            module: ts.ModuleKind.ESNext,
+            target: ts.ScriptTarget.ESNext,
+            lib: ["ESNext"],
+            skipLibCheck: true,
+        },
+        transformers: {
+            after: [transformer],
+        },
+    }).outputText;
+
+    if (variables.includes("defineSnippets")) {
+        // function declarations are hoisted, so we can put it at the end of the file.
+        outputText = outputText + "function defineSnippets(s) {return s}";
+    }
+    return outputText;
+};
 
 async function store_compressed(key: string, value: Uint8Array): Promise<void> {
     const CHUNK_SIZE = Math.ceil(8000 / 3); // 7.5KB per chunk

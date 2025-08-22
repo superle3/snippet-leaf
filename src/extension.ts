@@ -43,6 +43,10 @@ import { mkConcealPlugin } from "./conceal_plugin/conceal";
 import type { RawSnippet, SnippetVariables } from "./snippets/parse";
 import type { TabstopGroupC } from "./snippets/tabstop";
 import type { ProcessSnippetResult, SnippetData } from "./snippets/snippets";
+import {
+    colorPairedBracketsPluginLowestPrec,
+    highlightCursorBracketsPlugin,
+} from "./highlight_brackets_plugin/highlight_brackets";
 
 type CodeMirrorExt = {
     Decoration: typeof DecorationC;
@@ -176,6 +180,68 @@ export function main(
     ).extension;
 
     extensions.push(conceal_plugin);
+
+    const highlighting_brackets = [
+        colorPairedBracketsPluginLowestPrec(
+            Prec,
+            ViewPlugin,
+            Decoration,
+            syntaxTree,
+            latexSuiteConfig,
+        ),
+        highlightCursorBracketsPlugin(
+            ViewPlugin,
+            Decoration,
+            latexSuiteConfig,
+            syntaxTree,
+        ),
+    ];
+    extensions.push(...highlighting_brackets);
+    const dark_theme_extension = EditorView.theme(
+        {
+            '.latex-suite-color-bracket-0-dark, .latex-suite-color-bracket-0-dark [class^="tok-"], .latex-suite-color-bracket-0-dark .cm-bracket, .latex-suite-color-bracket-0-dark .cm-math':
+                {
+                    color: "#47b8ff",
+                },
+            '.latex-suite-color-bracket-1-dark, .latex-suite-color-bracket-1-dark [class^="tok-"], .latex-suite-color-bracket-1-dark .cm-bracket, .latex-suite-color-bracket-1-dark .cm-math':
+                {
+                    color: "#ff55cd",
+                },
+            '.latex-suite-color-bracket-2-dark, .latex-suite-color-bracket-2-dark [class^="tok-"], .latex-suite-color-bracket-2-dark .cm-bracket, .latex-suite-color-bracket-2-dark .cm-math':
+                {
+                    color: "#73ff63",
+                },
+            ".latex-suite-highlighted-bracket-dark, .latex-suite-highlighted-bracket-dark .cm-bracket, .latex-suite-highlighted-bracket-dark .cm-math ":
+                {
+                    backgroundColor: "hsla(170, 50%, 40%, 0.3)",
+                },
+        },
+        { dark: true },
+    );
+
+    const light_theme_extension = EditorView.theme(
+        {
+            '.latex-suite-color-bracket-0-light, .latex-suite-color-bracket-0-light [class^="tok-"], .latex-suite-color-bracket-0-light .cm-bracket, .latex-suite-color-bracket-0-light .cm-math':
+                {
+                    color: "#527aff",
+                },
+            '.latex-suite-color-bracket-1-light, .latex-suite-color-bracket-1-light [class^="tok-"], .latex-suite-color-bracket-1-light .cm-bracket, .latex-suite-color-bracket-1-light .cm-math':
+                {
+                    color: "#ff50b7",
+                },
+            '.latex-suite-color-bracket-2-light, .latex-suite-color-bracket-2-light [class^="tok-"], .latex-suite-color-bracket-2-light .cm-bracket, .latex-suite-color-bracket-2-light .cm-math':
+                {
+                    color: "#69ba00",
+                },
+            ".latex-suite-highlighted-bracket-light, .latex-suite-highlighted-bracket-light .cm-bracket, .latex-suite-highlighted-bracket-light .cm-math ":
+                {
+                    backgroundColor: "hsla(170, 50%, 70%, 0.6)",
+                },
+        },
+        { dark: false },
+    );
+    extensions.push(light_theme_extension, dark_theme_extension);
+
     return { latexSuiteConfig, extension: extensions };
 }
 

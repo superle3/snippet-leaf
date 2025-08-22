@@ -391,10 +391,15 @@ export const mkConcealPlugin = (
                         update.docChanged ||
                         update.viewportChanged ||
                         update.selectionSet
-                    ) ||
-                    !settings.concealEnabled
+                    )
                 )
                     return;
+                if (!settings.concealEnabled) {
+                    this.delayedReveal.cancel();
+                    this.decorations = Decoration.none;
+                    this.atomicRanges = RangeSet.empty;
+                    return;
+                }
                 revealTimeout = settings.concealRevealTimeout;
                 this.delayedReveal // Cancel the delayed revealment whenever we update the concealments
                     .cancel();

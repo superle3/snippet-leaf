@@ -8,7 +8,7 @@
         "target": "ES2017",
         "allowJs": true,
         "noImplicitAny": true,
-        "moduleResolution": "node",
+        "moduleResolution": "bundler",
         "importHelpers": true,
         "declaration": true,
 

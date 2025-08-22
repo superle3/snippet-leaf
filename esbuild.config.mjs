@@ -98,6 +98,7 @@ const inlin_plugin = (options) => {
     };
 };
 
+/**@type {Partial<import('esbuild').BuildOptions>} */
 const sharedConfig = {
     banner: {
         js: banner,
@@ -111,6 +112,7 @@ const sharedConfig = {
     logLevel: "info",
 };
 
+/**@type {Partial<import('esbuild').BuildOptions>} */
 const browserConfig = {
     ...sharedConfig,
     entryPoints: [
@@ -122,6 +124,7 @@ const browserConfig = {
     outdir: "browser_extension/dist",
     external: ["path", "fs"],
     metafile: true,
+    mainFields: ["module", "browser", "main"],
 };
 
 const codemirrorConfig = {
