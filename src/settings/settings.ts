@@ -21,6 +21,7 @@ import type { EditorView } from "@codemirror/view";
 interface LatexSuiteBasicSettings {
     snippetsEnabled: boolean;
     snippetsTrigger: "Tab" | " ";
+    defaultSnippetVersion: 1 | 2;
     suppressSnippetTriggerOnIME: boolean;
     removeSnippetWhitespace: boolean;
     autoDelete$: boolean;
@@ -77,6 +78,7 @@ export const DEFAULT_SETTINGS: LatexSuitePluginSettings &
     // Basic settings
     snippetsEnabled: true,
     snippetsTrigger: "Tab",
+    defaultSnippetVersion: 2,
     suppressSnippetTriggerOnIME: true,
     removeSnippetWhitespace: true,
     autoDelete$: true,
@@ -198,9 +200,14 @@ export function getSettingsSnippetVariables(snippetVariables: string) {
 export async function getSettingsSnippets(
     snippets: string,
     snippetVariables: SnippetVariables,
+    defaultSnippetVersion: 1 | 2 = 2,
 ) {
     try {
-        return await parseSnippets(snippets, snippetVariables);
+        return await parseSnippets(
+            snippets,
+            snippetVariables,
+            defaultSnippetVersion,
+        );
     } catch (e) {
         console.error(`Failed to load snippets from settings: ${e}`);
         return [];
@@ -388,5 +395,12 @@ export const SETTINGS_EXPLANATIONS: LatexSuitePluginSettingsExplanations = {
             "Whether to use a dark or light theme to highlight/color the brackets.",
         type: ["light", "dark"],
         defaultValue: DEFAULT_SETTINGS.theme,
+    },
+    defaultSnippetVersion: {
+        title: "Default snippet version",
+        description:
+            "The default snippet version to use for the snippet syntax. Version 2 is recommended for most users.",
+        type: ["1", "2"],
+        defaultValue: DEFAULT_SETTINGS.defaultSnippetVersion,
     },
 } as const;

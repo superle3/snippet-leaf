@@ -30,7 +30,7 @@
         }
     ],
     "action": {
-        "default_popup": "settings.html"
+        "default_popup": "popup.html"
     },
     "browser_specific_settings": {
         "gecko": {
