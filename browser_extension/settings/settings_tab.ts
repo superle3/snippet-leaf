@@ -284,6 +284,207 @@ class LatexSuiteSettingTab {
         this.displayTaboutSettings();
         this.displayAutoEnlargeBracketsSettings();
         this.displayAdvancedSnippetSettings();
+        this.displayImportExportSettings();
+    }
+
+    displayImportExportSettings() {
+        const containerEl = this.containerEl;
+        this.addHeading(containerEl, "Import/Export Settings", "download");
+
+        // Import from Obsidian
+        const obsidianSetting = new Setting(containerEl)
+            .setName("Import from Obsidian")
+            .setDesc(
+                "Import settings from Obsidian LaTeX Suite. Upload your Obsidian `data.json` file. Can be found in your vault's `.obsidian/plugins/obsidian-latex-suite` folder.",
+            );
+
+        const obsidianImportDiv = document.createElement("div");
+        obsidianImportDiv.style.display = "flex";
+        obsidianImportDiv.style.gap = "10px";
+        obsidianImportDiv.style.alignItems = "center";
+
+        const obsidianFileInput = document.createElement("input");
+        obsidianFileInput.type = "file";
+        obsidianFileInput.accept = ".json";
+        obsidianFileInput.style.flex = "1";
+
+        const obsidianImportButton = document.createElement("button");
+        obsidianImportButton.textContent = "Import";
+        obsidianImportButton.disabled = true;
+
+        obsidianFileInput.addEventListener("change", (event) => {
+            const file = (event.target as HTMLInputElement).files?.[0];
+            obsidianImportButton.disabled = !file;
+        });
+
+        obsidianImportButton.addEventListener("click", async () => {
+            const file = obsidianFileInput.files?.[0];
+            if (!file) return;
+
+            try {
+                const text = await file.text();
+                const obsidianSettings = JSON.parse(text);
+
+                const convertedSettings = this.convertObsidianSettings(
+                    obsidianSettings,
+                    this.plugin.settings,
+                );
+
+                Object.assign(this.plugin.settings, convertedSettings);
+                await this.plugin.saveSettings();
+
+                alert("Settings imported successfully from Obsidian!");
+                location.reload();
+            } catch (error) {
+                console.error("Failed to import Obsidian settings:", error);
+                alert(
+                    "Failed to import settings. Please check the file format.",
+                );
+            }
+        });
+
+        obsidianImportDiv.appendChild(obsidianFileInput);
+        obsidianImportDiv.appendChild(obsidianImportButton);
+        obsidianSetting.setting_control.appendChild(obsidianImportDiv);
+
+        const exportSetting = new Setting(containerEl)
+            .setName("Export current settings")
+            .setDesc(
+                "Export your current settings to a JSON file that can be imported later.",
+            );
+
+        const exportButton = document.createElement("button");
+        exportButton.textContent = "Export Settings";
+        exportButton.addEventListener("click", () => {
+            this.exportSettings();
+        });
+        exportSetting.setting_control.appendChild(exportButton);
+
+        const importSetting = new Setting(containerEl)
+            .setName("Import settings")
+            .setDesc("Import settings from a previously exported file.");
+
+        const importDiv = document.createElement("div");
+        importDiv.style.display = "flex";
+        importDiv.style.gap = "10px";
+        importDiv.style.alignItems = "center";
+
+        const fileInput = document.createElement("input");
+        fileInput.type = "file";
+        fileInput.accept = ".json";
+        fileInput.style.flex = "1";
+
+        const importButton = document.createElement("button");
+        importButton.textContent = "Import";
+        importButton.disabled = true;
+
+        fileInput.addEventListener("change", (event) => {
+            const file = (event.target as HTMLInputElement).files?.[0];
+            importButton.disabled = !file;
+        });
+
+        importButton.addEventListener("click", async () => {
+            const file = fileInput.files?.[0];
+            if (!file) return;
+
+            try {
+                const text = await file.text();
+                const importedSettings = JSON.parse(text);
+
+                if (!this.validateSettingsStructure(importedSettings)) {
+                    throw new Error("Invalid settings file structure");
+                }
+
+                Object.assign(this.plugin.settings, importedSettings);
+                await this.plugin.saveSettings();
+
+                alert("Settings imported successfully!");
+                location.reload();
+            } catch (error) {
+                console.error("Failed to import settings:", error);
+                alert(
+                    "Failed to import settings. Please check the file format.",
+                );
+                location.reload();
+            }
+        });
+
+        importDiv.appendChild(fileInput);
+        importDiv.appendChild(importButton);
+        importSetting.setting_control.appendChild(importDiv);
+    }
+
+    convertObsidianSettings(
+        obsidianSettings: Record<string, unknown>,
+        oldSettings: LatexSuitePluginSettingsRaw = DEFAULT_SETTINGS_RAW,
+    ): LatexSuitePluginSettingsRaw {
+        // The main difference is that Obsidian uses defaultSnippetVersion 1, while this app uses 2
+        // When importing from Obsidian, we keep the Obsidian defaultSnippetVersion (1) intact
+        for (const key of Object.keys(obsidianSettings)) {
+            if (!(key in oldSettings) && key in obsidianSettings) {
+                delete obsidianSettings[key];
+            }
+            if (key === "snippets" && key in obsidianSettings) {
+                obsidianSettings[key] =
+                    "export default " + obsidianSettings[key];
+            }
+        }
+        return { ...oldSettings, ...obsidianSettings };
+    }
+
+    validateSettingsStructure(settings: unknown): boolean {
+        // Basic validation to ensure the imported object has the expected structure
+        if (typeof settings !== "object" || settings === null) {
+            return false;
+        }
+
+        const settingsObj = settings as Record<string, unknown>;
+
+        // Check for some key properties that should exist in both Obsidian and this app
+        const requiredKeys = [
+            "snippetsEnabled",
+            "snippetsTrigger",
+            "concealEnabled",
+        ];
+        for (const key of requiredKeys) {
+            if (!(key in settingsObj)) {
+                console.warn(`Missing required setting: ${key}`);
+                return false;
+            }
+        }
+
+        // Additional validation for critical types
+        if (typeof settingsObj.snippetsEnabled !== "boolean") {
+            console.warn("snippetsEnabled must be boolean");
+            return false;
+        }
+
+        if (typeof settingsObj.concealEnabled !== "boolean") {
+            console.warn("concealEnabled must be boolean");
+            return false;
+        }
+
+        return true;
+    }
+
+    exportSettings() {
+        const settingsToExport = {
+            ...this.plugin.settings,
+            exportedAt: new Date().toISOString(),
+            exportedFrom: "Snippet Leaf Browser Extension",
+        };
+
+        const dataStr = JSON.stringify(settingsToExport, null, 2);
+        const dataUri =
+            "data:application/json;charset=utf-8," +
+            encodeURIComponent(dataStr);
+
+        const exportFileDefaultName = `snippet-leaf-settings-${new Date().toISOString().split("T")[0]}.json`;
+
+        const linkElement = document.createElement("a");
+        linkElement.setAttribute("href", dataUri);
+        linkElement.setAttribute("download", exportFileDefaultName);
+        linkElement.click();
     }
 
     displaySnippetSettings() {
@@ -327,6 +528,26 @@ class LatexSuiteSettingTab {
                             await this.plugin.saveSettings();
                         },
                     ),
+            );
+
+        new Setting(containerEl)
+            .setName("Default snippet version")
+            .setDesc(
+                "The default snippet version to use for the snippet syntax. Version 2 is recommended for most users.",
+            )
+            .addDropdown((dropdown) =>
+                dropdown
+                    .addOption("1", "Version 1")
+                    .addOption("2", "Version 2")
+                    .setValue(
+                        String(this.plugin.settings.defaultSnippetVersion),
+                    )
+                    .onChange(async (value: string) => {
+                        this.plugin.settings.defaultSnippetVersion = parseInt(
+                            value,
+                        ) as 1 | 2;
+                        await this.plugin.saveSettings();
+                    }),
             );
     }
 

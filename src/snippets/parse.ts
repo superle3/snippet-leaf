@@ -82,14 +82,20 @@ export function parseSnippetVariablesSync(
 export async function parseSnippets(
     snippetsStr: string,
     snippetVariables: SnippetVariables,
+    defaultSnippetVersion: 1 | 2 = 2,
 ) {
     const rawSnippets = (await importRaw(snippetsStr)) as RawSnippet[];
-    return parseSnippetsSync(rawSnippets, snippetVariables);
+    return parseSnippetsSync(
+        rawSnippets,
+        snippetVariables,
+        defaultSnippetVersion,
+    );
 }
 
 export function parseSnippetsSync(
     rawSnippets: RawSnippet[],
     snippetVariables: SnippetVariables,
+    defaultSnippetVersion: 1 | 2 = 2,
 ) {
     let parsedSnippets;
     try {
@@ -99,7 +105,11 @@ export function parseSnippetsSync(
         parsedSnippets = rawSnippets.map((raw) => {
             try {
                 // Normalize the raw snippet and convert it into a Snippet
-                return parseSnippet(raw, snippetVariables);
+                return parseSnippet(
+                    raw,
+                    snippetVariables,
+                    defaultSnippetVersion,
+                );
             } catch (e) {
                 // provide context of which snippet errored
                 throw `${e}\nErroring snippet:\n${serializeSnippetLike(raw)}`;
@@ -186,9 +196,10 @@ function validateRawSnippets(snippets: unknown): RawSnippet[] {
 function parseSnippet(
     raw: RawSnippet,
     snippetVariables: SnippetVariables,
+    defaultSnippetVersion: 1 | 2 = 2,
 ): Snippet {
     const { priority, description } = raw;
-    const version = raw.version ?? 2;
+    const version = raw.version ?? defaultSnippetVersion;
     let replacement = raw.replacement;
     const options = Options.fromSource(raw.options);
     let trigger;

@@ -134,6 +134,7 @@ async function processRawLatexSuiteSettings(
     const snippets = await getSettingsSnippets(
         rawSettings.snippets,
         snippetVariables,
+        rawSettings.defaultSnippetVersion,
     );
     if (!snippets || !snippetVariables) {
         console.error("Failed to process settings snippets or variables");
