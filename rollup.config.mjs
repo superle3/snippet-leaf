@@ -31,65 +31,6 @@ const inlin_plugin = {
     },
 };
 
-const browser_config = [
-    {
-        input: "browser_extension/browser_extension.ts",
-        output: {
-            format: "iife",
-            file: "dist/browser_extension.js",
-            sourcemap: true,
-        },
-        external: ["typescript", "@valtown/codemirror-ts", "path", "fs"],
-        plugins: [
-            typescript(),
-            nodeResolve({
-                browser: true,
-                preferBuiltins: false,
-            }),
-            commonjs(),
-            inlin_plugin,
-        ],
-    },
-    {
-        input: "browser_extension/settings/settings_tab.ts",
-        output: {
-            format: "iife",
-            name: "dist/settings_tab.js",
-            file: "dist/settings_tab.js",
-            sourcemap: true,
-        },
-        external: ["typescript", "@valtown/codemirror-ts", "path", "fs"],
-        plugins: [
-            typescript(),
-            nodeResolve({
-                browser: true,
-                preferBuiltins: false,
-            }),
-            commonjs(),
-            inlin_plugin,
-        ],
-    },
-    {
-        input: "browser_extension/settings/content_script.ts",
-        output: {
-            format: "iife",
-            file: "dist/content_script.js",
-            name: "dist/content_script.js",
-            sourcemap: true,
-        },
-        external: ["typescript", "@valtown/codemirror-ts", "path", "fs"],
-        plugins: [
-            typescript(),
-            nodeResolve({
-                browser: true,
-                preferBuiltins: false,
-            }),
-            commonjs(),
-            inlin_plugin,
-        ],
-    },
-];
-
 const codemirror_config = [
     {
         input: "codemirror_extension/codemirror_extensions.ts",
@@ -137,4 +78,4 @@ const codemirror_config = [
     },
 ];
 
-export default [...browser_config];
+export default codemirror_config;
