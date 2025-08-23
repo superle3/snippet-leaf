@@ -1,6 +1,6 @@
 {
-    "name": "obsidian-latex-suite",
-    "version": "1.9.8",
+    "name": "Snippetleaf",
+    "version": "0.0.1",
     "description": "Make typesetting LaTeX math as fast as handwriting through snippets, text expansion, and editor enhancements",
     "main": "dist/index.js",
     "scripts": {
@@ -14,7 +14,14 @@
         "format": "prettier --write .",
         "format:commit": "pretty-quick --staged"
     },
-    "keywords": [],
+    "keywords": [
+        "latex",
+        "snippets",
+        "programmable snippets",
+        "text expansion",
+        "overleaf",
+        "obsidian-latex-suite"
+    ],
     "author": "",
     "license": "MIT",
     "devDependencies": {
