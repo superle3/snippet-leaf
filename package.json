@@ -1,18 +1,23 @@
 {
-    "name": "Snippetleaf",
+    "name": "snippetleaf-monorepo",
+    "private": true,
     "version": "0.0.1",
-    "description": "Make typesetting LaTeX math as fast as handwriting through snippets, text expansion, and editor enhancements",
-    "main": "dist/index.js",
+    "workspaces": [
+        "browser_extension",
+        "codemirror_extension"
+    ],
+    "license": "MIT",
     "scripts": {
-        "web": "node esbuild.config.mjs web",
-        "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
+        "web:watch": "node esbuild.config.mjs web",
+        "web:build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
+        "web:lint": "eslint --ext .ts,.js src browser_extension --fix && env --chdir=./browser_extension -S web-ext lint",
         "web:full": "concurrently \"npm run web:ext\" \"npm run web\"",
         "web:ext": "env --chdir=./browser_extension -S web-ext run",
-        "lint": "eslint --ext .ts,.js src browser_extension --fix",
-        "build:rollup": "rollup -c",
+        "lint": "eslint --ext .ts,.js src browser_extension codemirror_extension --fix",
         "prepare": "npm run build:rollup",
         "format": "prettier --write .",
-        "format:commit": "pretty-quick --staged"
+        "format:commit": "pretty-quick --staged",
+        "build:rollup": "rollup -c"
     },
     "keywords": [
         "latex",
@@ -22,9 +27,13 @@
         "overleaf",
         "obsidian-latex-suite"
     ],
-    "author": "",
-    "license": "MIT",
+    "dependencies": {
+        "js-base64": "^3.7.7",
+        "json5": "^2.2.3",
+        "valibot": "^0.24.1"
+    },
     "devDependencies": {
+        "prettier": "^3.6.2",
         "@codemirror/autocomplete": "^6.0.0",
         "@codemirror/commands": "^6.0.0",
         "@codemirror/lang-javascript": "^6.0.0",
@@ -42,9 +51,9 @@
         "@rollup/plugin-typescript": "^12.1.4",
         "@types/firefox-webext-browser": "^120.0.4",
         "@types/node": "^24.1.0",
+        "@types/web": "^0.0.263",
         "@typescript-eslint/eslint-plugin": "^8.38.0",
         "@typescript-eslint/parser": "^8.38.0",
-        "builtin-modules": "^3.2.0",
         "concurrently": "^9.2.0",
         "dotenv": "^17.0.1",
         "esbuild": "^0.20.2",
@@ -55,7 +64,6 @@
         "eslint-plugin-relative-imports-when-same-folder": "^0.1.1",
         "obsidian": "^0.15.0",
         "pre-commit": "^1.2.2",
-        "prettier": "^3.6.2",
         "pretty-quick": "^4.2.2",
         "rollup": "^4.46.1",
         "rollup-plugin-dts": "^6.2.1",
@@ -63,23 +71,11 @@
         "typescript-eslint": "^8.39.1",
         "web-ext": "^8.8.0"
     },
-    "dependencies": {
-        "@types/web": "^0.0.261",
-        "@typescript/vfs": "^1.6.1",
-        "@valtown/codemirror-ts": "^2.2.1",
-        "acorn": "^8.15.0",
-        "codemirror": "^6.0.2",
-        "comlink": "^4.4.2",
-        "js-base64": "^3.7.7",
-        "json5": "^2.2.3",
-        "lz-string": "^1.5.0",
-        "typescript": "^5.9.2",
-        "valibot": "^0.24.1"
-    },
     "type": "module",
-    "types": "dist/index.d.ts",
+    "types": "codemirror_extension/dist/index.d.ts",
+    "main": "codemirror_extension/dist/index.js",
     "pre-commit": [
-        "build",
+        "web:build",
         "build:rollup",
         "format:commit"
     ]

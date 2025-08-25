@@ -1,6 +1,6 @@
 {
     "compilerOptions": {
-        "outDir": "dist",
+        "outDir": "codemirror_extension/dist",
         "baseUrl": ".",
         "inlineSourceMap": true,
         "inlineSources": true,
