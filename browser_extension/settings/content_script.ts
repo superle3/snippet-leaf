@@ -5,7 +5,7 @@ import { DEFAULT_SETTINGS_RAW } from "../../src/settings/settings";
 import * as ts from "typescript";
 
 async function send_config(): Promise<void> {
-    const config = await get_settings();
+    const config = await get_transpiled_settings();
     document.dispatchEvent(
         new CustomEvent("snippet_leaf_config_send", {
             detail: JSON.stringify(config),
@@ -39,14 +39,30 @@ function base64ToUint8Array(base64: string): Uint8Array {
     return uint8Array;
 }
 
-export async function get_settings() {
+export function get_default_snippets(): typeof DEFAULT_SETTINGS_RAW.snippets {
+    return DEFAULT_SETTINGS_RAW.snippets
+        .replace("/** @type {SnippetSignature[]} */", ": SnippetSignature[]")
+        .replace(
+            '// import {SnippetSignature, defineSnippets} from "./snippet_leaf";',
+            'import {SnippetSignature, defineSnippets} from "./snippet_leaf";',
+        );
+}
+
+export function get_default_settings(): typeof DEFAULT_SETTINGS_RAW {
+    return {
+        ...DEFAULT_SETTINGS_RAW,
+        snippets: get_default_snippets(),
+    };
+}
+
+export async function get_settings(): Promise<typeof DEFAULT_SETTINGS_RAW> {
     const version = await browser.storage.sync.get("version");
     if (!version.version) {
         await browser.storage.sync.clear();
         await browser.storage.sync.set({ version: 1 });
-
-        await store_settings(DEFAULT_SETTINGS_RAW);
-        return DEFAULT_SETTINGS_RAW;
+        const settings = get_default_settings();
+        await store_settings(settings);
+        return settings;
     }
     const settings = await browser.storage.sync.get(
         Object.entries(DEFAULT_SETTINGS_RAW).reduce(
@@ -59,11 +75,18 @@ export async function get_settings() {
             {} as Record<string, string | boolean | number>,
         ),
     );
-    const snippets = await get_decompressed("snippets");
-    settings.snippets = compiler(snippets);
+    settings.snippets = await get_decompressed("snippets");
     settings.snippetVariables = await get_decompressed("snippetVariables");
 
-    return settings;
+    return settings as typeof DEFAULT_SETTINGS_RAW;
+}
+
+async function get_transpiled_settings() {
+    const settings = await get_settings();
+    return {
+        ...settings,
+        snippets: compiler(settings.snippets),
+    };
 }
 
 const compiler = (source: string) => {
@@ -193,8 +216,8 @@ async function get_decompressed(key: string): Promise<string> {
     );
 }
 
-async function store_settings(
-    settings: typeof DEFAULT_SETTINGS_RAW = DEFAULT_SETTINGS_RAW,
+export async function store_settings(
+    settings: typeof DEFAULT_SETTINGS_RAW = get_default_settings(),
 ): Promise<void> {
     const compressedSnippets = compressToUint8Array(settings.snippets);
     const compressedSnippetVariables = compressToUint8Array(

@@ -1,4 +1,5 @@
-// typescript and thus the import below is supported for the official extension "snippet_leaf",
+// This file for the browser extension "Snippetleaf" is in
+// typescript and thus the import below is supported for the official extension "Snippetleaf",
 // but may not be supported third-partys.
 // import {SnippetSignature, defineSnippets} from "./snippet_leaf";
 
@@ -9,13 +10,12 @@
  * @property {string|((match: string | RegExpExecArray) => string|false)} replacement
  * @property {string} options t(ext), A(utomatic), w(ord-boundary), m(ath), M(display math), n(inline math)
  * @property {string} [flags] regex flags
- * @property {number} [priority]
+ * @property {number} [priority] if two snippets can expand, the one with the higher priority will be used or if they have equal priority, the one that appears first in the list will be used.
  * @property {string} [description]
- * @property {number} [version] 1 | 2 for your first installation
+ * @property {number} [version] 1 | 2 = 2 Default can be changed in the settings and a higher version number may appear later down the line.
  */
 
-/** @type {SnippetSignature[]} */
-export default [
+const snippets /** @type {SnippetSignature[]} */ = [
     // Math mode
     { trigger: "mk", replacement: "\\(@0\\)@1", options: "tA" },
     { trigger: "dm", replacement: "\\[\n@0\n\\]@1", options: "tAw" },
@@ -591,3 +591,5 @@ export default [
         description: "N x N identity matrix",
     },
 ];
+
+export default snippets;

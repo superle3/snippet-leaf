@@ -6,8 +6,12 @@ import { basicSetup } from "./ui/snippets_editor/codemirror_setup";
 import type { Extension } from "@codemirror/state";
 import { EditorState } from "@codemirror/state";
 import { compiler } from "./typescript";
-import { DEFAULT_SNIPPETS_str } from "src/utils/default_snippets";
 import { parseSnippetVariables } from "src/snippets/parse";
+import {
+    get_default_snippets,
+    get_settings,
+    store_settings,
+} from "./content_script";
 
 class Setting {
     container_element: HTMLElement;
@@ -994,7 +998,6 @@ class LatexSuiteSettingTab {
                 updateValidityIndicator(success, error);
                 if (!success) return;
                 this.plugin.settings.snippets = snippets;
-                // console.log(snippets);
                 await this.plugin.saveSettings();
             }
         });
@@ -1017,14 +1020,15 @@ class LatexSuiteSettingTab {
         snippets_footer.appendChild(buttonsDiv);
         const reset = new ExtraButtonComponent(buttonsDiv);
         reset.setIcon("repeat").onClick(async () => {
+            const snippets = get_default_snippets();
             view.setState(
                 EditorState.create({
-                    doc: DEFAULT_SNIPPETS_str,
+                    doc: snippets,
                     extensions: extensions,
                 }),
             );
             updateValidityIndicator(true, "");
-            this.plugin.settings.snippets = DEFAULT_SNIPPETS_str;
+            this.plugin.settings.snippets = snippets;
             await this.plugin.saveSettings();
         });
 
@@ -1047,20 +1051,6 @@ function createCMEditor(content: string, extensions: Extension[]) {
     return view;
 }
 
-function uint8ArrayToBase64(uint8Array: Uint8Array): string {
-    return btoa(String.fromCharCode(...uint8Array));
-}
-
-function base64ToUint8Array(base64: string): Uint8Array {
-    const binaryString = atob(base64);
-    const len = binaryString.length;
-    const uint8Array = new Uint8Array(len);
-    for (let i = 0; i < len; i++) {
-        uint8Array[i] = binaryString.charCodeAt(i);
-    }
-    return uint8Array;
-}
-
 async function main() {
     // await browser.storage.sync.clear();
     console.time("main");
@@ -1072,95 +1062,6 @@ async function main() {
         },
     }).display();
     console.timeEnd("main");
-}
-
-export async function get_settings(): Promise<LatexSuitePluginSettingsRaw> {
-    const version = await browser.storage.sync.get("version");
-    if (!version.version) {
-        await browser.storage.sync.clear();
-        await browser.storage.sync.set({ version: 1 });
-        console.log("overriding settings");
-        await store_settings(DEFAULT_SETTINGS_RAW);
-        return DEFAULT_SETTINGS_RAW;
-    }
-    const settings = await browser.storage.sync.get(
-        Object.entries(DEFAULT_SETTINGS_RAW).reduce(
-            (acc, [key, value]) => {
-                if (key === "snippets" || key === "snippetVariables")
-                    return acc;
-                acc[key] = value;
-                return acc;
-            },
-            {} as Record<string, string | boolean | number>,
-        ),
-    );
-    settings.snippets = await get_decompressed("snippets");
-    settings.snippetVariables = await get_decompressed("snippetVariables");
-
-    return settings as LatexSuitePluginSettingsRaw;
-}
-
-function store_compressed(
-    key: string,
-    value: Uint8Array,
-): Record<string, string | number> {
-    const CHUNK_SIZE = Math.ceil(8000 / 3); // 7.5KB per chunk
-    const totalChunks = Math.ceil(value.length / CHUNK_SIZE);
-    const compressed_items: Record<string, string | number> = {
-        [`${key}_number`]: totalChunks,
-    };
-    for (let i = 0; i < totalChunks; i++) {
-        const chunk = value.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
-        compressed_items[`${key}${i + 1}`] = uint8ArrayToBase64(chunk);
-    }
-    return compressed_items;
-}
-
-async function get_decompressed(key: string): Promise<string> {
-    const settings = (await browser.storage.sync.get(
-        `${key}_number`,
-    )) as Record<string, number>;
-    if (!settings) {
-        console.error(`No chunks found for ${key}`);
-        return "";
-    }
-    const total_chunks = settings[`${key}_number`];
-    const chunks = Array.from(
-        { length: total_chunks },
-        (_, i) => `${key}${i + 1}`,
-    );
-    const results = await browser.storage.sync.get(chunks);
-    const results_joined = Array.from(
-        { length: total_chunks },
-        (_, i) => results[`${key}${i + 1}`],
-    );
-    return decompressFromUint8Array(
-        base64ToUint8Array(results_joined.join("")),
-    );
-}
-
-async function store_settings(
-    settings: typeof DEFAULT_SETTINGS_RAW = DEFAULT_SETTINGS_RAW,
-): Promise<void> {
-    const compressedSnippets = compressToUint8Array(settings.snippets);
-    const compressedSnippetVariables = compressToUint8Array(
-        settings.snippetVariables,
-    );
-
-    const key_value_storage = {
-        ...Object.entries(settings).reduce(
-            (acc, [key, value]) => {
-                if (key === "snippets" || key === "snippetVariables")
-                    return acc;
-                acc[key] = value;
-                return acc;
-            },
-            {} as Record<string, string | boolean | number>,
-        ),
-        ...store_compressed("snippets", compressedSnippets),
-        ...store_compressed("snippetVariables", compressedSnippetVariables),
-    };
-    await browser.storage.sync.set(key_value_storage);
 }
 
 main();

@@ -31,13 +31,16 @@ const inlin_plugin = {
     },
 };
 
+/**
+ * @type {import('rollup').RollupOptions[]}
+ */
 const codemirror_config = [
     {
         input: "codemirror_extension/codemirror_extensions.ts",
         output: {
             format: "es",
-            file: "dist/index.js",
-            sourcemap: true,
+            file: "codemirror_extension/dist/index.js",
+            sourcemap: "hidden",
         },
         external: [
             "@codemirror/autocomplete",
@@ -57,8 +60,6 @@ const codemirror_config = [
             }),
             nodeResolve({
                 tsconfig: "./tsconfig.json",
-                browser: true,
-                preferBuiltins: false,
             }),
             commonjs(),
             inlin_plugin,
@@ -68,7 +69,7 @@ const codemirror_config = [
         input: "codemirror_extension/codemirror_extensions.ts",
         output: {
             format: "es",
-            file: "dist/index.d.ts",
+            file: "codemirror_extension/dist/index.d.ts",
         },
         plugins: [
             dts({

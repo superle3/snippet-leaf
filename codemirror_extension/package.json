@@ -1,0 +1,13 @@
+{
+    "name": "codemirror-latex-suite",
+    "version": "0.0.1",
+    "private": false,
+    "description": "Codemirror extension project",
+    "type": "module",
+    "license": "MIT",
+    "scripts": {},
+    "dependencies": {
+        "codemirror": "^6.0.2"
+    },
+    "devDependencies": {}
+}
