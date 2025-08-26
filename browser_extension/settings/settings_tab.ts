@@ -1,4 +1,3 @@
-import { compressToUint8Array, decompressFromUint8Array } from "lz-string";
 import type { LatexSuitePluginSettingsRaw } from "../../src/settings/settings";
 import { DEFAULT_SETTINGS_RAW } from "../../src/settings/settings";
 import { EditorView } from "@codemirror/view";
