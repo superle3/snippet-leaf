@@ -10,7 +10,11 @@
         "@valtown/codemirror-ts": "^2.2.1",
         "codemirror": "^6.0.2",
         "lz-string": "^1.5.0",
-        "typescript": "^5.9.2"
+        "typescript": "^5.9.2",
+        "webextension-polyfill": "^0.12.0"
     },
-    "devDependencies": {}
+    "devDependencies": {
+        "@types/webextension-polyfill": "^0.12.3",
+        "web-ext-option-types": "^8.9.5"
+    }
 }

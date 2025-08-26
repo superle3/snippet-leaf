@@ -1,8 +1,9 @@
-/// <reference types="firefox-webext-browser" />
+// /// <reference types="firefox-webext-browser" />
 
 import { compressToUint8Array, decompressFromUint8Array } from "lz-string";
 import { DEFAULT_SETTINGS_RAW } from "../../src/settings/settings";
 import * as ts from "typescript";
+import browser from "webextension-polyfill";
 
 async function send_config(): Promise<void> {
     const config = await get_transpiled_settings();

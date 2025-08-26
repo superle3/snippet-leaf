@@ -16,10 +16,6 @@
         }
     ],
     "permissions": ["storage"],
-    "options_ui": {
-        "page": "settings.html",
-        "open_in_tab": true
-    },
     "web_accessible_resources": [
         {
             "resources": [
@@ -29,6 +25,7 @@
             "matches": ["<all_urls>"]
         }
     ],
+    "options_page": "settings.html",
     "action": {
         "default_popup": "popup.html"
     },
