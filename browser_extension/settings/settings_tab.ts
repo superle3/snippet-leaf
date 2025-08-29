@@ -1,6 +1,6 @@
 import type { LatexSuitePluginSettingsRaw } from "../../src/settings/settings";
 import { DEFAULT_SETTINGS_RAW } from "../../src/settings/settings";
-import { EditorView } from "@codemirror/view";
+import { EditorView, type ViewUpdate } from "@codemirror/view";
 import { basicSetup } from "./ui/snippets_editor/codemirror_setup";
 import type { Extension } from "@codemirror/state";
 import { EditorState } from "@codemirror/state";
@@ -11,6 +11,7 @@ import {
     get_settings,
     store_settings,
 } from "./content_script";
+import { debounce } from "src/utils/debounce";
 
 class Setting {
     container_element: HTMLElement;
@@ -970,34 +971,62 @@ class LatexSuiteSettingTab {
         validity.appendChild(validityIndicator.container_element);
         validity.appendChild(validityText);
         validityText.textContent = "Saved";
-        function updateValidityIndicator(success: boolean, error: string) {
-            validityIndicator.setIcon(success ? "checkmark" : "cross");
-            validityText.textContent = success
-                ? "Saved"
-                : `Invalid syntax. Changes not saved: ${error}`;
+        function updateValidityIndicator(
+            success: ValidityIndicator,
+            error: string,
+        ) {
+            if (success === ValidityIndicator.INVALID) {
+                validityIndicator.setIcon("cross");
+                validityText.innerHTML = `Invalid syntax. Changes not saved ${error}`;
+            } else if (success === ValidityIndicator.VALID) {
+                validityIndicator.setIcon("checkmark");
+                validityText.textContent = "Saved";
+            } else if (success === ValidityIndicator.PENDING) {
+                validityIndicator.setIcon("repeat");
+                validityText.textContent = "Save pending...";
+            }
         }
 
         snippetsSetting.setting_control.appendChild(customCSSWrapper);
         snippetsSetting.setting_control.appendChild(snippets_footer);
 
         const extensions = basicSetup(this.plugin.settings.snippets);
-        updateValidityIndicator(true, "");
+        updateValidityIndicator(ValidityIndicator.VALID, "");
 
+        const delayedSave = debounce(async (v: ViewUpdate) => {
+            const snippets = v.state.doc.toString();
+            let success = ValidityIndicator.VALID;
+            let error = "";
+            const diagnostics = compiler(snippets);
+            if (diagnostics.length > 0) {
+                console.error("Snippet syntax error:", diagnostics);
+                success = ValidityIndicator.INVALID;
+                error =
+                    "<br>" +
+                    diagnostics
+                        .map((d) => {
+                            let result = d.messageText;
+                            const start_line = v.state.doc.lineAt(d.start);
+                            const start_line_number = start_line.number;
+                            const start_char = start_line.from - d.start;
+                            result += ` at Ln ${start_line_number}, Col ${start_char}`;
+                            return result;
+                        })
+                        .join("<br>");
+            }
+            updateValidityIndicator(success, error);
+            if (success !== ValidityIndicator.VALID) return;
+            this.plugin.settings.snippets = snippets;
+            await this.plugin.saveSettings();
+        }, 1000);
+        validityIndicator.onClick(() => {
+            delayedSave.now();
+        });
         const change = EditorView.updateListener.of(async (v) => {
             if (v.docChanged) {
-                const snippets = v.state.doc.toString();
-                let success = true;
-                let error = "";
-                const diagnostics = compiler(snippets);
-                if (diagnostics.length > 0) {
-                    console.error("Snippet syntax error:", diagnostics);
-                    success = false;
-                    error = diagnostics.map((d) => d.messageText).join(", ");
-                }
-                updateValidityIndicator(success, error);
-                if (!success) return;
-                this.plugin.settings.snippets = snippets;
-                await this.plugin.saveSettings();
+                delayedSave.cancel();
+                updateValidityIndicator(ValidityIndicator.PENDING, "");
+                delayedSave(v);
             }
         });
 
@@ -1026,7 +1055,7 @@ class LatexSuiteSettingTab {
                     extensions: extensions,
                 }),
             );
-            updateValidityIndicator(true, "");
+            updateValidityIndicator(ValidityIndicator.VALID, "");
             this.plugin.settings.snippets = snippets;
             await this.plugin.saveSettings();
         });
@@ -1035,11 +1064,17 @@ class LatexSuiteSettingTab {
         trash.setIcon("trash").onClick(async () => {
             const doc = "export default []\n";
             view.setState(EditorState.create({ doc, extensions }));
-            updateValidityIndicator(true, "");
+            updateValidityIndicator(ValidityIndicator.VALID, "");
             this.plugin.settings.snippets = doc;
             await this.plugin.saveSettings();
         });
     }
+}
+
+enum ValidityIndicator {
+    VALID,
+    PENDING,
+    INVALID,
 }
 
 function createCMEditor(content: string, extensions: Extension[]) {

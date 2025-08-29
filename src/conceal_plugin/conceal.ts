@@ -19,6 +19,7 @@ import type { syntaxTree as syntaxTreeC } from "@codemirror/language";
 import { conceal } from "./conceal_fns";
 import type { LatexSuiteFacet } from "codemirror_extension/codemirror_extensions";
 import { getLatexSuiteConfig } from "src/settings/settings";
+import { debounce } from "src/utils/debounce";
 // import { debounce, livePreviewState } from "obsidian";
 
 export type Replacement = {
@@ -28,52 +29,6 @@ export type Replacement = {
     class?: string;
     elementType?: string;
 };
-
-/**
- * A standard debounce function.
- *
- * @param cb - The function to call.
- * @param timeout - The timeout to wait.
- * @param resetTimer - Whether to reset the timeout when the debouncer is called again.
- * @returns a debounced function that takes the same parameter as the original function.
- * @public
- */
-function debounce<T extends unknown[]>(
-    // eslint-disable-next-line
-    cb: (...args: [...T]) => any,
-    timeout?: number,
-    resetTimer?: boolean,
-): Debouncer<T> {
-    let timer: ReturnType<typeof setTimeout> | null = null;
-
-    const debounced = (...args: [...T]) => {
-        if (timer) {
-            if (resetTimer) clearTimeout(timer);
-            else return;
-        }
-
-        timer = setTimeout(() => {
-            cb(...args);
-            timer = null;
-        }, timeout);
-    };
-
-    debounced.cancel = () => {
-        if (timer) clearTimeout(timer);
-        timer = null;
-        return debounced;
-    };
-
-    return debounced;
-}
-
-/** @public */
-export interface Debouncer<T extends unknown[]> {
-    /** @public */
-    (...args: [...T]): void;
-    /** @public */
-    cancel(): this;
-}
 
 export type ConcealSpec = Replacement[];
 
