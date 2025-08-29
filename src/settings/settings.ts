@@ -328,7 +328,7 @@ export const SETTINGS_EXPLANATIONS: LatexSuitePluginSettingsExplanations = {
         defaultValue: DEFAULT_SETTINGS.taboutEnabled,
     },
     autoEnlargeBrackets: {
-        title: "Enabled",
+        title: "Auto enlarge brackets",
         description:
             "Whether to automatically enlarge brackets containing e.g. sum, int, frac.",
         type: "boolean",
@@ -342,28 +342,28 @@ export const SETTINGS_EXPLANATIONS: LatexSuitePluginSettingsExplanations = {
         defaultValue: DEFAULT_SETTINGS.wordDelimiters,
     },
     autofractionExcludedEnvs: {
-        title: "Excluded environments",
+        title: "Excluded autofraction environments",
         description:
             'A list of environments to exclude auto-fraction from running in. For example, to exclude auto-fraction from running while inside an exponent, such as e^{...}, use  ["^{", "}"]',
         type: "string",
         defaultValue: DEFAULT_SETTINGS.autofractionExcludedEnvs,
     },
     matrixShortcutsEnvNames: {
-        title: "Environments",
+        title: "Matrix environments",
         description:
             "A list of environment names to run the matrix shortcuts in, separated by commas.",
         type: "string",
         defaultValue: DEFAULT_SETTINGS.matrixShortcutsEnvNames,
     },
     autoEnlargeBracketsTriggers: {
-        title: "Enabled",
+        title: "Auto enlarge bracket triggers",
         description:
-            "Whether to automatically enlarge brackets containing e.g. sum, int, frac.",
+            'A list of triggers that will cause brackets to be automatically enlarged. e.g. ["sum", "int", "frac"]',
         type: "string",
         defaultValue: DEFAULT_SETTINGS.autoEnlargeBracketsTriggers,
     },
     concealEnabled: {
-        title: "Enabled",
+        title: "Conceal enabled",
         description:
             " Make equations more readable by hiding LaTeX syntax and instead displaying it in a pretty format.\n e.g. <code>\\dot{x}^{2} + \\dot{y}^{2}</code> will display as ẋ² + ẏ², and <code>\\sqrt{ 1-\\beta^{2} }</code> will display as √{ 1-β² }.\n LaTeX beneath the cursor will be revealed.\n Disabled by default to not confuse new users. However, I recommend turning this on once you are comfortable with the plugin!.",
         type: "boolean",
