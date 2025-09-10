@@ -10,7 +10,7 @@ import {
     get_default_snippets,
     get_settings,
     store_settings,
-} from "./content_script";
+} from "./browser_storage_wrapper";
 import { debounce } from "src/utils/debounce";
 
 class Setting {
@@ -280,15 +280,18 @@ class LatexSuiteSettingTab {
     }
 
     display() {
-        this.displaySnippetSettings();
-        this.displayConcealSettings();
-        this.displayColorHighlightBracketsSettings();
-        this.displayAutofractionSettings();
-        this.displayMatrixShortcutsSettings();
-        this.displayTaboutSettings();
-        this.displayAutoEnlargeBracketsSettings();
-        this.displayAdvancedSnippetSettings();
-        this.displayImportExportSettings();
+        try {
+            this.displaySnippetSettings();
+        } finally {
+            this.displayConcealSettings();
+            this.displayColorHighlightBracketsSettings();
+            this.displayAutofractionSettings();
+            this.displayMatrixShortcutsSettings();
+            this.displayTaboutSettings();
+            this.displayAutoEnlargeBracketsSettings();
+            this.displayAdvancedSnippetSettings();
+            this.displayImportExportSettings();
+        }
     }
 
     displayImportExportSettings() {

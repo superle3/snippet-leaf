@@ -108,16 +108,31 @@ async function browser_main() {
             DEFAULT_SETTINGS,
         );
         extensions.push(latex_suite_extensions);
-        document.dispatchEvent(new CustomEvent("snippet_leaf_config_listen"));
         document.addEventListener("snippet_leaf_config_send", (e) => {
             const evt = e as CustomEvent<string>;
             const config = JSON.parse(evt.detail);
             processRawLatexSuiteSettings(config).then((parsed_settings) => {
                 if (parsed_settings) {
                     latexSuiteConfig.processSettings(parsed_settings);
+                    const messageBox = document.createElement("div");
+                    messageBox.style.position = "fixed";
+                    messageBox.style.top = "2rem";
+                    messageBox.style.right = "1rem";
+                    messageBox.style.backgroundColor = "rgba(0, 0, 0, 0.7)";
+                    messageBox.style.color = "white";
+                    messageBox.style.padding = "10px";
+                    messageBox.style.borderRadius = "5px";
+                    messageBox.style.zIndex = "1000";
+                    messageBox.textContent = "Snippetleaf settings updated!";
+                    window.document.body.appendChild(messageBox);
+
+                    setTimeout(() => {
+                        document.body.removeChild(messageBox);
+                    }, 3000);
                 }
             });
         });
+        document.dispatchEvent(new CustomEvent("snippet_leaf_config_listen"));
     });
 }
 browser_main();
