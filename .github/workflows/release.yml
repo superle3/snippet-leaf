@@ -24,31 +24,45 @@ jobs:
               run: |
                   npm install
                   npm run web:build
-
-                  # Create browser extension package
-                  mkdir -p ${{ env.BROWSER_EXTENSION_NAME }}
-                  cd browser_extension
-                  cp -r dist/ manifest.json popup.html popup.js settings.html styles.css ../${{ env.BROWSER_EXTENSION_NAME }}/
-                  cd ..
-                  zip -r ${{ env.BROWSER_EXTENSION_NAME }}.zip ${{ env.BROWSER_EXTENSION_NAME }}
-                  echo "tag_name=${{ needs.detect-release-type.outputs.tag_name }}" >> $GITHUB_OUTPUT
-
-            - name: Create Browser Extension Release
+            - name: Sign Browser Extension
+              id: sign
+              env:
+                  AMO_KEY: ${{ secrets.AMO_KEY }}
+                  AMO_SECRET: ${{ secrets.AMO_SECRET }}
+              run: |
+                  npm run web:sign
+            - name: Create Release
               id: create_release
-              uses: actions/create-release@v1
-              env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              uses: ncipollo/release-action@v1
               with:
-                  tag_name: ${{ needs.detect-release-type.outputs.tag_name }}
-                  release_name: Browser Extension ${{ needs.detect-release-type.outputs.tag_name }}
-                  draft: false
+                  tag: ${{ github.ref_name }}
+                  name: Release ${{ github.ref_name }}
+                  body: |
+                      #TODO: Add release notes
+                  draft: true
                   prerelease: false
-            - name: Upload browser extension zip
-              uses: actions/upload-release-asset@v1
-              env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  files: |
+                      browser_extension/artifacts/*.zip
+                      browser_extension/artifacts/*.xpi
+    build-codemirror-extension:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - name: Use Node.js
+              uses: actions/setup-node@v4
               with:
-                  upload_url: ${{ steps.create_release.outputs.upload_url }}
-                  asset_path: ./${{ env.BROWSER_EXTENSION_NAME }}.zip
-                  asset_name: ${{ env.BROWSER_EXTENSION_NAME }}-${{ steps.build.outputs.tag_name }}.zip
-                  asset_content_type: application/zip
+                  node-version: 18
+
+            - name: Build Codemirror Extension
+              id: build-codemirror
+              run: |
+                  npm install
+                  npm run build:rollup
+            - name: Publish to npm
+              if: startsWith(github.ref_name, 'v')
+              uses: JS-DevTools/npm-publish@v1.5.0
+              with:
+                  token: ${{ secrets.NPM_TOKEN }}
+                  access: public
+                  package-dir: ./codemirror_extension
+                  tag: latest
