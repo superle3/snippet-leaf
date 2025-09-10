@@ -1,13 +1,25 @@
 {
     "name": "codemirror-latex-suite",
-    "version": "0.0.1",
+    "version": "0.0.2",
     "private": false,
     "description": "Codemirror extension project",
     "type": "module",
     "license": "MIT",
-    "scripts": {},
-    "dependencies": {
-        "codemirror": "^6.0.2"
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/superle3/snippet-leaf.git",
+        "directory": "codemirror_extension"
     },
-    "devDependencies": {}
+    "peerDependencies": {
+        "@codemirror/view": "^6.0.0",
+        "@codemirror/state": "^6.0.0",
+        "@codemirror/language": "^6.0.0",
+        "codemirror-lang-latex": "^0.2.0"
+    },
+    "files": [
+        "dist/index.js",
+        "dist/index.d.ts"
+    ]
 }
