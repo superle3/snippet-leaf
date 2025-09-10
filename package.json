@@ -9,9 +9,9 @@
     "license": "MIT",
     "scripts": {
         "web:watch": "node esbuild.config.mjs web",
-        "web:build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
+        "web:build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production && rm browser_extension/artifacts/ -rf && env --chdir=./browser_extension -S npm run build",
         "web:lint": "eslint --ext .ts,.js src browser_extension --fix && env --chdir=./browser_extension -S web-ext lint",
-        "web:full": "concurrently \"npm run web:ext\" \"npm run web\"",
+        "web:full": "concurrently \"npm run web:ext\" \"npm run web:watch\"",
         "web:ext": "env --chdir=./browser_extension -S web-ext run",
         "lint": "eslint --ext .ts,.js src browser_extension codemirror_extension --fix",
         "prepare": "npm run build:rollup",

@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
     "name": "Snippetleaf",
-    "version": "0.0.1",
+    "version": "0.0.2",
     "description": "Make typesetting LaTeX math as fast as handwriting through snippets, text expansion, and editor enhancements",
     "author": "superle3",
     "content_scripts": [
