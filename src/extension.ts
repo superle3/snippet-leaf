@@ -177,7 +177,7 @@ export function main(
         RangeValue,
         syntaxTree,
         latexSuiteConfig,
-    ).extension;
+    );
 
     extensions.push(conceal_plugin);
 
@@ -240,6 +240,7 @@ export function main(
         },
         { dark: false },
     );
+
     extensions.push(light_theme_extension, dark_theme_extension);
 
     return { latexSuiteConfig, extension: extensions };

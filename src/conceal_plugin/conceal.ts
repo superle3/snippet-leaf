@@ -288,8 +288,8 @@ export const mkConcealPlugin = (
     RangeValue: typeof RangeValueC,
     syntaxTree: typeof syntaxTreeC,
     latexSuiteConfig: LatexSuiteFacet,
-) =>
-    ViewPlugin.fromClass(
+) => {
+    const viewPlugin = ViewPlugin.fromClass(
         class {
             // Stateful ViewPlugin: you should avoid one in general, but here
             // the approach based on StateField and updateListener conflicts with
@@ -422,3 +422,23 @@ export const mkConcealPlugin = (
                 ),
         },
     );
+    const theme = EditorView.theme({
+        "span.cm-math.cm-concealed-bold": {
+            fontWeight: "bold",
+        },
+        "span.cm-math.cm-concealed-underline": {
+            textDecoration: "underline",
+        },
+        "span.cm-math.cm-concealed-mathrm, sub.cm-math.cm-concealed-mathrm": {
+            fontStyle: "normal",
+        },
+        /* Conceal superscripts without changing line height */
+        "sup.cm-math": {
+            lineHeight: "0",
+        },
+        "sup.cm-math, sub.cm-math": {
+            fontStyle: "italic",
+        },
+    });
+    return [theme, viewPlugin.extension];
+};
