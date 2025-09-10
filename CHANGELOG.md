@@ -1,3 +1,14 @@
+## 0.0.3 (2025-09-11)
+
+### Bug fixes
+
+- Fix OOM bug. The extension kept trying to get the settings and with that causing an update which made it ask settings again.
+
+### New features
+
+- Show small message that settings are loaded.
+- Debounce the settings listener, such that the storage qoute doesn't get used up.
+
 ## 0.0.2 (2025-09-10)
 
 ### Bug fixes
