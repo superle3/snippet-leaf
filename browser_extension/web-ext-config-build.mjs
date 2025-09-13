@@ -16,6 +16,9 @@ const config = {
         "package.json",
         "package-lock.json",
     ],
+    sign: {
+        channel: "unlisted",
+    },
 };
 
 export default config;
