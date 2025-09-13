@@ -298,12 +298,20 @@ export const mkConcealPlugin = (
             decorations: DecorationSetC;
             atomicRanges: RangeSetC<RangeValueC>;
             delayEnabled: boolean;
+            concealSpecs: ConcealSpec[] | null = null;
+            private mousedown: boolean = false;
 
-            constructor() {
+            constructor(view: EditorViewC) {
                 this.concealments = [];
                 this.decorations = Decoration.none;
                 this.atomicRanges = RangeSet.empty;
                 this.delayEnabled = revealTimeout > 0;
+                view.dom.addEventListener("mousedown", () => {
+                    this.mousedown = true;
+                });
+                view.dom.addEventListener("mouseup", () => {
+                    this.mousedown = false;
+                });
             }
 
             delayedReveal = debounce(
@@ -355,15 +363,25 @@ export const mkConcealPlugin = (
                     this.atomicRanges = RangeSet.empty;
                     return;
                 }
-                revealTimeout = settings.concealRevealTimeout;
+                this.delayedReveal.timeout = settings.concealRevealTimeout;
                 this.delayedReveal // Cancel the delayed revealment whenever we update the concealments
                     .cancel();
+                if (
+                    this.concealSpecs === null ||
+                    update.docChanged ||
+                    update.viewportChanged
+                ) {
+                    this.concealSpecs = conceal(update.view, syntaxTree);
+                }
+                this.updateFromConcealSpecs(this.concealSpecs, update);
+            }
 
+            private updateFromConcealSpecs(
+                concealSpecs: ConcealSpec[],
+                update: ViewUpdateC,
+            ) {
                 const selection = update.state.selection;
-                const mousedown: undefined = undefined;
-
-                const concealSpecs = conceal(update.view, syntaxTree);
-
+                const mousedown = this.mousedown;
                 // Collect concealments from the new conceal specs
                 const concealments: Concealment[] = [];
                 // concealments that should be revealed after a delay (i.e. 'delay' action)
@@ -418,7 +436,8 @@ export const mkConcealPlugin = (
             decorations: (v) => v.decorations,
             provide: (plugin) =>
                 EditorView.atomicRanges.of(
-                    (view) => view.plugin(plugin).atomicRanges,
+                    (view) =>
+                        view.plugin(plugin)?.atomicRanges ?? RangeSet.empty,
                 ),
         },
     );

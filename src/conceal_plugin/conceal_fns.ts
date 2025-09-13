@@ -18,6 +18,7 @@ import {
 } from "./conceal_maps";
 import type { Bounds } from "src/utils/context";
 
+const ALL_SYMBOLS = { ...greek, ...cmd_symbols } as const;
 /**
  * Make a ConcealSpec from the given list of Replacements.
  * This function essentially does nothing but improves readability.
@@ -620,9 +621,12 @@ export function conceal(
     syntaxTree: typeof syntaxTreeC,
 ): ConcealSpec[] {
     const specs: ConcealSpec[] = [];
+    const maxTo = Math.max(...view.visibleRanges.map((r) => r.to));
+    const tree = syntaxTree(view.state);
+    if (tree.length < maxTo) return null;
     for (const { from, to } of view.visibleRanges) {
         const math_ranges: Bounds[] = [];
-        syntaxTree(view.state).iterate({
+        tree.iterate({
             from,
             to,
             enter: (node) => {
@@ -642,8 +646,6 @@ export function conceal(
 
         for (const bounds of math_ranges) {
             const eqn = view.state.doc.sliceString(bounds.start, bounds.end);
-
-            const ALL_SYMBOLS = { ...greek, ...cmd_symbols };
 
             const localSpecs = [
                 ...concealSymbols(eqn, "\\^", "", map_super),

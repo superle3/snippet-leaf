@@ -9,7 +9,7 @@
  */
 export function debounce<T extends unknown[]>(
     cb: (...args: [...T]) => unknown,
-    timeout?: number,
+    timeout: number = 0,
     resetTimer?: boolean,
 ): Debouncer<T> {
     let timer: ReturnType<typeof setTimeout> | null = null;
@@ -25,8 +25,9 @@ export function debounce<T extends unknown[]>(
         timer = setTimeout(() => {
             cb(...args);
             timer = null;
-        }, timeout);
+        }, debounced.timeout);
     };
+    debounced.timeout = timeout;
 
     debounced.cancel = () => {
         if (timer) clearTimeout(timer);
@@ -55,4 +56,5 @@ export interface Debouncer<T extends unknown[]> {
     /** @public */
     cancel(): this;
     now(): this;
+    timeout: number;
 }
