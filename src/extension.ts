@@ -40,7 +40,6 @@ import {
 import { expandSnippets } from "./snippets/snippet_management";
 import { stateEffect_variables } from "./snippets/codemirror/history";
 import { create_tabstopsStateField } from "./snippets/codemirror/tabstops_state_field";
-import { snippetQueues } from "./snippets/codemirror/snippet_queue_state_field";
 import { mkConcealPlugin } from "./conceal_plugin/conceal";
 
 import type { RawSnippet, SnippetVariables } from "./snippets/parse";
@@ -123,8 +122,6 @@ export function main(
         Decoration,
         EditorView,
     );
-    const { clearSnippetQueue, queueSnippet, snippetQueueStateField } =
-        snippetQueues(StateEffect, StateField);
     const extensions: ExtensionC[] = [];
 
     const latexSuiteConfig: LatexSuiteFacet = Facet.define<
@@ -152,15 +149,11 @@ export function main(
                         syntaxTree,
                         removeAllTabstops,
                         tabstopsStateField,
-                        clearSnippetQueue,
-                        queueSnippet,
                         (view: EditorViewC) =>
                             expandSnippets(
                                 view,
                                 ChangeSet,
                                 isolateHistory,
-                                snippetQueueStateField,
-                                clearSnippetQueue,
                                 addTabstops,
                                 getTabstopGroupsFromView,
                                 getNextTabstopColor,
@@ -176,11 +169,7 @@ export function main(
         EditorView.updateListener.of((update: ViewUpdateC) =>
             handleUpdate(update, latexSuiteConfig, handleUndoRedo),
         ),
-        create_snippet_extensions(
-            tabstopsStateField,
-            snippetQueueStateField,
-            snippetInvertedEffects,
-        ),
+        create_snippet_extensions(tabstopsStateField, snippetInvertedEffects),
         latexSuiteConfig.of(CMSettings),
     ];
     extensions.push(...snippet_leaf_extension);

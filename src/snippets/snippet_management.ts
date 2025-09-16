@@ -9,19 +9,18 @@ import type { isolateHistory as isolateHistoryC } from "@codemirror/commands";
 import type { TabstopSpec } from "./tabstop";
 import { tabstopSpecsToTabstopGroups } from "./tabstop";
 import type { create_tabstopsStateField } from "./codemirror/tabstops_state_field";
-import type { snippetQueues } from "./codemirror/snippet_queue_state_field";
 import type { SnippetChangeSpec } from "./codemirror/snippet_change_spec";
 import { resetCursorBlink } from "../utils/editor_utils";
+import {
+    clearSnippetQueue,
+    snippetQueueStateField,
+} from "./codemirror/snippet_queue_state_field";
 
 export type expandSnippetsC = (view: EditorView) => boolean;
 export function expandSnippets(
     view: EditorView,
     ChangeSet: typeof ChangeSetC,
     isolateHistory: typeof isolateHistoryC,
-    snippetQueueStateField: ReturnType<
-        typeof snippetQueues
-    >["snippetQueueStateField"],
-    clearSnippetQueue: ReturnType<typeof snippetQueues>["clearSnippetQueue"],
     addTabstops: ReturnType<typeof create_tabstopsStateField>["addTabstops"],
     getTabstopGroupsFromView: ReturnType<
         typeof create_tabstopsStateField
@@ -34,7 +33,7 @@ export function expandSnippets(
     EditorSelection: typeof EditorSelectionC,
     Decoration: typeof DecorationC,
 ): boolean {
-    const snippetsToExpand = view.state.field(snippetQueueStateField);
+    const snippetsToExpand = snippetQueueStateField.snippetQueueValue;
     if (snippetsToExpand.length === 0) return false;
 
     const originalDocLength = view.state.doc.length;
@@ -56,7 +55,7 @@ export function expandSnippets(
 
     // Insert any tabstops
     if (tabstopsToAdd.length === 0) {
-        clearSnippetQueue(view);
+        clearSnippetQueue();
         return true;
     }
 
@@ -71,7 +70,7 @@ export function expandSnippets(
     );
     expandTabstops(view, tabstopsToAdd, getTabstopGroupsFromView);
 
-    clearSnippetQueue(view);
+    clearSnippetQueue();
     return true;
 }
 

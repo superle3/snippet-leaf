@@ -15,11 +15,11 @@ import {
 import type { create_tabstopsStateField } from "./snippets/codemirror/tabstops_state_field";
 import type { LatexSuiteFacet } from "./settings/settings";
 import { getLatexSuiteConfig } from "./settings/settings";
-import type { snippetQueues } from "./snippets/codemirror/snippet_queue_state_field";
 import type { stateEffect_variables } from "./snippets/codemirror/history";
 
 // import { handleMathTooltip } from "./editor_extensions/math_tooltip";
 import { isComposing } from "./utils/editor_utils";
+import { clearSnippetQueue } from "./snippets/codemirror/snippet_queue_state_field";
 
 export const handleUpdate = (
     update: ViewUpdate,
@@ -48,8 +48,6 @@ export const onKeydown = (
     tabstopsStateField: ReturnType<
         typeof create_tabstopsStateField
     >["tabstopsStateField"],
-    clearSnippetQueue: ReturnType<typeof snippetQueues>["clearSnippetQueue"],
-    queueSnippet: ReturnType<typeof snippetQueues>["queueSnippet"],
     expandSnippets: expandSnippetsC,
 ): boolean | void => {
     const success = handleKeydown(
@@ -62,8 +60,6 @@ export const onKeydown = (
         syntaxTree,
         removeAllTabstops,
         tabstopsStateField,
-        clearSnippetQueue,
-        queueSnippet,
         expandSnippets,
     );
 
@@ -84,8 +80,6 @@ export const handleKeydown = (
     tabstopsStateField: ReturnType<
         typeof create_tabstopsStateField
     >["tabstopsStateField"],
-    clearSnippetQueue: ReturnType<typeof snippetQueues>["clearSnippetQueue"],
-    queueSnippet: ReturnType<typeof snippetQueues>["queueSnippet"],
     expandSnippets: expandSnippetsC,
 ) => {
     const settings = getLatexSuiteConfig(view, latexSuiteConfig);
@@ -135,13 +129,12 @@ export const handleKeydown = (
                     ctx,
                     key,
                     latexSuiteConfig,
-                    queueSnippet,
                     expandSnippets,
                     syntaxTree,
                 );
                 if (success) return true;
             } catch (e) {
-                clearSnippetQueue(view);
+                clearSnippetQueue();
                 console.error(e);
             }
         }
@@ -160,7 +153,6 @@ export const handleKeydown = (
                 ctx,
                 latexSuiteConfig,
                 syntaxTree,
-                queueSnippet,
                 expandSnippets,
             );
 
