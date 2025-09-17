@@ -59,16 +59,16 @@ export function expandSnippets(
         return true;
     }
 
-    markTabstops(
+    expandTabstops(
         view,
         tabstopsToAdd,
+        getTabstopGroupsFromView,
         addTabstops,
         getNextTabstopColor,
         endSnippet,
         EditorSelection,
         Decoration,
     );
-    expandTabstops(view, tabstopsToAdd, getTabstopGroupsFromView);
 
     clearSnippetQueue();
     return true;
@@ -105,10 +105,12 @@ function handleUndoKeypresses(
     // Insert the keypresses
     // Use isolateHistory to allow users to undo the triggering of a snippet,
     // but keep the text inserted by the trigger key
-    view.dispatch({
-        changes: keyPresses,
-        annotations: isolateHistory.of("full"),
-    });
+    if (keyPresses.length > 0) {
+        view.dispatch({
+            changes: keyPresses,
+            annotations: isolateHistory.of("full"),
+        });
+    }
 
     // Undo the keypresses, and insert the replacements
     const undoKeyPresses = ChangeSet.of(keyPresses, originalDocLength).invert(
@@ -143,9 +145,12 @@ function computeTabstops(
     return tabstopsToAdd;
 }
 
-function markTabstops(
+function expandTabstops(
     view: EditorView,
     tabstops: TabstopSpec[],
+    getTabstopGroupsFromView: ReturnType<
+        typeof create_tabstopsStateField
+    >["getTabstopGroupsFromView"],
     addTabstops: ReturnType<typeof create_tabstopsStateField>["addTabstops"],
     getNextTabstopColor: ReturnType<
         typeof create_tabstopsStateField
@@ -162,17 +167,6 @@ function markTabstops(
         EditorSelection,
         Decoration,
     );
-
-    addTabstops(view, tabstopGroups);
-}
-
-function expandTabstops(
-    view: EditorView,
-    tabstops: TabstopSpec[],
-    getTabstopGroupsFromView: ReturnType<
-        typeof create_tabstopsStateField
-    >["getTabstopGroupsFromView"],
-) {
     // Insert the replacements
     const changes = tabstops.map((tabstop: TabstopSpec) => {
         return {
@@ -183,6 +177,7 @@ function expandTabstops(
     });
 
     view.dispatch({
+        effects: addTabstops(tabstopGroups).effects,
         changes: changes,
     });
 
