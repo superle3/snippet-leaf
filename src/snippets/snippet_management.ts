@@ -2,6 +2,8 @@ import type { Decoration as DecorationC, EditorView } from "@codemirror/view";
 import type {
     EditorSelection as EditorSelectionC,
     ChangeSet as ChangeSetC,
+    StateEffect,
+    Text,
 } from "@codemirror/state";
 // import { startSnippet } from "./codemirror/history";
 import type { stateEffect_variables } from "./codemirror/history";
@@ -38,16 +40,18 @@ export function expandSnippets(
 
     const originalDocLength = view.state.doc.length;
 
-    handleUndoKeypresses(
+    // Try to apply changes all at once, because `view.dispatch` gets expensive for large documents
+    const undoChanges = handleUndoKeypresses(
         view,
         snippetsToExpand,
+
         ChangeSet,
         isolateHistory,
         startSnippet,
     );
-
+    const newDoc = undoChanges.changes.apply(view.state.doc);
     const tabstopsToAdd = computeTabstops(
-        view,
+        newDoc,
         snippetsToExpand,
         originalDocLength,
         ChangeSet,
@@ -55,6 +59,7 @@ export function expandSnippets(
 
     // Insert any tabstops
     if (tabstopsToAdd.length === 0) {
+        view.dispatch(undoChanges);
         clearSnippetQueue();
         return true;
     }
@@ -62,12 +67,15 @@ export function expandSnippets(
     expandTabstops(
         view,
         tabstopsToAdd,
+        undoChanges,
+        newDoc.length,
         getTabstopGroupsFromView,
         addTabstops,
         getNextTabstopColor,
         endSnippet,
         EditorSelection,
         Decoration,
+        ChangeSet,
     );
 
     clearSnippetQueue();
@@ -120,14 +128,14 @@ function handleUndoKeypresses(
     const combinedChanges = undoKeyPresses.compose(changesAsChangeSet);
 
     // Mark the transaction as the beginning of a snippet (for undo/history purposes)
-    view.dispatch({
+    return {
         changes: combinedChanges,
         effects: startSnippet.of(null),
-    });
+    };
 }
 
 function computeTabstops(
-    view: EditorView,
+    doc: Text,
     snippets: SnippetChangeSpec[],
     originalDocLength: number,
     ChangeSet: typeof ChangeSetC,
@@ -139,7 +147,7 @@ function computeTabstops(
 
     const tabstopsToAdd: TabstopSpec[] = [];
     for (let i = 0; i < snippets.length; i++) {
-        tabstopsToAdd.push(...snippets[i].getTabstops(view, newPositions[i]));
+        tabstopsToAdd.push(...snippets[i].getTabstops(doc, newPositions[i]));
     }
 
     return tabstopsToAdd;
@@ -148,6 +156,8 @@ function computeTabstops(
 function expandTabstops(
     view: EditorView,
     tabstops: TabstopSpec[],
+    undoChanges: { changes: ChangeSetC; effects: StateEffect<null> },
+    newLength: number,
     getTabstopGroupsFromView: ReturnType<
         typeof create_tabstopsStateField
     >["getTabstopGroupsFromView"],
@@ -158,6 +168,7 @@ function expandTabstops(
     endSnippet: ReturnType<typeof stateEffect_variables>["endSnippet"],
     EditorSelection: typeof EditorSelectionC,
     Decoration: typeof DecorationC,
+    ChangeSet: typeof ChangeSetC,
 ) {
     const color = getNextTabstopColor(view);
     const tabstopGroups = tabstopSpecsToTabstopGroups(
@@ -167,18 +178,22 @@ function expandTabstops(
         EditorSelection,
         Decoration,
     );
+    const changes = ChangeSet.of(
+        tabstops.map((tabstop: TabstopSpec) => {
+            return {
+                from: tabstop.from,
+                to: tabstop.to,
+                insert: tabstop.replacement,
+            };
+        }),
+        newLength,
+    );
+    tabstopGroups.forEach((grp) => grp.map(changes));
     // Insert the replacements
-    const changes = tabstops.map((tabstop: TabstopSpec) => {
-        return {
-            from: tabstop.from,
-            to: tabstop.to,
-            insert: tabstop.replacement,
-        };
-    });
-
+    const effects = addTabstops(tabstopGroups).effects;
     view.dispatch({
-        effects: addTabstops(tabstopGroups).effects,
-        changes: changes,
+        effects: [undoChanges.effects, ...effects],
+        changes: undoChanges.changes.compose(changes),
     });
 
     // Select the first tabstop

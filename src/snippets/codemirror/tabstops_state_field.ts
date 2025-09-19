@@ -25,7 +25,9 @@ export function create_tabstopsStateField(
 
         update(value, transaction) {
             let tabstopGroups = value;
-
+            // Optimization: tabstops that are added should already have their changes applied
+            // So changes are only applied to existing tabstops
+            tabstopGroups.forEach((grp) => grp.map(transaction.changes));
             for (const effect of transaction.effects) {
                 if (effect.is(addTabstopsEffect)) {
                     tabstopGroups.unshift(...effect.value);
@@ -33,7 +35,6 @@ export function create_tabstopsStateField(
                     tabstopGroups = [];
                 }
             }
-            tabstopGroups.forEach((grp) => grp.map(transaction.changes));
 
             // Remove the tabstop groups that the cursor has passed. This scenario
             // happens when the user manually moves the cursor using arrow keys or mouse
