@@ -128,18 +128,29 @@ function atSamePosAfter(
 }
 
 function determineCursorPosType(
-    sel: EditorSelectionC,
+    view: EditorViewC,
     concealSpec: ConcealSpec,
+    linewise: boolean = false,
 ): Concealment["cursorPosType"] {
     // Priority: "within" > "edge" > "apart"
 
+    const sel = view.state.selection;
     let cursorPosType: Concealment["cursorPosType"] = "apart";
 
     for (const range of sel.ranges) {
+        const fromRange = linewise ? view.state.doc.lineAt(range.from) : range;
+        const to = (
+            linewise
+                ? range.to <= fromRange.to
+                    ? fromRange
+                    : view.state.doc.lineAt(range.to)
+                : range
+        ).to;
+        const from = fromRange.from;
         for (const replace of concealSpec) {
             // 'cursorPosType' is guaranteed to be "edge" or "apart" at this point
-            const overlapRangeFrom = Math.max(range.from, replace.start);
-            const overlapRangeTo = Math.min(range.to, replace.end);
+            const overlapRangeFrom = Math.max(from, replace.start);
+            const overlapRangeTo = Math.min(to, replace.end);
 
             if (
                 overlapRangeFrom === overlapRangeTo &&
@@ -373,14 +384,18 @@ export const mkConcealPlugin = (
                 ) {
                     this.concealSpecs = conceal(update.view, syntaxTree);
                 }
-                this.updateFromConcealSpecs(this.concealSpecs, update);
+                this.updateFromConcealSpecs(
+                    this.concealSpecs,
+                    update,
+                    settings.concealLinewise,
+                );
             }
 
             private updateFromConcealSpecs(
                 concealSpecs: ConcealSpec[],
                 update: ViewUpdateC,
+                linewise: boolean,
             ) {
-                const selection = update.state.selection;
                 const mousedown = this.mousedown;
                 // Collect concealments from the new conceal specs
                 const concealments: Concealment[] = [];
@@ -389,8 +404,9 @@ export const mkConcealPlugin = (
 
                 for (const spec of concealSpecs) {
                     const cursorPosType = determineCursorPosType(
-                        selection,
+                        update.view,
                         spec,
+                        linewise,
                     );
                     const oldConcealment = this.concealments.find((old) =>
                         atSamePosAfter(update, old.spec, spec),

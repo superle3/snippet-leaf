@@ -638,6 +638,19 @@ class LatexSuiteSettingTab {
                         }
                     }),
             );
+        new Setting(containerEl)
+            .setName("Reveal linewise")
+            .setDesc(
+                "Whether to reveal entire lines when the cursor is on that line.",
+            )
+            .addToggle((toggle) =>
+                toggle
+                    .setValue(this.plugin.settings.concealLinewise)
+                    .onChange(async (value) => {
+                        this.plugin.settings.concealLinewise = value;
+                        await this.plugin.saveSettings();
+                    }),
+            );
     }
 
     displayColorHighlightBracketsSettings() {

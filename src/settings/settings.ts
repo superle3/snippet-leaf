@@ -27,6 +27,7 @@ interface LatexSuiteBasicSettings {
     autoDelete$: boolean;
     concealEnabled: boolean;
     concealRevealTimeout: number;
+    concealLinewise: boolean;
     colorPairedBracketsEnabled: boolean;
     highlightCursorBracketsEnabled: boolean;
     autofractionEnabled: boolean;
@@ -80,10 +81,11 @@ export const DEFAULT_SETTINGS: LatexSuitePluginSettings &
     snippetsTrigger: "Tab",
     defaultSnippetVersion: 2,
     suppressSnippetTriggerOnIME: true,
-    removeSnippetWhitespace: true,
+    removeSnippetWhitespace: false,
     autoDelete$: true,
-    concealEnabled: true,
+    concealEnabled: false,
     concealRevealTimeout: 0,
+    concealLinewise: false,
     colorPairedBracketsEnabled: true,
     highlightCursorBracketsEnabled: true,
     autofractionEnabled: true,
@@ -379,6 +381,13 @@ export const SETTINGS_EXPLANATIONS: LatexSuitePluginSettingsExplanations = {
             " How long to delay the reveal of LaTeX for, in milliseconds, when the cursor moves over LaTeX. Defaults to 0 (LaTeX under the cursor is revealed immediately).\n Can be set to a positive number, e.g. 300, to delay the reveal of LaTeX, making it much easier to navigate equations using arrow keys.\n Must be an integer ≥ 0. ",
         type: "string",
         defaultValue: DEFAULT_SETTINGS.concealRevealTimeout,
+    },
+    concealLinewise: {
+        title: "Conceal linewise",
+        description:
+            "Whether to reveal entire lines when the cursor is on that line. If false, only LaTeX directly beneath the cursor is revealed.",
+        type: "boolean",
+        defaultValue: DEFAULT_SETTINGS.concealLinewise,
     },
     colorPairedBracketsEnabled: {
         title: "Color paired brackets",
