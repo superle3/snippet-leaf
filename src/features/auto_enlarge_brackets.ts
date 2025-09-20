@@ -1,16 +1,15 @@
 import type { EditorView as EditorViewC } from "@codemirror/view";
 import { findMatchingBracket } from "src/utils/editor_utils";
-import type { snippetQueues } from "src/snippets/codemirror/snippet_queue_state_field";
 import { Context } from "src/utils/context";
 import type { LatexSuiteFacet } from "src/settings/settings";
 import { getLatexSuiteConfig } from "src/settings/settings";
 import type { syntaxTree as syntaxTreeC } from "@codemirror/language";
+import { queueSnippet } from "src/snippets/codemirror/snippet_queue_state_field";
 
 export const autoEnlargeBrackets = (
     view: EditorViewC,
     latexSuiteConfig: LatexSuiteFacet,
     syntaxTree: typeof syntaxTreeC,
-    queueSnippet: ReturnType<typeof snippetQueues>["queueSnippet"],
     expandSnippets: (view: EditorViewC) => boolean,
 ) => {
     const settings = getLatexSuiteConfig(view, latexSuiteConfig);
@@ -76,18 +75,8 @@ export const autoEnlargeBrackets = (
         }
 
         // Enlarge the brackets
-        queueSnippet(
-            view,
-            start + i,
-            start + i + bracketSize,
-            left + open + " ",
-        );
-        queueSnippet(
-            view,
-            start + j,
-            start + j + bracketSize,
-            " " + right + close,
-        );
+        queueSnippet(start + i, start + i + bracketSize, left + open + " ");
+        queueSnippet(start + j, start + j + bracketSize, " " + right + close);
     }
 
     expandSnippets(view);

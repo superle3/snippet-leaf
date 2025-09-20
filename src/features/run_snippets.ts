@@ -2,18 +2,17 @@ import type { EditorView as EditorViewC } from "@codemirror/view";
 import type { EditorState, SelectionRange } from "@codemirror/state";
 import type { LatexSuiteFacet } from "src/settings/settings";
 import { getLatexSuiteConfig } from "src/settings/settings";
-import type { snippetQueues } from "src/snippets/codemirror/snippet_queue_state_field";
 import { Mode } from "src/snippets/options";
 import type { Context } from "src/utils/context";
 import { autoEnlargeBrackets } from "./auto_enlarge_brackets";
 import type { syntaxTree as syntaxTreeC } from "@codemirror/language";
+import { queueSnippet } from "src/snippets/codemirror/snippet_queue_state_field";
 
 export const runSnippets = (
     view: EditorViewC,
     ctx: Context,
     key: string,
     latexSuiteConfig: LatexSuiteFacet,
-    queueSnippet: ReturnType<typeof snippetQueues>["queueSnippet"],
     expandSnippets: (view: EditorViewC) => boolean,
     syntaxTree: typeof syntaxTreeC,
 ): boolean => {
@@ -27,7 +26,6 @@ export const runSnippets = (
             range,
             latexSuiteConfig,
             syntaxTree,
-            queueSnippet,
         );
 
         if (result.shouldAutoEnlargeBrackets) shouldAutoEnlargeBrackets = true;
@@ -36,13 +34,7 @@ export const runSnippets = (
     const success = expandSnippets(view);
 
     if (shouldAutoEnlargeBrackets) {
-        autoEnlargeBrackets(
-            view,
-            latexSuiteConfig,
-            syntaxTree,
-            queueSnippet,
-            expandSnippets,
-        );
+        autoEnlargeBrackets(view, latexSuiteConfig, syntaxTree, expandSnippets);
     }
 
     return success;
@@ -55,7 +47,6 @@ const runSnippetCursor = (
     range: SelectionRange,
     latexSuiteConfig: LatexSuiteFacet,
     syntaxTree: typeof syntaxTreeC,
-    queueSnippet: ReturnType<typeof snippetQueues>["queueSnippet"],
 ): { success: boolean; shouldAutoEnlargeBrackets: boolean } => {
     const settings = getLatexSuiteConfig(view, latexSuiteConfig);
     const { from, to } = range;
@@ -78,6 +69,10 @@ const runSnippetCursor = (
             continue;
         }
 
+        const result = snippet.process(effectiveLine, range, sel);
+        if (result === null) continue;
+        const triggerPos = result.triggerPos;
+
         // Check that this snippet is not excluded in a certain environment
         let isExcluded = false;
         // in practice, a snippet should have very few excluded environments, if any,
@@ -85,6 +80,7 @@ const runSnippetCursor = (
         for (const environment of snippet.excludedEnvironments) {
             if (ctx.isWithinEnvironment(to, environment, syntaxTree)) {
                 isExcluded = true;
+                break;
             }
         }
         // we could've used a labelled outer for loop to `continue` from within the inner for loop,
@@ -92,10 +88,6 @@ const runSnippetCursor = (
         if (isExcluded) {
             continue;
         }
-
-        const result = snippet.process(effectiveLine, range, sel);
-        if (result === null) continue;
-        const triggerPos = result.triggerPos;
 
         if (snippet.options.onWordBoundary) {
             // Check that the trigger is preceded and followed by a word delimiter
@@ -119,7 +111,7 @@ const runSnippetCursor = (
 
         // Expand the snippet
         const start = triggerPos;
-        queueSnippet(view, start, to, replacement, key);
+        queueSnippet(start, to, replacement, key);
 
         const containsTrigger = settings.autoEnlargeBracketsTriggers.some(
             (word) => replacement.includes("\\" + word),

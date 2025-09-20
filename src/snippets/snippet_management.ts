@@ -2,6 +2,8 @@ import type { Decoration as DecorationC, EditorView } from "@codemirror/view";
 import type {
     EditorSelection as EditorSelectionC,
     ChangeSet as ChangeSetC,
+    StateEffect,
+    Text,
 } from "@codemirror/state";
 // import { startSnippet } from "./codemirror/history";
 import type { stateEffect_variables } from "./codemirror/history";
@@ -9,19 +11,18 @@ import type { isolateHistory as isolateHistoryC } from "@codemirror/commands";
 import type { TabstopSpec } from "./tabstop";
 import { tabstopSpecsToTabstopGroups } from "./tabstop";
 import type { create_tabstopsStateField } from "./codemirror/tabstops_state_field";
-import type { snippetQueues } from "./codemirror/snippet_queue_state_field";
 import type { SnippetChangeSpec } from "./codemirror/snippet_change_spec";
 import { resetCursorBlink } from "../utils/editor_utils";
+import {
+    clearSnippetQueue,
+    snippetQueueStateField,
+} from "./codemirror/snippet_queue_state_field";
 
 export type expandSnippetsC = (view: EditorView) => boolean;
 export function expandSnippets(
     view: EditorView,
     ChangeSet: typeof ChangeSetC,
     isolateHistory: typeof isolateHistoryC,
-    snippetQueueStateField: ReturnType<
-        typeof snippetQueues
-    >["snippetQueueStateField"],
-    clearSnippetQueue: ReturnType<typeof snippetQueues>["clearSnippetQueue"],
     addTabstops: ReturnType<typeof create_tabstopsStateField>["addTabstops"],
     getTabstopGroupsFromView: ReturnType<
         typeof create_tabstopsStateField
@@ -34,21 +35,23 @@ export function expandSnippets(
     EditorSelection: typeof EditorSelectionC,
     Decoration: typeof DecorationC,
 ): boolean {
-    const snippetsToExpand = view.state.field(snippetQueueStateField);
+    const snippetsToExpand = snippetQueueStateField.snippetQueueValue;
     if (snippetsToExpand.length === 0) return false;
 
     const originalDocLength = view.state.doc.length;
 
-    handleUndoKeypresses(
+    // Try to apply changes all at once, because `view.dispatch` gets expensive for large documents
+    const undoChanges = handleUndoKeypresses(
         view,
         snippetsToExpand,
+
         ChangeSet,
         isolateHistory,
         startSnippet,
     );
-
+    const newDoc = undoChanges.changes.apply(view.state.doc);
     const tabstopsToAdd = computeTabstops(
-        view,
+        newDoc,
         snippetsToExpand,
         originalDocLength,
         ChangeSet,
@@ -56,22 +59,26 @@ export function expandSnippets(
 
     // Insert any tabstops
     if (tabstopsToAdd.length === 0) {
-        clearSnippetQueue(view);
+        view.dispatch(undoChanges);
+        clearSnippetQueue();
         return true;
     }
 
-    markTabstops(
+    expandTabstops(
         view,
         tabstopsToAdd,
+        undoChanges,
+        newDoc.length,
+        getTabstopGroupsFromView,
         addTabstops,
         getNextTabstopColor,
         endSnippet,
         EditorSelection,
         Decoration,
+        ChangeSet,
     );
-    expandTabstops(view, tabstopsToAdd, getTabstopGroupsFromView);
 
-    clearSnippetQueue(view);
+    clearSnippetQueue();
     return true;
 }
 
@@ -106,10 +113,12 @@ function handleUndoKeypresses(
     // Insert the keypresses
     // Use isolateHistory to allow users to undo the triggering of a snippet,
     // but keep the text inserted by the trigger key
-    view.dispatch({
-        changes: keyPresses,
-        annotations: isolateHistory.of("full"),
-    });
+    if (keyPresses.length > 0) {
+        view.dispatch({
+            changes: keyPresses,
+            annotations: isolateHistory.of("full"),
+        });
+    }
 
     // Undo the keypresses, and insert the replacements
     const undoKeyPresses = ChangeSet.of(keyPresses, originalDocLength).invert(
@@ -119,14 +128,14 @@ function handleUndoKeypresses(
     const combinedChanges = undoKeyPresses.compose(changesAsChangeSet);
 
     // Mark the transaction as the beginning of a snippet (for undo/history purposes)
-    view.dispatch({
+    return {
         changes: combinedChanges,
         effects: startSnippet.of(null),
-    });
+    };
 }
 
 function computeTabstops(
-    view: EditorView,
+    doc: Text,
     snippets: SnippetChangeSpec[],
     originalDocLength: number,
     ChangeSet: typeof ChangeSetC,
@@ -138,15 +147,20 @@ function computeTabstops(
 
     const tabstopsToAdd: TabstopSpec[] = [];
     for (let i = 0; i < snippets.length; i++) {
-        tabstopsToAdd.push(...snippets[i].getTabstops(view, newPositions[i]));
+        tabstopsToAdd.push(...snippets[i].getTabstops(doc, newPositions[i]));
     }
 
     return tabstopsToAdd;
 }
 
-function markTabstops(
+function expandTabstops(
     view: EditorView,
     tabstops: TabstopSpec[],
+    undoChanges: { changes: ChangeSetC; effects: StateEffect<null> },
+    newLength: number,
+    getTabstopGroupsFromView: ReturnType<
+        typeof create_tabstopsStateField
+    >["getTabstopGroupsFromView"],
     addTabstops: ReturnType<typeof create_tabstopsStateField>["addTabstops"],
     getNextTabstopColor: ReturnType<
         typeof create_tabstopsStateField
@@ -154,6 +168,7 @@ function markTabstops(
     endSnippet: ReturnType<typeof stateEffect_variables>["endSnippet"],
     EditorSelection: typeof EditorSelectionC,
     Decoration: typeof DecorationC,
+    ChangeSet: typeof ChangeSetC,
 ) {
     const color = getNextTabstopColor(view);
     const tabstopGroups = tabstopSpecsToTabstopGroups(
@@ -163,28 +178,22 @@ function markTabstops(
         EditorSelection,
         Decoration,
     );
-
-    addTabstops(view, tabstopGroups);
-}
-
-function expandTabstops(
-    view: EditorView,
-    tabstops: TabstopSpec[],
-    getTabstopGroupsFromView: ReturnType<
-        typeof create_tabstopsStateField
-    >["getTabstopGroupsFromView"],
-) {
+    const changes = ChangeSet.of(
+        tabstops.map((tabstop: TabstopSpec) => {
+            return {
+                from: tabstop.from,
+                to: tabstop.to,
+                insert: tabstop.replacement,
+            };
+        }),
+        newLength,
+    );
+    tabstopGroups.forEach((grp) => grp.map(changes));
     // Insert the replacements
-    const changes = tabstops.map((tabstop: TabstopSpec) => {
-        return {
-            from: tabstop.from,
-            to: tabstop.to,
-            insert: tabstop.replacement,
-        };
-    });
-
+    const effects = addTabstops(tabstopGroups).effects;
     view.dispatch({
-        changes: changes,
+        effects: [undoChanges.effects, ...effects],
+        changes: undoChanges.changes.compose(changes),
     });
 
     // Select the first tabstop

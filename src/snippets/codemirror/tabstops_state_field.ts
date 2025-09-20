@@ -25,8 +25,9 @@ export function create_tabstopsStateField(
 
         update(value, transaction) {
             let tabstopGroups = value;
+            // Optimization: tabstops that are added should already have their changes applied
+            // So changes are only applied to existing tabstops
             tabstopGroups.forEach((grp) => grp.map(transaction.changes));
-
             for (const effect of transaction.effects) {
                 if (effect.is(addTabstopsEffect)) {
                     tabstopGroups.unshift(...effect.value);
@@ -88,10 +89,10 @@ export function create_tabstopsStateField(
         return currentTabstopGroups;
     }
 
-    function addTabstops(view: EditorViewC, tabstopGroups: TabstopGroupC[]) {
-        view.dispatch({
+    function addTabstops(tabstopGroups: TabstopGroupC[]) {
+        return {
             effects: [addTabstopsEffect.of(tabstopGroups)],
-        });
+        };
     }
 
     function removeAllTabstops(view: EditorViewC) {

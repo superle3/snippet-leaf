@@ -1,43 +1,29 @@
 import type { EditorView } from "@codemirror/view";
 import type { SelectionRange } from "@codemirror/state";
 import { findMatchingBracket, getOpenBracket } from "src/utils/editor_utils";
-import type { snippetQueues } from "src/snippets/codemirror/snippet_queue_state_field";
 import type { expandSnippetsC } from "../snippets/snippet_management";
 import { autoEnlargeBrackets } from "./auto_enlarge_brackets";
 import type { Context } from "../utils/context";
 import type { LatexSuiteFacet } from "src/settings/settings";
 import { getLatexSuiteConfig } from "src/settings/settings";
 import type { syntaxTree as syntaxTreeC } from "@codemirror/language";
+import { queueSnippet } from "src/snippets/codemirror/snippet_queue_state_field";
 
 export const runAutoFraction = (
     view: EditorView,
     ctx: Context,
     latexSuiteConfig: LatexSuiteFacet,
     syntaxTree: typeof syntaxTreeC,
-    queueSnippet: ReturnType<typeof snippetQueues>["queueSnippet"],
     expandSnippets: expandSnippetsC,
 ): boolean => {
     for (const range of ctx.ranges) {
-        runAutoFractionCursor(
-            view,
-            ctx,
-            range,
-            latexSuiteConfig,
-            syntaxTree,
-            queueSnippet,
-        );
+        runAutoFractionCursor(view, ctx, range, latexSuiteConfig, syntaxTree);
     }
 
     const success = expandSnippets(view);
 
     if (success) {
-        autoEnlargeBrackets(
-            view,
-            latexSuiteConfig,
-            syntaxTree,
-            queueSnippet,
-            expandSnippets,
-        );
+        autoEnlargeBrackets(view, latexSuiteConfig, syntaxTree, expandSnippets);
     }
 
     return success;
@@ -49,7 +35,6 @@ export const runAutoFractionCursor = (
     range: SelectionRange,
     latexSuiteConfig: LatexSuiteFacet,
     syntaxTree: typeof syntaxTreeC,
-    queueSnippet: ReturnType<typeof snippetQueues>["queueSnippet"],
 ): boolean => {
     const settings = getLatexSuiteConfig(view, latexSuiteConfig);
     const { from, to } = range;
@@ -147,7 +132,7 @@ export const runAutoFractionCursor = (
         "@@",
     )}}{@0}@1`;
 
-    queueSnippet(view, start, to, replacement, "/");
+    queueSnippet(start, to, replacement, "/");
 
     return true;
 };

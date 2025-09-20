@@ -1,5 +1,4 @@
-import type { EditorView } from "@codemirror/view";
-import type { ChangeSpec } from "@codemirror/state";
+import type { ChangeSpec, Text } from "@codemirror/state";
 import type { TabstopSpec } from "../tabstop";
 
 /**
@@ -53,11 +52,8 @@ export class SnippetChangeSpec {
             }).filter((val) => val !== undefined) || [];
     }
 
-    getTabstops(view: EditorView, start: number): TabstopSpec[] {
-        const text = view.state.doc.sliceString(
-            start,
-            start + this.insert.length,
-        );
+    getTabstops(doc: Text, start: number): TabstopSpec[] {
+        const text = doc.sliceString(start, start + this.insert.length);
 
         const matches = text.matchAll(tabstop_regex);
         const tabstops: TabstopSpec[] = Array.from(
