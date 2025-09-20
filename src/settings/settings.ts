@@ -15,7 +15,7 @@ import {
     type RawSnippet,
     type SnippetVariables,
 } from "src/snippets/parse";
-import type { EditorState } from "@codemirror/state";
+import type { EditorState, Facet as FacetC } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
 
 interface LatexSuiteBasicSettings {
@@ -179,13 +179,17 @@ export function processLatexSuiteSettings(
         ),
     };
 }
-export type LatexSuiteFacet = { value: LatexSuiteCMSettings };
+export type LatexSuiteFacet = FacetC<
+    Partial<LatexSuitePluginSettings>,
+    LatexSuiteCMSettings
+>;
 
 export function getLatexSuiteConfig(
     viewOrState: EditorView | EditorState,
     latexSuiteConfig: LatexSuiteFacet,
 ): LatexSuiteCMSettings {
-    return latexSuiteConfig.value;
+    // @ts-expect-error Property 'state' does not exist on type 'EditorState | EditorView'.
+    return (viewOrState.state ?? viewOrState).facet(latexSuiteConfig);
 }
 
 export function getSettingsSnippetVariables(snippetVariables: string) {

@@ -26,7 +26,10 @@ import type {
 } from "@codemirror/view";
 import type { syntaxTree as syntaxTreeC } from "@codemirror/language";
 import { handleUpdate, onKeydown } from "./latex_suite";
-import type { LatexSuiteCMSettings } from "./settings/settings";
+import type {
+    LatexSuiteCMSettings,
+    LatexSuiteFacet,
+} from "./settings/settings";
 import type { LatexSuitePluginSettings } from "./settings/settings";
 import { create_snippet_extensions } from "./snippets/codemirror/extensions";
 import type { invertedEffects as invertedEffectsC } from "@codemirror/commands";
@@ -94,6 +97,7 @@ export function main(
         RangeSet,
         RangeSetBuilder,
         RangeValue,
+        Facet,
     } = codemirror_objects;
     const CMSettings: LatexSuiteCMSettings =
         processLatexSuiteSettings(settings);
@@ -123,7 +127,20 @@ export function main(
         snippetQueues(StateEffect, StateField);
     const extensions: ExtensionC[] = [];
 
-    const latexSuiteConfig = new LatexSuiteConfig(CMSettings);
+    const latexSuiteConfig: LatexSuiteFacet = Facet.define<
+        Partial<LatexSuitePluginSettings>,
+        LatexSuiteCMSettings
+    >({
+        combine: (input: Partial<LatexSuitePluginSettings>[]) => {
+            const settings =
+                input.length > 0
+                    ? processLatexSuiteSettings(
+                          Object.assign({}, DEFAULT_SETTINGS, ...input),
+                      )
+                    : processLatexSuiteSettings(DEFAULT_SETTINGS);
+            return settings;
+        },
+    });
     const snippet_leaf_extension = [
         Prec.highest(
             EditorView.domEventHandlers({
@@ -164,6 +181,7 @@ export function main(
             snippetQueueStateField,
             snippetInvertedEffects,
         ),
+        latexSuiteConfig.of(CMSettings),
     ];
     extensions.push(...snippet_leaf_extension);
     const conceal_plugin = mkConcealPlugin(
@@ -255,18 +273,3 @@ export type {
     ProcessSnippetResult,
     SnippetData,
 };
-class LatexSuiteConfig {
-    value: LatexSuiteCMSettings;
-    constructor(value: LatexSuiteCMSettings) {
-        this.value = value;
-    }
-    processSettings(settings: LatexSuitePluginSettings): this | null {
-        try {
-            const processedSettings = processLatexSuiteSettings(settings);
-            this.value = processedSettings;
-            return this;
-        } catch {
-            return null;
-        }
-    }
-}

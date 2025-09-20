@@ -9,6 +9,7 @@ import type {
     RangeValue as RangeValueC,
     RangeSetBuilder as RangeSetBuilderC,
     ChangeSet as ChangeSetC,
+    Compartment as CompartmentC,
 } from "@codemirror/state";
 import type {
     undo as undoC,
@@ -108,12 +109,35 @@ async function browser_main() {
             DEFAULT_SETTINGS,
         );
         extensions.push(latex_suite_extensions);
+        let view: EditorViewC | null = null;
+        await new Promise((resolve) => {
+            //@ts-expect-error - not correctly typed.
+            view = CodeMirror.EditorView.findFromDOM(document);
+            const conf_interval = setInterval(() => {
+                //@ts-expect-error - internal type.
+                if (view.state?.config.base.length > 0) resolve(true);
+                clearInterval(conf_interval);
+            }, 100);
+        });
+        //@ts-expect-error - internal type.
+        const Compartment: typeof CompartmentC = view.state.config.compartments
+            .keys()
+            .next().value.constructor;
+        const latexSuiteConfigCompartment = new Compartment();
+        extensions.push(
+            latexSuiteConfigCompartment.of(latexSuiteConfig.of({})),
+        );
+
         document.addEventListener("snippet_leaf_config_send", (e) => {
             const evt = e as CustomEvent<string>;
             const config = JSON.parse(evt.detail);
             processRawLatexSuiteSettings(config).then((parsed_settings) => {
                 if (parsed_settings) {
-                    latexSuiteConfig.processSettings(parsed_settings);
+                    view.dispatch({
+                        effects: latexSuiteConfigCompartment.reconfigure(
+                            latexSuiteConfig.of(parsed_settings),
+                        ),
+                    });
                     const messageBox = document.createElement("div");
                     messageBox.style.position = "fixed";
                     messageBox.style.top = "2rem";
