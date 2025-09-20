@@ -125,6 +125,7 @@ const browserConfig = {
     external: ["path", "fs"],
     metafile: true,
     mainFields: ["module", "browser", "main"],
+    sourcemap: production ? false : "inline",
 };
 
 const codemirrorConfig = {
