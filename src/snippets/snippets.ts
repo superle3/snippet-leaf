@@ -197,7 +197,7 @@ export class RegexSnippet extends Snippet<"regex"> {
                           .join("|")})\\])`,
                       "g",
                   )
-                : new RegExp("");
+                : new RegExp("(?!)");
         const named_capture_groups = test_result.groups
             ? Object.keys(test_result.groups)
             : [];
@@ -209,7 +209,7 @@ export class RegexSnippet extends Snippet<"regex"> {
                   `@(?:@|\\[(${escapedNamedCaptureGroups.join("|")})\\])`,
                   "g",
               )
-            : new RegExp("");
+            : new RegExp("(?!)");
     }
 
     process(
