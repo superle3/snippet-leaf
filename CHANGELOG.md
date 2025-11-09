@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.0.5 (2025-11-10)
+
+### Bug fixes
+
+- Adhere to new `manifest.json` standard.
+
 ## 0.0.4 (2025-11-09)
 
 ### New features
