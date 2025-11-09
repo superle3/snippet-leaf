@@ -6,14 +6,17 @@
     "type": "module",
     "scripts": {
         "build": "web-ext build --config ./web-ext-config-build.mjs",
-        "sign": "web-ext sign --api-key=$AMO_KEY --api-secret=$AMO_SECRET --config ./web-ext-config-build.mjs"
+        "sign": "web-ext sign --api-key=$AMO_KEY --api-secret=$AMO_SECRET --config ./web-ext-config-build.mjs",
+        "lint": "web-ext lint --config ./web-ext-config-build.mjs --self-hosted"
     },
     "dependencies": {
         "@typescript/vfs": "^1.6.1",
         "@valtown/codemirror-ts": "^2.2.1",
         "codemirror": "^6.0.2",
         "lz-string": "^1.5.0",
+        "snippetleaf": "file:",
         "typescript": "^5.9.2",
+        "web-ext": "^9.1.0",
         "webextension-polyfill": "^0.12.0"
     },
     "devDependencies": {

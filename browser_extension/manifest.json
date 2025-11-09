@@ -31,8 +31,11 @@
     },
     "browser_specific_settings": {
         "gecko": {
-            "id": "snippetleaf@superle3"
+            "id": "snippetleaf@superle3",
+            "update_url": "https://raw.githubusercontent.com/superle3/snippet-leaf/refs/heads/main/browser_extension/update_manifest.json",
+            "data_collection_permissions": {
+                "required": ["none"]
+            }
         }
-    },
-    "update_url": "https://raw.githubusercontent.com/superle3/snippet-leaf/refs/heads/main/browser_extension/update_manifest.json"
+    }
 }

@@ -993,7 +993,7 @@ class LatexSuiteSettingTab {
         ) {
             if (success === ValidityIndicator.INVALID) {
                 validityIndicator.setIcon("cross");
-                validityText.innerHTML = `Invalid syntax. Changes not saved ${error}`;
+                validityText.textContent = `Invalid syntax. Changes not saved ${error}`;
             } else if (success === ValidityIndicator.VALID) {
                 validityIndicator.setIcon("checkmark");
                 validityText.textContent = "Saved";
