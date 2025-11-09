@@ -3,22 +3,23 @@ name: Release
 on:
     push:
         tags:
-            - "*"
-
-env:
-    BROWSER_EXTENSION_NAME: snippet-leaf-browser
-    CODEMIRROR_EXTENSION_NAME: snippet-leaf-codemirror
+            - "v*"
 
 jobs:
     build-browser-extension:
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v4
+            - name: Check tag format
+              run: |
+                  if [[ ! "${GITHUB_REF_NAME}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9]+)?$ ]]; then
+                    echo "Tag ${GITHUB_REF_NAME} is not of the form v<major>.<minor>.<patch>"
+                    exit 1
+                  fi
             - name: Use Node.js
               uses: actions/setup-node@v4
               with:
                   node-version: 18
-
             - name: Build Browser Extension
               id: build
               run: |
@@ -31,38 +32,34 @@ jobs:
                   AMO_SECRET: ${{ secrets.AMO_SECRET }}
               run: |
                   npm run web:sign
+                  version=$(sed 's/^v//' <<< "${GITHUB_REF_NAME}")
+                  mv browser_extension/artifacts/*.xpi browser_extension/artifacts/snippetleaf-${version}.xpi
+            - name: Parse CHANGELOG.md for Release Notes
+              id: parse_changelog
+              run: |
+                  VERSION=$(echo "${{ github.ref_name }}" | sed 's/^v//')
+                  awk "/^## ${VERSION}/ {flag=1} /^## [0-9]/ && !/^## ${VERSION}/ {flag=0} flag" CHANGELOG.md | sed "s/^###/#/" | tail -n +2 > release_notes.md
+                  RELEASE_NOTES=$(cat release_notes.md)
+                  echo "RELEASE_NOTES<<EOF" >> $GITHUB_OUTPUT
+                  echo "$RELEASE_NOTES" >> $GITHUB_OUTPUT
+                  echo "EOF" >> $GITHUB_OUTPUT
+            - name: Is prerelease
+              id: prerelease_check
+              run: |
+                  VERSION=${{ github.ref_name }}
+                  if [[ "$VERSION" == *"-"* ]]; then
+                      echo "PRERELEASE=true" >> $GITHUB_OUTPUT
+                  else
+                      echo "PRERELEASE=false" >> $GITHUB_OUTPUT
+                  fi
             - name: Create Release
-              id: create_release
               uses: ncipollo/release-action@v1
               with:
                   tag: ${{ github.ref_name }}
-                  name: Release ${{ github.ref_name }}
-                  body: |
-                      #TODO: Add release notes
-                  draft: true
-                  prerelease: false
+                  name: ${{ github.ref_name }}
+                  body: ${{ steps.parse_changelog.outputs.RELEASE_NOTES }}
+                  draft: false
+                  prerelease: ${{ steps.prerelease_check.outputs.PRERELEASE }}
                   files: |
                       browser_extension/artifacts/*.zip
                       browser_extension/artifacts/*.xpi
-    build-codemirror-extension:
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@v4
-            - name: Use Node.js
-              uses: actions/setup-node@v4
-              with:
-                  node-version: 18
-
-            - name: Build Codemirror Extension
-              id: build-codemirror
-              run: |
-                  npm install
-                  npm run build:rollup
-            - name: Publish to npm
-              if: startsWith(github.ref_name, 'v')
-              uses: JS-DevTools/npm-publish@v1.5.0
-              with:
-                  token: ${{ secrets.NPM_TOKEN }}
-                  access: public
-                  package-dir: ./codemirror_extension
-                  tag: latest
