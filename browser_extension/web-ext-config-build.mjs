@@ -5,7 +5,6 @@ const config = {
         overwriteDest: true,
     },
     artifactsDir: "artifacts",
-    /** @type {import('web-ext-option-types').SignOptions} */
     ignoreFiles: [
         "node_modules/**",
         "settings/**",
@@ -16,6 +15,7 @@ const config = {
         "package.json",
         "package-lock.json",
     ],
+    /** @type {import('web-ext-option-types').SignOptions} */
     sign: {
         channel: "unlisted",
     },
