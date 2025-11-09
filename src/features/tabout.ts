@@ -15,7 +15,7 @@ export const tabout = (
     if (!ctx.mode.inMath()) {
         return false;
     }
-    const result = ctx.getOuterBounds(syntaxTree);
+    const result = ctx.getInnerBounds(syntaxTree);
     if (!result) {
         return false;
     }
@@ -28,7 +28,7 @@ export const tabout = (
     const rangle = "\\rangle";
 
     for (let i = pos; i < end; i++) {
-        if (["}", ")", "]", ">", "|", "$"].includes(text.charAt(i))) {
+        if (["}", ")", "]", ">", "|"].includes(text.charAt(i))) {
             setCursor(view, i + 1);
 
             return true;
@@ -39,30 +39,38 @@ export const tabout = (
         }
     }
 
+    // TODO: Handle array environments better. Now tabout doesn't work inside arrays when matrix shortcuts are off.
+    if (ctx.mode.array) {
+        return false;
+    }
     // If cursor at end of line/equation, move to next line/outside $$ symbols
 
     // Check whether we're at end of equation
     // Accounting for whitespace, using trim
     const textBtwnCursorAndEnd = doc.sliceString(pos, end);
     const atEnd = textBtwnCursorAndEnd.trim().length === 0;
-
+    const { start: startOfEquation, end: endOfEquation } =
+        ctx.getOuterBounds(syntaxTree);
     if (!atEnd) return false;
 
     // Check whether we're in inline math or a block eqn
     if (ctx.mode.inlineMath) {
-        setCursor(view, end + 1);
+        setCursor(view, endOfEquation);
     } else {
         // First, locate the $$ symbol
-        const dollarLine = doc.lineAt(end + 2);
+        const dollarLine = doc.lineAt(endOfEquation);
 
         // If there's no line after the equation, create one
 
-        if (dollarLine.number === doc.lines) {
+        if (
+            dollarLine.number === doc.lines &&
+            startOfEquation < dollarLine.from
+        ) {
             replaceRange(view, dollarLine.to, dollarLine.to, "\n");
         }
 
         // Finally, move outside the $$ symbol
-        setCursor(view, dollarLine.to + 1);
+        setCursor(view, endOfEquation);
 
         // Trim whitespace at beginning / end of equation
         const line = doc.lineAt(pos);

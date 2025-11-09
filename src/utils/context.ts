@@ -294,7 +294,7 @@ const mathContext: Record<
         return {
             type: MathMode.DollarDisplay,
             inner_bounds: addBounds(boundsFromNode(node), DisplayMathOffset),
-            outer_bounds: boundsFromNode(node),
+            outer_bounds: { start: node.from - 1, end: node.to + 1 },
         };
     },
     /**
@@ -302,7 +302,7 @@ const mathContext: Record<
      * @param node the node to check
      * @returns inline math bounds or null if its not the special case.
      */
-    DollarMath: (node: SyntaxNode): EquationInfo => {
+    DollarMath: (node: SyntaxNode, state: EditorStateC): EquationInfo => {
         if (node.to - node.from < 4) {
             return {
                 type: MathMode.DollarInline,
@@ -310,8 +310,33 @@ const mathContext: Record<
                 outer_bounds: boundsFromNode(node),
             };
         }
+        const pos = state.selection.main.head;
+        const dollarNode = node.firstChild;
+        if (dollarNode.to === pos) {
+            return {
+                type: MathMode.DollarInline,
+                inner_bounds: addBounds(
+                    boundsFromNode(dollarNode),
+                    InlineMathOffset,
+                ),
+                outer_bounds: {
+                    start: dollarNode.from - 1,
+                    end: dollarNode.to + 1,
+                },
+            };
+        }
         return null;
     },
+    BeginEnv: (node: SyntaxNode): EquationInfo => ({
+        type: MathMode.TextEnv,
+        inner_bounds: addBounds(boundsFromNode(node), TextEnvOffset),
+        outer_bounds: boundsFromNode(node),
+    }),
+    EndEnv: (node: SyntaxNode): EquationInfo => ({
+        type: MathMode.TextEnv,
+        inner_bounds: addBounds(boundsFromNode(node), TextEnvOffset),
+        outer_bounds: boundsFromNode(node),
+    }),
     TextArgument: (node: SyntaxNode): EquationInfo => ({
         type: MathMode.TextEnv,
         inner_bounds: addBounds(boundsFromNode(node), TextEnvOffset),
@@ -369,7 +394,7 @@ const equationType = (
     const tree: Tree = syntaxTree(state);
 
     // Traverse up the tree to find math context
-    let currentNode: NodeIterator = tree.resolveStack(pos, direction);
+    let currentNode: NodeIterator = tree.resolveStack(pos, 0);
     while (currentNode) {
         const context = mathContext[currentNode.node.name];
         if (context !== undefined) {
@@ -453,4 +478,30 @@ const boundsFromNode = (node: SyntaxNode): Bounds | null => {
     const end = node.to;
 
     return { start, end };
+};
+
+const printSyntaxTree = (
+    state: EditorStateC,
+    syntaxTree: typeof syntaxTreeC,
+    pos: number,
+) => {
+    console.log("Syntax tree at position", pos);
+    const tree = syntaxTree(state);
+    let i = 0;
+    const buildTreeString = (node: SyntaxNode, indent: number = 0): string => {
+        let str =
+            " ".repeat(indent) +
+            node.name +
+            ` (${node.from}-${node.to}): ` +
+            // `${JSON.stringify([state.sliceDoc(node.from, node.to)])}` +
+            "\n";
+        // console.log(i++, " i++", [str]);
+        let child = node.firstChild;
+        while (child) {
+            str += buildTreeString(child, indent + 2);
+            child = child.nextSibling;
+        }
+        return str;
+    };
+    console.log(buildTreeString(tree.topNode));
 };

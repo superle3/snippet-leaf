@@ -3,7 +3,6 @@ import { setCursor } from "src/utils/editor_utils";
 import type { LatexSuiteFacet } from "src/settings/settings";
 import { getLatexSuiteConfig } from "src/settings/settings";
 import type { Context } from "src/utils/context";
-import { tabout } from "src/features/tabout";
 import type { syntaxTree as syntaxTreeC } from "@codemirror/language";
 
 export const runMatrixShortcuts = (
@@ -27,16 +26,9 @@ export const runMatrixShortcuts = (
 
         return true;
     } else if (key === "Enter") {
-        if (shiftKey && ctx.mode.blockMath) {
-            // Move cursor to end of next line
-            const d = view.state.doc;
-
-            const nextLineNo = d.lineAt(ctx.pos).number + 1;
-            const nextLine = d.line(nextLineNo);
-
-            setCursor(view, nextLine.to);
-        } else if (shiftKey && ctx.mode.inlineMath) {
-            tabout(view, ctx, syntaxTree);
+        if (shiftKey) {
+            const bounds = ctx.getOuterBounds(syntaxTree);
+            setCursor(view, bounds.end);
         } else if (ctx.mode.blockMath) {
             const d = view.state.doc;
             const lineText = d.lineAt(ctx.pos).text;
