@@ -35,6 +35,38 @@ You can also add your own snippets! [For more info on writing snippets, see **he
 
 Aside from snippets, the plugin also comes with several other features that aim to make writing LaTeX easier.
 
+## Installation
+
+### Firefox
+
+- Go the [latest release](https://github.com/superle3/snippet-leaf/releases/latest) and download the `.xpi` file in the firefox based browser you want to add the extension.
+- There should open a popup, click on `Continue to Installation` and when its done downloading, click `add`.
+- If for whatever reason this doesn't work or you can't download it on that browser, you first hide any sidebar on the left/right and drag-and-drop the `.xpi` file from your file-explorer in firefox. It should give you a popup where it asks you if the addons should be added. Click `add` to install the addon.
+
+### Chromium (Chrome, Edge, Brave, Opera, Vivaldi, etc)
+
+- Go to the [latest release](https://github.com/superle3/snippet-leaf/releases/latest) and download the `snippetleaf-<version-number>.zip` file.
+- Extract the zip file into any folder, for example `snippetleaf`.
+- Inside the folder `snippetleaf`, there should be a file called `manifest.json`, if there is only a folder in `snippetleaf`, check if that folder has a file `manifest.json`.
+- Go to `chrome://extensions` or open your extensions settings. (the url `chrome://extensions` might get redirected to `<insert-browser-name>://extensions` like `brave://extensions`).
+- turn on developer mode
+- Click on `Load unpacked`
+- Select the folder which contains the `manifest.json` file, in this example thus `snippetleaf`.
+
+To check if the installation succeeded, reload your overleaf website and there should be little message in the corner saying `Snippetleaf settings updated!`.
+
+> [!NOTE]
+> For pictures of the installation on brave see https://github.com/superle3/snippet-leaf/discussions/23#discussioncomment-14723470.
+> This addon relies on a very recent patch of overleaf which has not been brought into `overleaf-toolkit`. Thus if you self-host your overleaf instance and you can patch your instance, see https://github.com/superle3/snippet-leaf/discussions/23#discussioncomment-14732840 on how to patch your `overleaf-toolkit`.
+
+### Safari/other browsers
+
+Not supported, use a chromium/firefox browser. If anyone is willing to release this addon for safari you can open an issue and I'll redirect it to that version. As for other browsers, you can open up an issue asking for support if its not already supported.
+
+### Chrome extension store/ Edge extension store/ Mozilla addons store
+
+Coming soon(ish), need to make an icon and then I'll try to release it on there.
+
 ## Features
 
 ### Auto-fraction
