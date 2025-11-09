@@ -49,3 +49,14 @@ will (hopefully) be uploaded later on AMO and the chrome extension store.
 ### Removed
 
 - Math preview (not currently possible for Overleaf, therefor omitted)
+
+## 0.0.4 (2025-11-09)
+
+### New features
+
+- Optimized snippet detection and expansion
+- Optimized concealment
+
+### Bug fixes
+
+- Bounds are detected correctly for `$$` and `\begin{...} \end{...}` such that you can still type `\begin{array}[]{cc}... \end{array}`
