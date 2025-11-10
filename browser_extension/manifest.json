@@ -1,28 +1,40 @@
 {
     "manifest_version": 3,
     "name": "Snippetleaf",
-    "version": "0.0.4",
+    "version": "0.0.5",
     "description": "Make typesetting LaTeX math as fast as handwriting through snippets, text expansion, and editor enhancements",
     "author": "superle3",
     "content_scripts": [
         {
-            "js": ["dist/browser_extension.js"],
-            "matches": ["<all_urls>"],
+            "js": [
+                "dist/browser_extension.js"
+            ],
+            "matches": [
+                "<all_urls>"
+            ],
             "world": "MAIN"
         },
         {
-            "js": ["dist/settings/content_script.js"],
-            "matches": ["<all_urls>"]
+            "js": [
+                "dist/settings/content_script.js"
+            ],
+            "matches": [
+                "<all_urls>"
+            ]
         }
     ],
-    "permissions": ["storage"],
+    "permissions": [
+        "storage"
+    ],
     "web_accessible_resources": [
         {
             "resources": [
                 "dist/browser_extension.js",
                 "dist/settings/content_script.js"
             ],
-            "matches": ["<all_urls>"]
+            "matches": [
+                "<all_urls>"
+            ]
         }
     ],
     "options_page": "settings.html",
@@ -34,7 +46,9 @@
             "id": "snippetleaf@superle3",
             "update_url": "https://raw.githubusercontent.com/superle3/snippet-leaf/refs/heads/main/browser_extension/update_manifest.json",
             "data_collection_permissions": {
-                "required": ["none"]
+                "required": [
+                    "none"
+                ]
             }
         }
     }
