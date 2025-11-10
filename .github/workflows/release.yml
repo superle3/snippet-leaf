@@ -60,6 +60,5 @@ jobs:
                   body: ${{ steps.parse_changelog.outputs.RELEASE_NOTES }}
                   draft: false
                   prerelease: ${{ steps.prerelease_check.outputs.PRERELEASE }}
-                  files: |
-                      browser_extension/artifacts/*.zip
-                      browser_extension/artifacts/*.xpi
+                  makeLatest: true
+                  artifacts: "browser_extension/artifacts/*.zip,browser_extension/artifacts/*.xpi"
