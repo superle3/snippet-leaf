@@ -17,6 +17,10 @@
 
 - Bounds are detected correctly for `$$` and `\begin{...} \end{...}` such that you can still type `\begin{array}[]{cc}... \end{array}`
 
+### Breaking changes
+
+- changed id in `manifest.json` so when installing a new version it doesn't override the previous one. (id was nonsensical at first).
+
 ## 0.0.3 (2025-09-11)
 
 ### Bug fixes

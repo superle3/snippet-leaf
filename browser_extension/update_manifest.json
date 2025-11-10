@@ -5,6 +5,10 @@
                 {
                     "version": "0.0.4",
                     "update_link": "https://github.com/superle3/snippet-leaf/releases/download/v0.0.4/snippet_leaf-0.0.4.xpi"
+                },
+                {
+                    "version": "0.0.5",
+                    "update_link": "https://github.com/superle3/snippet-leaf/releases/download/v0.0.5/snippet_leaf-0.0.5.xpi"
                 }
             ]
         }
