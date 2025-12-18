@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.0.6 (2025-12-18)
+
+### Bug fixes
+
+- Don't override codemirror theme to dark and adhere to codemirror theme syntax of `light` and `dark`
+
 ## 0.0.5 (2025-11-10)
 
 ### Bug fixes
