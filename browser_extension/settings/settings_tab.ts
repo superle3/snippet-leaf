@@ -688,23 +688,6 @@ class LatexSuiteSettingTab {
                         await this.plugin.saveSettings();
                     }),
             );
-
-        new Setting(containerEl)
-            .setName("Highlighting theme")
-            .setDesc(
-                "Whether to use a dark or light theme to highlight/color the brackets.",
-            )
-            .addDropdown((dropdown) =>
-                dropdown
-                    .setValue(this.plugin.settings.theme)
-                    .onChange(async (value) => {
-                        this.plugin.settings.theme =
-                            value as LatexSuitePluginSettingsRaw["theme"];
-                        await this.plugin.saveSettings();
-                    })
-                    .addOption("light", "Light")
-                    .addOption("dark", "Dark"),
-            );
     }
 
     displayAutofractionSettings() {

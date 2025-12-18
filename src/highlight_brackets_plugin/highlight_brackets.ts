@@ -36,7 +36,6 @@ function colorPairedBrackets(
     view: EditorViewC,
     syntaxTree: typeof syntaxTreeC,
     Decoration: typeof DecorationC,
-    theme: "light" | "dark",
 ): DecorationSetC {
     const widgets: RangeC<DecorationC>[] = [];
 
@@ -78,8 +77,7 @@ function colorPairedBrackets(
                         const lastBracketPos = bracketsPosStack.pop();
                         const depth = bracketsStack.length % Ncolors;
 
-                        const className =
-                            "latex-suite-color-bracket-" + depth + "-" + theme;
+                        const className = "latex-suite-color-bracket-" + depth;
 
                         const j = lastBracketPos + bounds.start;
                         const k = i + bounds.start;
@@ -172,8 +170,7 @@ function highlightCursorBrackets(
     const brackets = ["{", "[", "(", "}", "]", ")"];
 
     let done = false;
-    const theme = getLatexSuiteConfig(view, latexSuiteConfig).theme;
-    const className = "latex-suite-highlighted-bracket-" + theme;
+    const className = "latex-suite-highlighted-bracket";
     for (const range of ranges) {
         for (let i = Math.max(0, range.from - 1); i <= range.to; i++) {
             const char = text.charAt(i);
@@ -255,7 +252,6 @@ const colorPairedBracketsPlugin = (
                     view,
                     syntaxTree,
                     Decoration,
-                    getLatexSuiteConfig(view, latexSuiteConfig).theme,
                 );
             }
 
@@ -272,8 +268,6 @@ const colorPairedBracketsPlugin = (
                         update.view,
                         syntaxTree,
                         Decoration,
-                        getLatexSuiteConfig(update.view, latexSuiteConfig)
-                            .theme,
                     );
                 }
             }
