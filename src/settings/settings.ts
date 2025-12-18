@@ -37,7 +37,6 @@ interface LatexSuiteBasicSettings {
     taboutEnabled: boolean;
     autoEnlargeBrackets: boolean;
     wordDelimiters: string;
-    theme: "light" | "dark";
 }
 
 /**
@@ -95,7 +94,6 @@ export const DEFAULT_SETTINGS: LatexSuitePluginSettings &
     taboutEnabled: true,
     autoEnlargeBrackets: true,
     wordDelimiters: "., +-\\n\t:;!?\\/{}[]()=~$",
-    theme: "light",
 
     // Raw settings
     autofractionExcludedEnvs: '[\n\t["^{", "}"],\n\t["\\\\pu{", "}"]\n]',
@@ -401,13 +399,6 @@ export const SETTINGS_EXPLANATIONS: LatexSuitePluginSettingsExplanations = {
             "When the cursor is adjacent to a bracket, highlight the matching bracket.",
         type: "boolean",
         defaultValue: DEFAULT_SETTINGS.highlightCursorBracketsEnabled,
-    },
-    theme: {
-        title: "Highlighting theme",
-        description:
-            "Whether to use a dark or light theme to highlight/color the brackets.",
-        type: ["light", "dark"],
-        defaultValue: DEFAULT_SETTINGS.theme,
     },
     defaultSnippetVersion: {
         title: "Default snippet version",

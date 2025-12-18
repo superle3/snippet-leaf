@@ -204,49 +204,43 @@ export function main(
         ),
     ];
     extensions.push(...highlighting_brackets);
-    const dark_theme_extension = EditorView.theme(
-        {
-            '.latex-suite-color-bracket-0-dark, .latex-suite-color-bracket-0-dark [class^="tok-"], .latex-suite-color-bracket-0-dark .cm-bracket, .latex-suite-color-bracket-0-dark .cm-math':
-                {
-                    color: "#47b8ff",
-                },
-            '.latex-suite-color-bracket-1-dark, .latex-suite-color-bracket-1-dark [class^="tok-"], .latex-suite-color-bracket-1-dark .cm-bracket, .latex-suite-color-bracket-1-dark .cm-math':
-                {
-                    color: "#ff55cd",
-                },
-            '.latex-suite-color-bracket-2-dark, .latex-suite-color-bracket-2-dark [class^="tok-"], .latex-suite-color-bracket-2-dark .cm-bracket, .latex-suite-color-bracket-2-dark .cm-math':
-                {
-                    color: "#73ff63",
-                },
-            ".latex-suite-highlighted-bracket-dark, .latex-suite-highlighted-bracket-dark .cm-bracket, .latex-suite-highlighted-bracket-dark .cm-math ":
-                {
-                    backgroundColor: "hsla(170, 50%, 40%, 0.3)",
-                },
-        },
-        { dark: true },
-    );
+    const dark_theme_extension = EditorView.baseTheme({
+        '&dark .latex-suite-color-bracket-0, &dark .latex-suite-color-bracket-0 [class^="tok-"], &dark .latex-suite-color-bracket-0 .cm-bracket, &dark .latex-suite-color-bracket-0 .cm-math':
+            {
+                color: "#47b8ff",
+            },
+        '&dark .latex-suite-color-bracket-1, &dark .latex-suite-color-bracket-1 [class^="tok-"], &dark .latex-suite-color-bracket-1 .cm-bracket, &dark .latex-suite-color-bracket-1 .cm-math':
+            {
+                color: "#ff55cd",
+            },
+        '&dark .latex-suite-color-bracket-2, &dark .latex-suite-color-bracket-2 [class^="tok-"], &dark .latex-suite-color-bracket-2 .cm-bracket, &dark .latex-suite-color-bracket-2 .cm-math':
+            {
+                color: "#73ff63",
+            },
+        "&dark .latex-suite-highlighted-bracket, &dark .latex-suite-highlighted-bracket .cm-bracket, &dark .latex-suite-highlighted-bracket .cm-math ":
+            {
+                backgroundColor: "hsla(170, 50%, 40%, 0.3)",
+            },
+    });
 
-    const light_theme_extension = EditorView.theme(
-        {
-            '.latex-suite-color-bracket-0-light, .latex-suite-color-bracket-0-light [class^="tok-"], .latex-suite-color-bracket-0-light .cm-bracket, .latex-suite-color-bracket-0-light .cm-math':
-                {
-                    color: "#527aff",
-                },
-            '.latex-suite-color-bracket-1-light, .latex-suite-color-bracket-1-light [class^="tok-"], .latex-suite-color-bracket-1-light .cm-bracket, .latex-suite-color-bracket-1-light .cm-math':
-                {
-                    color: "#ff50b7",
-                },
-            '.latex-suite-color-bracket-2-light, .latex-suite-color-bracket-2-light [class^="tok-"], .latex-suite-color-bracket-2-light .cm-bracket, .latex-suite-color-bracket-2-light .cm-math':
-                {
-                    color: "#69ba00",
-                },
-            ".latex-suite-highlighted-bracket-light, .latex-suite-highlighted-bracket-light .cm-bracket, .latex-suite-highlighted-bracket-light .cm-math ":
-                {
-                    backgroundColor: "hsla(170, 50%, 70%, 0.6)",
-                },
-        },
-        { dark: false },
-    );
+    const light_theme_extension = EditorView.baseTheme({
+        '&light .latex-suite-color-bracket-0, &light .latex-suite-color-bracket-0 [class^="tok-"], &light .latex-suite-color-bracket-0 .cm-bracket, &light .latex-suite-color-bracket-0 .cm-math':
+            {
+                color: "#527aff",
+            },
+        '&light .latex-suite-color-bracket-1, &light .latex-suite-color-bracket-1 [class^="tok-"], &light .latex-suite-color-bracket-1 .cm-bracket, &light .latex-suite-color-bracket-1 .cm-math':
+            {
+                color: "#ff50b7",
+            },
+        '&light .latex-suite-color-bracket-2, &light .latex-suite-color-bracket-2 [class^="tok-"], &light .latex-suite-color-bracket-2 .cm-bracket, &light .latex-suite-color-bracket-2 .cm-math':
+            {
+                color: "#69ba00",
+            },
+        "&light .latex-suite-highlighted-bracket, &light .latex-suite-highlighted-bracket .cm-bracket, &light .latex-suite-highlighted-bracket .cm-math ":
+            {
+                backgroundColor: "hsla(170, 50%, 70%, 0.6)",
+            },
+    });
 
     extensions.push(light_theme_extension, dark_theme_extension);
 
