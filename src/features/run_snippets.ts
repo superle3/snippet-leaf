@@ -96,7 +96,7 @@ const runSnippetCursor = (
 
         // Expand the snippet
         const start = triggerPos;
-        queueSnippet(start, to, replacement, key);
+        queueSnippet(view, start, to, replacement, key);
 
         const containsTrigger = settings.autoEnlargeBracketsTriggers.some(
             (word) => replacement.includes("\\" + word),

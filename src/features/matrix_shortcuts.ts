@@ -2,6 +2,8 @@ import type { EditorView } from "@codemirror/view";
 import { setCursor } from "src/utils/editor_utils";
 import { getLatexSuiteConfig } from "src/settings/settings";
 import { getContextPlugin } from "src/latex_context/context";
+import { queueSnippet } from "src/snippets/codemirror/snippet_queue_state_field";
+import { expandSnippets } from "src/snippets/snippet_management";
 
 export const runMatrixShortcuts = (
     view: EditorView,
@@ -26,14 +28,9 @@ export const runMatrixShortcuts = (
             const end = ctx.getBounds().outer_end;
             setCursor(view, end);
         } else if (ctx.mode.blockMath) {
-            const d = view.state.doc;
-            const lineText = d.lineAt(ctx.pos).text;
-            const matchIndents = lineText.match(/^\s*/);
-            const leadingIndents = matchIndents ? matchIndents[0] : "";
-
-            view.dispatch(
-                view.state.replaceSelection(` \\\\\n${leadingIndents}`),
-            );
+            // Keep current indentation
+            queueSnippet(view, ctx.pos, ctx.pos, "\\\\\n@0");
+            expandSnippets(view);
         } else {
             view.dispatch(view.state.replaceSelection(" \\\\ "));
         }

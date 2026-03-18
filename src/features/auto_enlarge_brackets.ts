@@ -156,11 +156,13 @@ export const autoEnlargeBrackets = (view: EditorView) => {
             if (!containsTrigger) break;
 
             queueSnippet(
+                view,
                 start + openStart,
                 start + openEnd,
                 left + openToken + " ",
             );
             queueSnippet(
+                view,
                 start + closeStart,
                 start + closeStart + token.length,
                 " " + right + token,

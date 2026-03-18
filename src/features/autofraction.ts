@@ -123,7 +123,7 @@ export const runAutoFractionCursor = (
         "@@",
     )}}{@0}@1`;
 
-    queueSnippet(start, to, replacement, "/");
+    queueSnippet(view, start, to, replacement, "/");
 
     return true;
 };
