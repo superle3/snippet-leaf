@@ -40,13 +40,15 @@ import { create_tabstopsStateField } from "./snippets/codemirror/tabstops_state_
 import { mkConcealPlugin } from "./conceal_plugin/conceal";
 
 import type { RawSnippet, SnippetVariables } from "./snippets/parse";
-import type { TabstopGroupC } from "./snippets/tabstop";
+import type { TabstopGroup } from "./snippets/tabstop";
 import type { ProcessSnippetResult, SnippetData } from "./snippets/snippets";
 import {
     colorPairedBracketsPluginLowestPrec,
     highlightCursorBracketsPlugin,
 } from "./highlight_brackets_plugin/highlight_brackets";
 import { set_codemirror_objects } from "./set_codemirror_objects";
+import { createContextPlugin } from "./latex_context/context";
+import { createMathBoundsPlugin } from "./latex_context/mathbounds";
 
 type CodeMirrorExt = {
     Decoration: typeof DecorationC;
@@ -96,6 +98,8 @@ export function main(
         EditorView.updateListener.of(handleUpdate),
         create_snippet_extensions(),
         latexSuiteConfig.of(CMSettings),
+        createContextPlugin(),
+        createMathBoundsPlugin(),
     ];
     extensions.push(...snippet_leaf_extension);
     const conceal_plugin = mkConcealPlugin(settings.concealRevealTimeout);
@@ -155,7 +159,7 @@ export type {
     LatexSuitePluginSettings,
     RawSnippet,
     SnippetVariables,
-    TabstopGroupC,
+    TabstopGroup as TabstopGroupC,
     ProcessSnippetResult,
     SnippetData,
 };

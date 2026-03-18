@@ -1,22 +1,11 @@
 import { type ViewUpdate } from "@codemirror/view";
-// import type {
-//     StateEffect as StateEffectC,
-//     StateField as StateFieldC,
-// } from "@codemirror/state";
-// import type {
-//     invertedEffects as invertedEffectsC,
-//     undo as undoC,
-//     redo as redoC,
-// } from "@codemirror/commands";
-
 import { removeAllTabstops } from "./tabstops_state_field";
 import {
-    invertedEffects,
-    redo,
     StateEffect,
-    undo,
-} from "src/set_codemirror_objects";
-import type { Extension, StateEffectType } from "@codemirror/state";
+    type Extension,
+    type StateEffectType,
+} from "@codemirror/state";
+import { invertedEffects, redo, undo } from "@codemirror/commands";
 
 export let startSnippet: StateEffectType<null>;
 export let endSnippet: StateEffectType<null>;

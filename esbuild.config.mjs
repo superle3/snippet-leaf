@@ -98,6 +98,58 @@ const inlin_plugin = (options) => {
     };
 };
 
+const setCodeMirrorPath = path.resolve("src/set_codemirror_objects.ts");
+
+const codemirrorReroutePlugin = {
+    name: "codemirror-reroute",
+    setup(build) {
+        build.onResolve({ filter: /^@codemirror\// }, async (args) => {
+            // only reroute if importer is inside src/*
+            if (
+                !args.importer ||
+                !args.importer.startsWith(path.resolve("src") + path.sep)
+            ) {
+                return null; // normal resolution for non-src or entry imports
+            }
+
+            // avoid chasing self-import loops
+            if (path.resolve(args.importer) === setCodeMirrorPath) {
+                return {
+                    errors: [
+                        {
+                            text: `set_codemirror_objects.ts cannot import @codemirror/*; circular dependency detected in ${args.importer}`,
+                        },
+                    ],
+                };
+            }
+
+            try {
+                await fs.access(setCodeMirrorPath);
+            } catch {
+                return {
+                    errors: [
+                        {
+                            text: `set_codemirror_objects.ts not found at ${setCodeMirrorPath}; cannot reroute ${args.path}`,
+                        },
+                    ],
+                };
+            }
+
+            return {
+                path: setCodeMirrorPath,
+                // namespace: "codemirror-reroute",
+            };
+        });
+
+        // build.onLoad(
+        //     { filter: /.*/, namespace: "codemirror-reroute" },
+        //     async (...args) => {
+        //         const contents = await fs.readFile(setCodeMirrorPath, "utf8");
+        //         return { contents, loader: "ts" };
+        //     },
+        // );
+    },
+};
 /**@type {Partial<import('esbuild').BuildOptions>} */
 const sharedConfig = {
     banner: {
@@ -108,7 +160,7 @@ const sharedConfig = {
     target: ["ES2017"],
     sourcemap: production ? false : "inline",
     minify: production,
-    plugins: [inlin_plugin()],
+    plugins: [inlin_plugin(), codemirrorReroutePlugin],
     logLevel: "info",
 };
 

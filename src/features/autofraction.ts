@@ -3,13 +3,14 @@ import type { SelectionRange } from "@codemirror/state";
 import { findMatchingBracket, getOpenBracket } from "src/utils/editor_utils";
 import { expandSnippets } from "../snippets/snippet_management";
 import { autoEnlargeBrackets } from "./auto_enlarge_brackets";
-import type { Context } from "../utils/context";
 import { getLatexSuiteConfig } from "src/settings/settings";
 import { queueSnippet } from "src/snippets/codemirror/snippet_queue_state_field";
+import { getContextPlugin } from "src/latex_context/context";
 
-export const runAutoFraction = (view: EditorView, ctx: Context): boolean => {
+export const runAutoFraction = (view: EditorView): boolean => {
+    const ctx = getContextPlugin(view);
     for (const range of ctx.ranges) {
-        runAutoFractionCursor(view, ctx, range);
+        runAutoFractionCursor(view, range);
     }
 
     const success = expandSnippets(view);
@@ -23,10 +24,10 @@ export const runAutoFraction = (view: EditorView, ctx: Context): boolean => {
 
 export const runAutoFractionCursor = (
     view: EditorView,
-    ctx: Context,
     range: SelectionRange,
 ): boolean => {
     const settings = getLatexSuiteConfig(view);
+    const ctx = getContextPlugin(view);
     const { from, to } = range;
 
     // Don't run autofraction in excluded environments
@@ -39,7 +40,7 @@ export const runAutoFractionCursor = (
     // Get the bounds of the equation
     const result = ctx.getBounds();
     if (!result) return false;
-    const eqnStart = result.start;
+    const eqnStart = result.inner_start;
 
     let curLine = view.state.sliceDoc(0, to);
     let start = eqnStart;

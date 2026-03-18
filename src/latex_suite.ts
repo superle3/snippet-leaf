@@ -5,7 +5,7 @@ import { runAutoFraction } from "./features/autofraction";
 import { tabout, shouldTaboutByCloseBracket } from "./features/tabout";
 import { runMatrixShortcuts } from "./features/matrix_shortcuts";
 
-import { Context } from "./utils/context";
+import { getContextPlugin } from "./latex_context/context";
 import { replaceRange } from "./utils/editor_utils";
 import { setSelectionToNextTabstop } from "./snippets/snippet_management";
 import { removeAllTabstops } from "./snippets/codemirror/tabstops_state_field";
@@ -14,7 +14,6 @@ import { getLatexSuiteConfig } from "./settings/settings";
 // import { handleMathTooltip } from "./editor_extensions/math_tooltip";
 import { isComposing } from "./utils/editor_utils";
 import { clearSnippetQueue } from "./snippets/codemirror/snippet_queue_state_field";
-import { syntaxTree } from "src/set_codemirror_objects";
 import { handleUndoRedo } from "./snippets/codemirror/history";
 
 export const handleUpdate = (update: ViewUpdate) => {
@@ -63,7 +62,7 @@ export const handleKeydown = (
     ) {
         return false;
     }
-    const ctx = Context.fromView(view);
+    const ctx = getContextPlugin(view);
 
     let success = false;
 
@@ -93,7 +92,7 @@ export const handleKeydown = (
         // Allows Ctrl + z for undo, instead of triggering a snippet ending with z
         if (!ctrlKey) {
             try {
-                success = runSnippets(view, ctx, key);
+                success = runSnippets(view, key);
                 if (success) return true;
             } catch (e) {
                 clearSnippetQueue();
@@ -110,7 +109,7 @@ export const handleKeydown = (
 
     if (settings.autofractionEnabled && ctx.mode.strictlyInMath()) {
         if (key === "/") {
-            success = runAutoFraction(view, ctx);
+            success = runAutoFraction(view);
 
             if (success) return true;
         }
@@ -118,7 +117,7 @@ export const handleKeydown = (
 
     if (settings.matrixShortcutsEnabled && ctx.mode.strictlyInMath()) {
         if (["Tab", "Enter"].includes(key)) {
-            success = runMatrixShortcuts(view, ctx, key, shiftKey);
+            success = runMatrixShortcuts(view, key, shiftKey);
 
             if (success) return true;
         }
@@ -131,7 +130,7 @@ export const handleKeydown = (
             (key === "Tab" && view.state.selection.main.empty) ||
             shouldTaboutByCloseBracket(view, key)
         ) {
-            success = tabout(view, ctx, syntaxTree);
+            success = tabout(view);
 
             if (success) return true;
         }

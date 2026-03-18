@@ -4,14 +4,10 @@ import {
     setCursor,
     getCharacterAtPos,
 } from "../utils/editor_utils";
-import type { Context } from "../utils/context";
-import type { syntaxTree as syntaxTreeC } from "@codemirror/language";
+import { getContextPlugin } from "src/latex_context/context";
 
-export const tabout = (
-    view: EditorView,
-    ctx: Context,
-    syntaxTree: typeof syntaxTreeC,
-): boolean => {
+export const tabout = (view: EditorView): boolean => {
+    const ctx = getContextPlugin(view);
     if (!ctx.mode.inMath()) {
         return false;
     }
@@ -19,7 +15,7 @@ export const tabout = (
     if (!result) {
         return false;
     }
-    const end = result.end;
+    const end = result.inner_end;
 
     const pos = view.state.selection.main.to;
     const doc = view.state.doc;
@@ -49,7 +45,8 @@ export const tabout = (
     // Accounting for whitespace, using trim
     const textBtwnCursorAndEnd = doc.sliceString(pos, end);
     const atEnd = textBtwnCursorAndEnd.trim().length === 0;
-    const { start: startOfEquation, end: endOfEquation } = ctx.getOuterBounds();
+    const { inner_start: startOfEquation, outer_end: endOfEquation } =
+        ctx.getBounds();
     if (!atEnd) return false;
 
     // Check whether we're in inline math or a block eqn

@@ -1,11 +1,13 @@
-import type { ChangeDesc, SelectionRange } from "@codemirror/state";
-import type { EditorSelection as EditorSelectionC } from "@codemirror/state";
+import {
+    EditorSelection,
+    type ChangeDesc,
+    type SelectionRange,
+} from "@codemirror/state";
 import { resetCursorBlink } from "../utils/editor_utils";
-import type { EditorView } from "@codemirror/view";
+import { Decoration, type EditorView } from "@codemirror/view";
 
-import { Decoration, EditorSelection } from "src/set_codemirror_objects";
 import { endSnippet } from "./codemirror/history";
-import type { DecorationSet as DecorationSetC } from "@codemirror/view";
+import type { DecorationSet } from "@codemirror/view";
 
 const LATEX_SUITE_TABSTOP_DECO_CLASS = "latex-suite-snippet-placeholder";
 
@@ -26,8 +28,8 @@ function getMarkerDecoration(from: number, to: number, color: number) {
     }).range(from, to);
 }
 
-class TabstopGroup {
-    decos: DecorationSetC;
+export class TabstopGroup {
+    decos: DecorationSet;
     color: number;
     hidden: boolean;
 
@@ -73,7 +75,7 @@ class TabstopGroup {
         return sel;
     }
 
-    containsSelection(selection: EditorSelectionC) {
+    containsSelection(selection: EditorSelection) {
         function rangeLiesWithinSelection(
             range: SelectionRange,
             sel: SelectionRange[],
@@ -120,12 +122,11 @@ class TabstopGroup {
         return ranges;
     }
 }
-export type TabstopGroupC = InstanceType<typeof TabstopGroup>;
 
 export function tabstopSpecsToTabstopGroups(
     tabstops: TabstopSpec[],
     color: number,
-): TabstopGroupC[] {
+): TabstopGroup[] {
     const tabstopsByNumber: { [n: string]: TabstopSpec[] } = {};
 
     for (const tabstop of tabstops) {
@@ -150,8 +151,7 @@ export function tabstopSpecsToTabstopGroups(
     return result;
 }
 
-export function getEditorSelectionEndpoints(sel: EditorSelectionC) {
-    const EditorSelection = sel.constructor as typeof EditorSelectionC;
+export function getEditorSelectionEndpoints(sel: EditorSelection) {
     const endpoints = sel.ranges.map((range) =>
         EditorSelection.range(range.to, range.to),
     );

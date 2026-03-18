@@ -1,9 +1,5 @@
 import type { EditorView } from "@codemirror/view";
-import type {
-    ChangeSet as ChangeSetC,
-    StateEffect,
-    Text,
-} from "@codemirror/state";
+import { ChangeSet, type StateEffect, type Text } from "@codemirror/state";
 // import { startSnippet } from "./codemirror/history";
 import { startSnippet } from "./codemirror/history";
 import type { TabstopSpec } from "./tabstop";
@@ -20,9 +16,8 @@ import {
     clearSnippetQueue,
     snippetQueueStateField,
 } from "./codemirror/snippet_queue_state_field";
-import { ChangeSet, isolateHistory } from "src/set_codemirror_objects";
+import { isolateHistory } from "@codemirror/commands";
 
-export type expandSnippetsC = (view: EditorView) => boolean;
 export function expandSnippets(view: EditorView): boolean {
     const snippetsToExpand = snippetQueueStateField.snippetQueueValue;
     if (snippetsToExpand.length === 0) return false;
@@ -118,7 +113,7 @@ function computeTabstops(
 function expandTabstops(
     view: EditorView,
     tabstops: TabstopSpec[],
-    undoChanges: { changes: ChangeSetC; effects: StateEffect<null> },
+    undoChanges: { changes: ChangeSet; effects: StateEffect<null> },
     newLength: number,
 ) {
     const color = getNextTabstopColor(view);

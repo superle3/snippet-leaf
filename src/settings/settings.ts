@@ -15,9 +15,8 @@ import {
     type RawSnippet,
     type SnippetVariables,
 } from "src/snippets/parse";
-import type { EditorState, Facet as FacetC } from "@codemirror/state";
+import { Facet, type EditorState } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
-import { Facet } from "src/set_codemirror_objects";
 
 interface LatexSuiteBasicSettings {
     snippetsEnabled: boolean;
@@ -180,7 +179,7 @@ export function processLatexSuiteSettings(
         ),
     };
 }
-export type LatexSuiteFacet = FacetC<
+export type LatexSuiteFacet = Facet<
     Partial<LatexSuitePluginSettings>,
     LatexSuiteCMSettings
 >;

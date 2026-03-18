@@ -1,15 +1,15 @@
 import type { EditorView } from "@codemirror/view";
 import { setCursor } from "src/utils/editor_utils";
 import { getLatexSuiteConfig } from "src/settings/settings";
-import type { Context } from "src/utils/context";
+import { getContextPlugin } from "src/latex_context/context";
 
 export const runMatrixShortcuts = (
     view: EditorView,
-    ctx: Context,
     key: string,
     shiftKey: boolean,
 ): boolean => {
     const settings = getLatexSuiteConfig(view);
+    const ctx = getContextPlugin(view);
 
     // Check whether we are inside a matrix / align / case environment
     const envName = ctx.getEnvironmentName();
@@ -23,8 +23,8 @@ export const runMatrixShortcuts = (
         return true;
     } else if (key === "Enter") {
         if (shiftKey) {
-            const bounds = ctx.getOuterBounds();
-            setCursor(view, bounds.end);
+            const end = ctx.getBounds().outer_end;
+            setCursor(view, end);
         } else if (ctx.mode.blockMath) {
             const d = view.state.doc;
             const lineText = d.lineAt(ctx.pos).text;

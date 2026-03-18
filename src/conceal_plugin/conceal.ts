@@ -1,18 +1,6 @@
 // https://discuss.codemirror.net/t/concealing-syntax/3135
 
-import type {
-    ViewUpdate as ViewUpdateC,
-    Decoration as DecorationC,
-    DecorationSet as DecorationSetC,
-    WidgetType as WidgetTypeC,
-    EditorView as EditorViewC,
-} from "@codemirror/view";
-import type {
-    Range as RangeC,
-    RangeSet as RangeSetC,
-    RangeSetBuilder as RangeSetBuilderC,
-    RangeValue as RangeValueC,
-} from "@codemirror/state";
+import type { ConcealCachedEquations } from "./conceal_fns";
 import { conceal } from "./conceal_fns";
 import { getLatexSuiteConfig } from "src/settings/settings";
 import { debounce } from "src/utils/debounce";
@@ -21,11 +9,11 @@ import {
     EditorView,
     ViewPlugin,
     WidgetType,
-    syntaxTree,
-    RangeSet,
-    RangeValue,
-    RangeSetBuilder,
-} from "src/set_codemirror_objects";
+    type ViewUpdate,
+} from "@codemirror/view";
+import type { DecorationSet } from "@codemirror/view";
+import type { Range } from "@codemirror/state";
+import { RangeSet, RangeSetBuilder, RangeValue } from "@codemirror/state";
 // import { debounce, livePreviewState } from "obsidian";
 
 export type Replacement = {
@@ -48,7 +36,7 @@ export type Concealment = {
 // 'delay' means reveal after a time delay.
 type ConcealAction = "conceal" | "reveal" | "delay";
 
-function ConcealWidget(WidgetType: typeof WidgetTypeC) {
+function ConcealWidget() {
     return class ConcealWidget2 extends WidgetType {
         private readonly className: string;
         private readonly elementType: string;
@@ -85,7 +73,7 @@ function ConcealWidget(WidgetType: typeof WidgetTypeC) {
     };
 }
 
-function TextWidget(WidgetType: typeof WidgetTypeC) {
+function TextWidget() {
     return class TextWidget2 extends WidgetType {
         constructor(readonly symbol: string) {
             super();
@@ -113,7 +101,7 @@ function TextWidget(WidgetType: typeof WidgetTypeC) {
  * considered identical.
  */
 function atSamePosAfter(
-    update: ViewUpdateC,
+    update: ViewUpdate,
     oldConceal: ConcealSpec,
     newConceal: ConcealSpec,
 ): boolean {
@@ -134,7 +122,7 @@ function atSamePosAfter(
 }
 
 function determineCursorPosType(
-    view: EditorViewC,
+    view: EditorView,
     concealSpec: ConcealSpec,
     linewise: boolean = false,
 ): Concealment["cursorPosType"] {
@@ -214,12 +202,8 @@ function determineAction(
 }
 
 // Build a decoration set from the given concealments
-function buildDecoSet(
-    concealments: Concealment[],
-    Decoration: typeof DecorationC,
-    WidgetType: typeof WidgetTypeC,
-) {
-    const decos: RangeC<DecorationC>[] = [];
+function buildDecoSet(concealments: Concealment[]) {
+    const decos: Range<Decoration>[] = [];
     try {
         for (const conc of concealments) {
             if (!conc.enable) continue;
@@ -229,7 +213,7 @@ function buildDecoSet(
                     // Add an additional "/" symbol, as part of concealing \\frac{}{} -> ()/()
                     decos.push(
                         Decoration.widget({
-                            widget: new (TextWidget(WidgetType))(replace.text),
+                            widget: new (TextWidget())(replace.text),
                             block: false,
                         }).range(replace.start, replace.end),
                     );
@@ -241,7 +225,7 @@ function buildDecoSet(
 
                     decos.push(
                         Decoration.replace({
-                            widget: new (ConcealWidget(WidgetType))(
+                            widget: new (ConcealWidget())(
                                 replace.text,
                                 replace.class,
                                 replace.elementType,
@@ -266,11 +250,7 @@ function buildDecoSet(
 // The resulting ranges are basically the same as the original replacements, but empty replacements
 // are merged with the "next character," which can be either plain text or another replacement.
 // This adjustment makes cursor movement around empty replacements more intuitive.
-function buildAtomicRanges(
-    concealments: Concealment[],
-    RangeSetBuilder: typeof RangeSetBuilderC,
-    RangeValue: typeof RangeValueC,
-) {
+function buildAtomicRanges(concealments: Concealment[]) {
     const repls: Replacement[] = concealments
         .filter((c) => c.enable)
         .flatMap((c) => c.spec)
@@ -301,16 +281,22 @@ export const mkConcealPlugin = (revealTimeout: number) => {
             // the approach based on StateField and updateListener conflicts with
             // obsidian's internal logic and causes weird rendering.
             concealments: Concealment[];
-            decorations: DecorationSetC;
-            atomicRanges: RangeSetC<RangeValueC>;
+            decorations: DecorationSet;
+            atomicRanges: RangeSet<RangeValue>;
             delayEnabled: boolean;
-            concealSpecs: ConcealSpec[] | null = null;
+            concealSpecs: ConcealSpec[];
+            cached_equations: ConcealCachedEquations;
+            delayedReveal;
             private mousedown: boolean = false;
 
-            constructor(view: EditorViewC) {
+            constructor(view: EditorView) {
+                console.log(2);
+
                 this.concealments = [];
                 this.decorations = Decoration.none;
                 this.atomicRanges = RangeSet.empty;
+                const revealTimeout =
+                    getLatexSuiteConfig(view).concealRevealTimeout;
                 this.delayEnabled = revealTimeout > 0;
                 view.dom.addEventListener("mousedown", () => {
                     this.mousedown = true;
@@ -318,39 +304,39 @@ export const mkConcealPlugin = (revealTimeout: number) => {
                 view.dom.addEventListener("mouseup", () => {
                     this.mousedown = false;
                 });
+                this.cached_equations = {};
+                this.concealSpecs = [];
+                this.delayedReveal = debounce(
+                    this.delayedRevealCallback,
+                    revealTimeout,
+                    true,
+                );
+                // HACK: trigger an initial concealment calculation
+                this.update({
+                    view,
+                    state: view.state,
+                    docChanged: true,
+                } as ViewUpdate);
             }
 
-            delayedReveal = debounce(
-                (delayedConcealments: Concealment[], view: EditorViewC) => {
-                    // Implicitly change the state
-                    for (const concealment of delayedConcealments) {
-                        concealment.enable = false;
-                    }
-                    this.decorations = buildDecoSet(
-                        this.concealments,
-                        Decoration,
-                        WidgetType,
-                    );
-                    this.atomicRanges = buildAtomicRanges(
-                        this.concealments,
-                        RangeSetBuilder,
-                        RangeValue,
-                    );
+            delayedRevealCallback = (
+                delayedConcealments: Concealment[],
+                view: EditorView,
+            ) => {
+                for (const concealment of delayedConcealments) {
+                    concealment.enable = false;
+                }
+                this.decorations = buildDecoSet(this.concealments);
+                this.atomicRanges = buildAtomicRanges(this.concealments);
 
-                    // Invoke the update method to reflect the changes of this.decoration
-                    view.dispatch();
-                    //TODO: remove this when replit fixes their vim extension
-                    //@ts-ignore
-                    const cm = view.cm;
-                    if (cm && typeof cm.signal === "function") {
-                        cm.signal("vim-command-done");
-                    }
-                },
-                revealTimeout,
-                true,
-            );
+                // Invoke the update method to reflect the changes of this.decoration
+                view.dispatch();
+                //TODO: If replit or the future maintainers of vim ever decides to support CM6 (decorations) properly, remove this.
+                //@ts-ignore
+                view?.cm?.signal("vim-command-done");
+            };
 
-            update(update: ViewUpdateC) {
+            update(update: ViewUpdate) {
                 const settings = getLatexSuiteConfig(update.view);
                 if (
                     !(
@@ -367,25 +353,34 @@ export const mkConcealPlugin = (revealTimeout: number) => {
                     return;
                 }
                 this.delayedReveal.timeout = settings.concealRevealTimeout;
-                this.delayedReveal // Cancel the delayed revealment whenever we update the concealments
-                    .cancel();
-                if (
-                    this.concealSpecs === null ||
-                    update.docChanged ||
-                    update.viewportChanged
-                ) {
-                    this.concealSpecs = conceal(update.view, syntaxTree);
+                // Cancel the delayed revealment whenever we update the concealments
+                this.delayedReveal.cancel();
+                // If document/viewport is not changed, the conceal specs stay the same
+                // and only the revealing needs to be updated.
+                if (!update.docChanged && !update.viewportChanged) {
+                    this.updateFromConcealSpecs(
+                        this.concealSpecs,
+                        update,
+                        settings.concealLinewise,
+                    );
+                } else {
+                    const { specs: concealSpecs, cached_equations } = conceal(
+                        update.view,
+                        this.cached_equations,
+                    );
+                    this.cached_equations = cached_equations;
+                    this.concealSpecs = concealSpecs;
+                    this.updateFromConcealSpecs(
+                        concealSpecs,
+                        update,
+                        settings.concealLinewise,
+                    );
                 }
-                this.updateFromConcealSpecs(
-                    this.concealSpecs,
-                    update,
-                    settings.concealLinewise,
-                );
             }
 
             private updateFromConcealSpecs(
                 concealSpecs: ConcealSpec[],
-                update: ViewUpdateC,
+                update: ViewUpdate,
                 linewise: boolean,
             ) {
                 const mousedown = this.mousedown;
@@ -423,21 +418,14 @@ export const mkConcealPlugin = (revealTimeout: number) => {
 
                     concealments.push(concealment);
                 }
+
                 if (delayedConcealments.length > 0) {
                     this.delayedReveal(delayedConcealments, update.view);
                 }
 
                 this.concealments = concealments;
-                this.decorations = buildDecoSet(
-                    this.concealments,
-                    Decoration,
-                    WidgetType,
-                );
-                this.atomicRanges = buildAtomicRanges(
-                    this.concealments,
-                    RangeSetBuilder,
-                    RangeValue,
-                );
+                this.decorations = buildDecoSet(this.concealments);
+                this.atomicRanges = buildAtomicRanges(this.concealments);
             }
         },
         {

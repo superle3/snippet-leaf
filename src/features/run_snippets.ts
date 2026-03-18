@@ -1,21 +1,19 @@
-import type { EditorView as EditorViewC } from "@codemirror/view";
+import type { EditorView } from "@codemirror/view";
 import type { EditorState, SelectionRange } from "@codemirror/state";
 import { getLatexSuiteConfig } from "src/settings/settings";
 import { Mode } from "src/snippets/options";
-import type { Context } from "src/utils/context";
+import { getContextPlugin } from "src/latex_context/context";
 import { autoEnlargeBrackets } from "./auto_enlarge_brackets";
 import { queueSnippet } from "src/snippets/codemirror/snippet_queue_state_field";
 import { expandSnippets } from "src/snippets/snippet_management";
 
-export const runSnippets = (
-    view: EditorViewC,
-    ctx: Context,
-    key: string,
-): boolean => {
+export const runSnippets = (view: EditorView, key: string): boolean => {
     let shouldAutoEnlargeBrackets = false;
 
+    const ctx = getContextPlugin(view);
+
     for (const range of ctx.ranges) {
-        const result = runSnippetCursor(view, ctx, key, range);
+        const result = runSnippetCursor(view, key, range);
 
         if (result.shouldAutoEnlargeBrackets) shouldAutoEnlargeBrackets = true;
     }
@@ -30,12 +28,12 @@ export const runSnippets = (
 };
 
 const runSnippetCursor = (
-    view: EditorViewC,
-    ctx: Context,
+    view: EditorView,
     key: string,
     range: SelectionRange,
 ): { success: boolean; shouldAutoEnlargeBrackets: boolean } => {
     const settings = getLatexSuiteConfig(view);
+    const ctx = getContextPlugin(view);
     const { from, to } = range;
     const sel = view.state.sliceDoc(from, to);
     const line = view.state.sliceDoc(0, to);

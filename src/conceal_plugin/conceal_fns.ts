@@ -1,9 +1,7 @@
 // Conceal functions
 
-import type { syntaxTree as syntaxTreeC } from "@codemirror/language";
-import type { EditorView as EditorViewC } from "@codemirror/view";
-// import { getEquationBounds } from "src/utils/context";
-// import { findMatchingBracket } from "src/utils/editor_utils";
+import type { EditorView } from "@codemirror/view";
+import { findMatchingBracket } from "src/utils/editor_utils";
 import type { ConcealSpec, Replacement } from "./conceal";
 import {
     greek,
@@ -15,63 +13,29 @@ import {
     mathscrcal,
     mathbb,
     operators,
+    not_remap as raw_not_remap,
 } from "./conceal_maps";
-import type { Bounds } from "src/utils/context";
+import { getMathBoundsPlugin } from "src/latex_context/mathbounds";
 
-const ALL_SYMBOLS = { ...greek, ...cmd_symbols } as const;
-/**
- * Make a ConcealSpec from the given list of Replacements.
- * This function essentially does nothing but improves readability.
- */
 function mkConcealSpec(...replacements: Replacement[]) {
     return replacements;
 }
 
-function reverse(s: string) {
-    return s.split("").reverse().join("");
-}
-function findMatchingBracket(
-    text: string,
-    start: number,
-    openBracket: string,
-    closeBracket: string,
-    searchBackwards: boolean,
-    end?: number,
-): number {
-    if (searchBackwards) {
-        const reversedIndex = findMatchingBracket(
-            reverse(text),
-            text.length - (start + closeBracket.length),
-            reverse(closeBracket),
-            reverse(openBracket),
-            false,
-        );
+/**
+ *sort by length. This is a workaround for ios devices < 16.4 where lookbehind is not supported.
+ * This is to ensure regex preferes "top" over "to" for the string "\\top" since top is earlier as on of the options in the regex.
+ */
+const ALL_SYMBOLS: Record<string, string> = Object.fromEntries(
+    Object.entries({ ...greek, ...cmd_symbols }).sort(
+        (a, b) => b[0].length - a[0].length,
+    ),
+);
+const not_remap: Record<string, string> = Object.fromEntries([
+    ...Object.entries(raw_not_remap).sort((a, b) => b[0].length - a[0].length),
+]);
 
-        if (reversedIndex === -1) return -1;
-
-        return text.length - (reversedIndex + openBracket.length);
-    }
-
-    let brackets = 0;
-    const stop = end ? end : text.length;
-
-    for (let i = start; i < stop; i++) {
-        if (text.slice(i, i + openBracket.length) === openBracket) {
-            brackets++;
-        } else if (text.slice(i, i + closeBracket.length) === closeBracket) {
-            brackets--;
-
-            if (brackets === 0) {
-                return i;
-            }
-        }
-    }
-
-    return -1;
-}
-
-function escapeRegex(regex: string) {
-    const escapeChars = ["\\", "(", ")", "+", "-", "[", "]", "{", "}"];
+export function escapeRegex(regex: string) {
+    const escapeChars = ["\\", "(", ")", "+", "-", "[", "]", "{", "}", "."];
 
     for (const escapeChar of escapeChars) {
         regex = regex.replaceAll(escapeChar, "\\" + escapeChar);
@@ -94,6 +58,47 @@ function getEndIncludingLimits(eqn: string, end: number): number {
         return end + LIMITS.length;
     }
     return end;
+}
+/**
+ * Conceals all symbols and ensures \not gets priority over the normal symbol.
+ * @param eqn the equation that need to be concealed
+ * @param symbols normal symbols with \ as prefix
+ * @param notSymbols symbols that can be negated with \not before
+ * @returns the concealed text
+ */
+function concealNotSymbols(
+    eqn: string,
+    symbols: Record<string, string>,
+    notSymbols: Record<string, string>,
+): ConcealSpec[] {
+    const normalSpec = concealSymbols(
+        eqn,
+        "\\\\",
+        "",
+        symbols,
+        undefined,
+        false,
+    );
+    const notSpec = concealSymbols(
+        eqn,
+        "\\\\not[ \t]*\\\\",
+        "",
+        notSymbols,
+        undefined,
+        false,
+    );
+    const spec: ConcealSpec[] = [];
+    const notSpecEnds: number[] = [];
+    for (let i = 0; i < notSpec.length; i++) {
+        spec.push(notSpec[i]);
+        notSpecEnds.push(normalSpec[i][0].end);
+    }
+    for (let i = 0; i < normalSpec.length; i++) {
+        if (!notSpecEnds.includes(normalSpec[i][0].end)) {
+            spec.push(normalSpec[i]);
+        }
+    }
+    return spec;
 }
 
 function concealSymbols(
@@ -175,13 +180,7 @@ function concealSupSub(
     symbolMap: { [key: string]: string },
 ): ConcealSpec[] {
     const prefix = superscript ? "\\^" : "_";
-    const conceal_regex = /[A-Za-z0-9()[\]/+-=<>'|#:;\\ *]/;
-    const regexStr =
-        prefix +
-        `{(${conceal_regex.source}+)}` +
-        "|" +
-        prefix +
-        `{(${conceal_regex.source})}`;
+    const regexStr = prefix + "{([A-Za-z0-9\\()\\[\\]/+-=<>':;\\\\ *]+)}";
     const regex = new RegExp(regexStr, "g");
 
     const matches = [...eqn.matchAll(regex)];
@@ -189,7 +188,7 @@ function concealSupSub(
     const specs: ConcealSpec[] = [];
 
     for (const match of matches) {
-        const exponent = match[1] ?? match[2];
+        const exponent = match[1];
         const elementType = superscript ? "sup" : "sub";
 
         // Conceal super/subscript symbols as well
@@ -519,7 +518,7 @@ function concealSet(eqn: string): ConcealSpec[] {
 function concealFraction(eqn: string): ConcealSpec[] {
     const concealSpecs: ConcealSpec[] = [];
 
-    for (const match of eqn.matchAll(/\\(frac|dfrac|tfrac|gfrac){/g)) {
+    for (const match of eqn.matchAll(/\n?\\(frac|dfrac|tfrac|gfrac){/g)) {
         // index of the closing bracket of the numerator
         const numeratorEnd = findMatchingBracket(
             eqn,
@@ -544,14 +543,17 @@ function concealFraction(eqn: string): ConcealSpec[] {
         );
         if (denominatorEnd === -1) continue;
 
-        const commandStart = match.index;
-        const numeratorStart = commandStart + match[0].length - 1;
+        const commandStart = match.index + +(match[0][0] === "\n");
+        // The home key needs some **visually** to grab onto, so if the \frac is at the start of a line,
+        // it would go to \\frac| instead of |\\frac. Hence we replace \frac with a space in this case.
+        const hideFrac = match[0][0] === "\n" ? " " : "";
+        const numeratorStart = match.index + match[0].length - 1;
         const denominatorStart = numeratorEnd + 1;
 
         concealSpecs.push(
             mkConcealSpec(
                 // Hide "\frac"
-                { start: commandStart, end: numeratorStart, text: "" },
+                { start: commandStart, end: numeratorStart, text: hideFrac },
                 // Replace brackets of the numerator
                 {
                     start: numeratorStart,
@@ -616,81 +618,63 @@ function concealOperatorname(eqn: string): ConcealSpec[] {
     return specs;
 }
 
+export type ConcealCachedEquations = Record<string, ConcealSpec[]>;
 export function conceal(
-    view: EditorViewC,
-    syntaxTree: typeof syntaxTreeC,
-): ConcealSpec[] {
+    view: EditorView,
+    cached_equations: ConcealCachedEquations,
+): { specs: ConcealSpec[]; cached_equations: ConcealCachedEquations } {
+    const equations = getMathBoundsPlugin(view).getEquations(view.state);
+    const new_equations: typeof cached_equations = {};
+
+    for (const eqn of equations.values()) {
+        if (eqn in cached_equations) {
+            new_equations[eqn] = cached_equations[eqn];
+            continue;
+        }
+
+        const localSpecs = [
+            ...concealSymbols(eqn, "\\^", "", map_super),
+            ...concealSymbols(eqn, "_", "", map_sub),
+            ...concealSymbols(eqn, "\\\\frac", "", fractions),
+            ...concealNotSymbols(eqn, ALL_SYMBOLS, not_remap),
+            ...concealSupSub(eqn, true, ALL_SYMBOLS),
+            ...concealSupSub(eqn, false, ALL_SYMBOLS),
+            ...concealModifier(eqn, "hat", "\u0302"),
+            ...concealModifier(eqn, "dot", "\u0307"),
+            ...concealModifier(eqn, "ddot", "\u0308"),
+            ...concealModifier(eqn, "overline", "\u0304"),
+            ...concealModifier(eqn, "bar", "\u0304"),
+            ...concealModifier(eqn, "tilde", "\u0303"),
+            ...concealModifier(eqn, "vec", "\u20D7"),
+            ...concealSymbols(eqn, "\\\\", "", brackets, "cm-bracket"),
+            ...concealAtoZ(eqn, "\\\\mathcal{", "}", mathscrcal),
+            ...concealModifiedGreekLetters(eqn, greek),
+            ...concealModified_A_to_Z_0_to_9(eqn, mathbb),
+            ...concealText(eqn),
+            ...concealBraKet(eqn),
+            ...concealSet(eqn),
+            ...concealFraction(eqn),
+            ...concealOperators(eqn, operators),
+            ...concealOperatorname(eqn),
+        ];
+        new_equations[eqn] = localSpecs;
+    }
+    cached_equations = new_equations;
+
+    // Make the 'start' and 'end' fields represent positions in the entire
+    // document (not in a math expression)
     const specs: ConcealSpec[] = [];
-    const maxTo = Math.max(...view.visibleRanges.map((r) => r.to));
-    const tree = syntaxTree(view.state);
-    if (tree.length < maxTo) return null;
-    for (const { from, to } of view.visibleRanges) {
-        const math_ranges: Bounds[] = [];
-        tree.iterate({
-            from,
-            to,
-            enter: (node) => {
-                if (node.name !== "Math") {
-                    return;
-                } else if (
-                    math_ranges.length == 0 ||
-                    node.to >= math_ranges[math_ranges.length - 1].end
-                ) {
-                    math_ranges.push({
-                        start: node.from,
-                        end: node.to,
-                    });
-                }
-            },
-        });
-
-        for (const bounds of math_ranges) {
-            const eqn = view.state.doc.sliceString(bounds.start, bounds.end);
-
-            const localSpecs = [
-                ...concealSymbols(eqn, "\\^", "", map_super),
-                ...concealSymbols(eqn, "_", "", map_sub),
-                ...concealSymbols(eqn, "\\\\frac", "", fractions),
-                ...concealSymbols(
-                    eqn,
-                    "\\\\",
-                    "",
-                    ALL_SYMBOLS,
-                    undefined,
-                    false,
-                ),
-                ...concealSupSub(eqn, true, ALL_SYMBOLS),
-                ...concealSupSub(eqn, false, ALL_SYMBOLS),
-                ...concealModifier(eqn, "hat", "\u0302"),
-                ...concealModifier(eqn, "dot", "\u0307"),
-                ...concealModifier(eqn, "ddot", "\u0308"),
-                ...concealModifier(eqn, "overline", "\u0304"),
-                ...concealModifier(eqn, "bar", "\u0304"),
-                ...concealModifier(eqn, "tilde", "\u0303"),
-                ...concealModifier(eqn, "vec", "\u20D7"),
-                ...concealSymbols(eqn, "\\\\", "", brackets, "cm-bracket"),
-                ...concealAtoZ(eqn, "\\\\mathcal{", "}", mathscrcal),
-                ...concealModifiedGreekLetters(eqn, greek),
-                ...concealModified_A_to_Z_0_to_9(eqn, mathbb),
-                ...concealText(eqn),
-                ...concealBraKet(eqn),
-                ...concealSet(eqn),
-                ...concealFraction(eqn),
-                ...concealOperators(eqn, operators),
-                ...concealOperatorname(eqn),
-            ];
-
-            // Make the 'start' and 'end' fields represent positions in the entire
-            // document (not in a math expression)
-            for (const spec of localSpecs) {
-                for (const replace of spec) {
-                    replace.start += bounds.start;
-                    replace.end += bounds.start;
-                }
-            }
-
-            specs.push(...localSpecs);
+    for (const [start, eqn] of equations.entries()) {
+        for (const spec of new_equations[eqn]) {
+            specs.push(
+                spec.map((replace) => ({
+                    ...replace,
+                    start: replace.start + start,
+                    end: replace.end + start,
+                })),
+            );
         }
     }
-    return specs;
+
+    return { specs, cached_equations };
 }
