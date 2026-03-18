@@ -310,22 +310,8 @@ const mathContext: Record<
                 outer_bounds: boundsFromNode(node),
             };
         }
-        const pos = state.selection.main.head;
-        const dollarNode = node.firstChild;
-        if (dollarNode.to === pos) {
-            return {
-                type: MathMode.DollarInline,
-                inner_bounds: addBounds(
-                    boundsFromNode(dollarNode),
-                    InlineMathOffset,
-                ),
-                outer_bounds: {
-                    start: dollarNode.from - 1,
-                    end: dollarNode.to + 1,
-                },
-            };
-        }
-        return null;
+        const mathNode = node.firstChild.nextSibling;
+        return mathContext[mathNode.name](mathNode) as EquationInfo;
     },
     BeginEnv: (node: SyntaxNode): EquationInfo => ({
         type: MathMode.TextEnv,
