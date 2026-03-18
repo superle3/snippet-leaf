@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.0.7 (2026-03-18)
+
+### Bug fixes
+
+- Recognize dollar inline math correctly (#26).
+
 ## 0.0.6 (2025-12-18)
 
 ### Bug fixes
