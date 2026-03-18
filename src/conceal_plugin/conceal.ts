@@ -5,21 +5,27 @@ import type {
     Decoration as DecorationC,
     DecorationSet as DecorationSetC,
     WidgetType as WidgetTypeC,
-    ViewPlugin as ViewPluginC,
     EditorView as EditorViewC,
 } from "@codemirror/view";
 import type {
-    EditorSelection as EditorSelectionC,
     Range as RangeC,
     RangeSet as RangeSetC,
     RangeSetBuilder as RangeSetBuilderC,
     RangeValue as RangeValueC,
 } from "@codemirror/state";
-import type { syntaxTree as syntaxTreeC } from "@codemirror/language";
 import { conceal } from "./conceal_fns";
-import type { LatexSuiteFacet } from "codemirror_extension/codemirror_extensions";
 import { getLatexSuiteConfig } from "src/settings/settings";
 import { debounce } from "src/utils/debounce";
+import {
+    Decoration,
+    EditorView,
+    ViewPlugin,
+    WidgetType,
+    syntaxTree,
+    RangeSet,
+    RangeValue,
+    RangeSetBuilder,
+} from "src/set_codemirror_objects";
 // import { debounce, livePreviewState } from "obsidian";
 
 export type Replacement = {
@@ -288,18 +294,7 @@ function buildAtomicRanges(
     return builder.finish();
 }
 
-export const mkConcealPlugin = (
-    revealTimeout: number,
-    ViewPlugin: typeof ViewPluginC,
-    EditorView: typeof EditorViewC,
-    Decoration: typeof DecorationC,
-    WidgetType: typeof WidgetTypeC,
-    RangeSet: typeof RangeSetC,
-    RangeSetBuilder: typeof RangeSetBuilderC,
-    RangeValue: typeof RangeValueC,
-    syntaxTree: typeof syntaxTreeC,
-    latexSuiteConfig: LatexSuiteFacet,
-) => {
+export const mkConcealPlugin = (revealTimeout: number) => {
     const viewPlugin = ViewPlugin.fromClass(
         class {
             // Stateful ViewPlugin: you should avoid one in general, but here
@@ -356,10 +351,7 @@ export const mkConcealPlugin = (
             );
 
             update(update: ViewUpdateC) {
-                const settings = getLatexSuiteConfig(
-                    update.view,
-                    latexSuiteConfig,
-                );
+                const settings = getLatexSuiteConfig(update.view);
                 if (
                     !(
                         update.docChanged ||

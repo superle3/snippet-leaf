@@ -1,60 +1,41 @@
-import type { Decoration as DecorationC, EditorView } from "@codemirror/view";
+import type { EditorView } from "@codemirror/view";
 import type {
-    EditorSelection as EditorSelectionC,
     ChangeSet as ChangeSetC,
     StateEffect,
     Text,
 } from "@codemirror/state";
 // import { startSnippet } from "./codemirror/history";
-import type { stateEffect_variables } from "./codemirror/history";
-import type { isolateHistory as isolateHistoryC } from "@codemirror/commands";
+import { startSnippet } from "./codemirror/history";
 import type { TabstopSpec } from "./tabstop";
 import { tabstopSpecsToTabstopGroups } from "./tabstop";
-import type { create_tabstopsStateField } from "./codemirror/tabstops_state_field";
+import {
+    addTabstops,
+    getNextTabstopColor,
+    getTabstopGroupsFromView,
+    tabstopsStateField,
+} from "./codemirror/tabstops_state_field";
 import type { SnippetChangeSpec } from "./codemirror/snippet_change_spec";
 import { resetCursorBlink } from "../utils/editor_utils";
 import {
     clearSnippetQueue,
     snippetQueueStateField,
 } from "./codemirror/snippet_queue_state_field";
+import { ChangeSet, isolateHistory } from "src/set_codemirror_objects";
 
 export type expandSnippetsC = (view: EditorView) => boolean;
-export function expandSnippets(
-    view: EditorView,
-    ChangeSet: typeof ChangeSetC,
-    isolateHistory: typeof isolateHistoryC,
-    addTabstops: ReturnType<typeof create_tabstopsStateField>["addTabstops"],
-    getTabstopGroupsFromView: ReturnType<
-        typeof create_tabstopsStateField
-    >["getTabstopGroupsFromView"],
-    getNextTabstopColor: ReturnType<
-        typeof create_tabstopsStateField
-    >["getNextTabstopColor"],
-    startSnippet: ReturnType<typeof stateEffect_variables>["startSnippet"],
-    endSnippet: ReturnType<typeof stateEffect_variables>["endSnippet"],
-    EditorSelection: typeof EditorSelectionC,
-    Decoration: typeof DecorationC,
-): boolean {
+export function expandSnippets(view: EditorView): boolean {
     const snippetsToExpand = snippetQueueStateField.snippetQueueValue;
     if (snippetsToExpand.length === 0) return false;
 
     const originalDocLength = view.state.doc.length;
 
     // Try to apply changes all at once, because `view.dispatch` gets expensive for large documents
-    const undoChanges = handleUndoKeypresses(
-        view,
-        snippetsToExpand,
-
-        ChangeSet,
-        isolateHistory,
-        startSnippet,
-    );
+    const undoChanges = handleUndoKeypresses(view, snippetsToExpand);
     const newDoc = undoChanges.changes.apply(view.state.doc);
     const tabstopsToAdd = computeTabstops(
         newDoc,
         snippetsToExpand,
         originalDocLength,
-        ChangeSet,
     );
 
     // Insert any tabstops
@@ -64,31 +45,13 @@ export function expandSnippets(
         return true;
     }
 
-    expandTabstops(
-        view,
-        tabstopsToAdd,
-        undoChanges,
-        newDoc.length,
-        getTabstopGroupsFromView,
-        addTabstops,
-        getNextTabstopColor,
-        endSnippet,
-        EditorSelection,
-        Decoration,
-        ChangeSet,
-    );
+    expandTabstops(view, tabstopsToAdd, undoChanges, newDoc.length);
 
     clearSnippetQueue();
     return true;
 }
 
-function handleUndoKeypresses(
-    view: EditorView,
-    snippets: SnippetChangeSpec[],
-    ChangeSet: typeof ChangeSetC,
-    isolateHistory: typeof isolateHistoryC,
-    startSnippet: ReturnType<typeof stateEffect_variables>["startSnippet"],
-) {
+function handleUndoKeypresses(view: EditorView, snippets: SnippetChangeSpec[]) {
     const originalDoc = view.state.doc;
     const originalDocLength = originalDoc.length;
 
@@ -138,7 +101,6 @@ function computeTabstops(
     doc: Text,
     snippets: SnippetChangeSpec[],
     originalDocLength: number,
-    ChangeSet: typeof ChangeSetC,
 ) {
     // Find the positions of the cursors in the new document
     const changeSet = ChangeSet.of(snippets, originalDocLength);
@@ -158,26 +120,9 @@ function expandTabstops(
     tabstops: TabstopSpec[],
     undoChanges: { changes: ChangeSetC; effects: StateEffect<null> },
     newLength: number,
-    getTabstopGroupsFromView: ReturnType<
-        typeof create_tabstopsStateField
-    >["getTabstopGroupsFromView"],
-    addTabstops: ReturnType<typeof create_tabstopsStateField>["addTabstops"],
-    getNextTabstopColor: ReturnType<
-        typeof create_tabstopsStateField
-    >["getNextTabstopColor"],
-    endSnippet: ReturnType<typeof stateEffect_variables>["endSnippet"],
-    EditorSelection: typeof EditorSelectionC,
-    Decoration: typeof DecorationC,
-    ChangeSet: typeof ChangeSetC,
 ) {
     const color = getNextTabstopColor(view);
-    const tabstopGroups = tabstopSpecsToTabstopGroups(
-        tabstops,
-        color,
-        endSnippet,
-        EditorSelection,
-        Decoration,
-    );
+    const tabstopGroups = tabstopSpecsToTabstopGroups(tabstops, color);
     const changes = ChangeSet.of(
         tabstops.map((tabstop: TabstopSpec) => {
             return {
@@ -202,12 +147,7 @@ function expandTabstops(
 }
 
 // Returns true if the transaction was dispatched
-export function setSelectionToNextTabstop(
-    view: EditorView,
-    tabstopsStateField: ReturnType<
-        typeof create_tabstopsStateField
-    >["tabstopsStateField"],
-): boolean {
+export function setSelectionToNextTabstop(view: EditorView): boolean {
     const tabstopGroups = view.state.field(tabstopsStateField);
 
     function aux(nextGrpIndex: number) {

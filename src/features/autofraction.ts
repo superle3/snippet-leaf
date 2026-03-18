@@ -1,29 +1,21 @@
 import type { EditorView } from "@codemirror/view";
 import type { SelectionRange } from "@codemirror/state";
 import { findMatchingBracket, getOpenBracket } from "src/utils/editor_utils";
-import type { expandSnippetsC } from "../snippets/snippet_management";
+import { expandSnippets } from "../snippets/snippet_management";
 import { autoEnlargeBrackets } from "./auto_enlarge_brackets";
 import type { Context } from "../utils/context";
-import type { LatexSuiteFacet } from "src/settings/settings";
 import { getLatexSuiteConfig } from "src/settings/settings";
-import type { syntaxTree as syntaxTreeC } from "@codemirror/language";
 import { queueSnippet } from "src/snippets/codemirror/snippet_queue_state_field";
 
-export const runAutoFraction = (
-    view: EditorView,
-    ctx: Context,
-    latexSuiteConfig: LatexSuiteFacet,
-    syntaxTree: typeof syntaxTreeC,
-    expandSnippets: expandSnippetsC,
-): boolean => {
+export const runAutoFraction = (view: EditorView, ctx: Context): boolean => {
     for (const range of ctx.ranges) {
-        runAutoFractionCursor(view, ctx, range, latexSuiteConfig, syntaxTree);
+        runAutoFractionCursor(view, ctx, range);
     }
 
     const success = expandSnippets(view);
 
     if (success) {
-        autoEnlargeBrackets(view, latexSuiteConfig, syntaxTree, expandSnippets);
+        autoEnlargeBrackets(view);
     }
 
     return success;
@@ -33,21 +25,19 @@ export const runAutoFractionCursor = (
     view: EditorView,
     ctx: Context,
     range: SelectionRange,
-    latexSuiteConfig: LatexSuiteFacet,
-    syntaxTree: typeof syntaxTreeC,
 ): boolean => {
-    const settings = getLatexSuiteConfig(view, latexSuiteConfig);
+    const settings = getLatexSuiteConfig(view);
     const { from, to } = range;
 
     // Don't run autofraction in excluded environments
     for (const env of settings.autofractionExcludedEnvs) {
-        if (ctx.isWithinEnvironment(to, env, syntaxTree)) {
+        if (ctx.isWithinEnvironment(to, env)) {
             return false;
         }
     }
 
     // Get the bounds of the equation
-    const result = ctx.getBounds(syntaxTree);
+    const result = ctx.getBounds();
     if (!result) return false;
     const eqnStart = result.start;
 

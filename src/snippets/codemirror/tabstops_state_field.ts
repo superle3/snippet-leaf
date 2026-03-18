@@ -1,24 +1,24 @@
+import type { EditorView as EditorViewC } from "@codemirror/view";
 import type {
-    EditorView as EditorViewC,
-    Decoration as DecorationC,
-} from "@codemirror/view";
-import type { EditorSelection as EditorSelectionC } from "@codemirror/state";
-import type {
-    StateEffect as StateEffectC,
-    StateField as StateFieldC,
+    EditorSelection as EditorSelectionC,
+    StateEffectType,
 } from "@codemirror/state";
+import type { StateField as StateFieldC } from "@codemirror/state";
 import type { TabstopGroupC } from "../tabstop";
+import {
+    Decoration,
+    EditorView,
+    StateField,
+    StateEffect,
+} from "src/set_codemirror_objects";
+export let addTabstopsEffect: StateEffectType<TabstopGroupC[]>;
+export let removeAllTabstopsEffect: StateEffectType<null>;
+export let tabstopsStateField: StateFieldC<TabstopGroupC[]>;
+export function create_tabstopsStateField() {
+    addTabstopsEffect = StateEffect.define<TabstopGroupC[]>();
+    removeAllTabstopsEffect = StateEffect.define();
 
-export function create_tabstopsStateField(
-    StateEffect: typeof StateEffectC,
-    StateField: typeof StateFieldC,
-    Decoration: typeof DecorationC,
-    EditorView: typeof EditorViewC,
-) {
-    const addTabstopsEffect = StateEffect.define<TabstopGroupC[]>();
-    const removeAllTabstopsEffect = StateEffect.define();
-
-    const tabstopsStateField = StateField.define<TabstopGroupC[]>({
+    tabstopsStateField = StateField.define<TabstopGroupC[]>({
         create() {
             return [];
         },
@@ -83,38 +83,6 @@ export function create_tabstopsStateField(
         return tabstopGroups.length;
     }
 
-    function getTabstopGroupsFromView(view: EditorViewC) {
-        const currentTabstopGroups = view.state.field(tabstopsStateField);
-
-        return currentTabstopGroups;
-    }
-
-    function addTabstops(tabstopGroups: TabstopGroupC[]) {
-        return {
-            effects: [addTabstopsEffect.of(tabstopGroups)],
-        };
-    }
-
-    function removeAllTabstops(view: EditorViewC) {
-        view.dispatch({
-            effects: [removeAllTabstopsEffect.of(null)],
-        });
-    }
-
-    // const COLORS = ["lightskyblue", "orange", "lime"];
-    const N_COLORS = 3;
-
-    function getNextTabstopColor(view: EditorViewC) {
-        const field = view.state.field(tabstopsStateField);
-        const existingColors = field.map((tabstopGroup) => tabstopGroup.color);
-        const uniqueExistingColors = new Set(existingColors);
-
-        for (let i = 0; i < N_COLORS; i++) {
-            if (!uniqueExistingColors.has(i)) return i;
-        }
-
-        return 0;
-    }
     return {
         addTabstops,
         removeAllTabstops,
@@ -122,4 +90,35 @@ export function create_tabstopsStateField(
         tabstopsStateField,
         getNextTabstopColor,
     };
+}
+
+export function addTabstops(tabstopGroups: TabstopGroupC[]) {
+    return {
+        effects: [addTabstopsEffect.of(tabstopGroups)],
+    };
+}
+export function removeAllTabstops(view: EditorViewC) {
+    view.dispatch({
+        effects: [removeAllTabstopsEffect.of(null)],
+    });
+}
+
+export function getTabstopGroupsFromView(view: EditorViewC) {
+    const currentTabstopGroups = view.state.field(tabstopsStateField);
+
+    return currentTabstopGroups;
+}
+// const COLORS = ["lightskyblue", "orange", "lime"];
+const N_COLORS = 3;
+
+export function getNextTabstopColor(view: EditorViewC) {
+    const field = view.state.field(tabstopsStateField);
+    const existingColors = field.map((tabstopGroup) => tabstopGroup.color);
+    const uniqueExistingColors = new Set(existingColors);
+
+    for (let i = 0; i < N_COLORS; i++) {
+        if (!uniqueExistingColors.has(i)) return i;
+    }
+
+    return 0;
 }

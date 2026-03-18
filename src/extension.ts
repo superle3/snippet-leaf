@@ -26,18 +26,15 @@ import type {
 } from "@codemirror/view";
 import type { syntaxTree as syntaxTreeC } from "@codemirror/language";
 import { handleUpdate, onKeydown } from "./latex_suite";
-import type {
-    LatexSuiteCMSettings,
-    LatexSuiteFacet,
-} from "./settings/settings";
+import type { LatexSuiteCMSettings } from "./settings/settings";
 import type { LatexSuitePluginSettings } from "./settings/settings";
 import { create_snippet_extensions } from "./snippets/codemirror/extensions";
 import type { invertedEffects as invertedEffectsC } from "@codemirror/commands";
 import {
     DEFAULT_SETTINGS,
     processLatexSuiteSettings,
+    setLatexSuiteConfig,
 } from "./settings/settings";
-import { expandSnippets } from "./snippets/snippet_management";
 import { stateEffect_variables } from "./snippets/codemirror/history";
 import { create_tabstopsStateField } from "./snippets/codemirror/tabstops_state_field";
 import { mkConcealPlugin } from "./conceal_plugin/conceal";
@@ -49,6 +46,7 @@ import {
     colorPairedBracketsPluginLowestPrec,
     highlightCursorBracketsPlugin,
 } from "./highlight_brackets_plugin/highlight_brackets";
+import { set_codemirror_objects } from "./set_codemirror_objects";
 
 type CodeMirrorExt = {
     Decoration: typeof DecorationC;
@@ -78,130 +76,35 @@ export function main(
     codemirror_objects: CodeMirrorExt,
     settings: LatexSuitePluginSettings = DEFAULT_SETTINGS,
 ) {
-    const {
-        Prec,
-        ViewPlugin,
-        EditorView,
-        syntaxTree,
-        Decoration,
-        WidgetType,
-        EditorSelection,
-        StateField,
-        StateEffect,
-        invertedEffects,
-        ChangeSet,
-        isolateHistory,
-        undo,
-        redo,
-        RangeSet,
-        RangeSetBuilder,
-        RangeValue,
-        Facet,
-    } = codemirror_objects;
+    set_codemirror_objects(codemirror_objects);
+    const { Prec, EditorView } = codemirror_objects;
     const CMSettings: LatexSuiteCMSettings =
         processLatexSuiteSettings(settings);
-    const { handleUndoRedo, endSnippet, startSnippet, snippetInvertedEffects } =
-        stateEffect_variables(
-            StateEffect,
-            invertedEffects,
-            undo,
-            redo,
-            StateField,
-            Decoration,
-            EditorView,
-        );
-    const {
-        addTabstops,
-        getNextTabstopColor,
-        getTabstopGroupsFromView,
-        removeAllTabstops,
-        tabstopsStateField,
-    } = create_tabstopsStateField(
-        StateEffect,
-        StateField,
-        Decoration,
-        EditorView,
-    );
+    stateEffect_variables();
+    create_tabstopsStateField();
+    const latexSuiteConfig = setLatexSuiteConfig();
     const extensions: ExtensionC[] = [];
 
-    const latexSuiteConfig: LatexSuiteFacet = Facet.define<
-        Partial<LatexSuitePluginSettings>,
-        LatexSuiteCMSettings
-    >({
-        combine: (input: Partial<LatexSuitePluginSettings>[]) => {
-            const settings =
-                input.length > 0
-                    ? processLatexSuiteSettings(
-                          Object.assign({}, DEFAULT_SETTINGS, ...input),
-                      )
-                    : processLatexSuiteSettings(DEFAULT_SETTINGS);
-            return settings;
-        },
-    });
     const snippet_leaf_extension = [
         Prec.highest(
             EditorView.domEventHandlers({
                 keydown: function (event: KeyboardEvent, view: EditorViewC) {
-                    return onKeydown(
-                        event,
-                        view,
-                        latexSuiteConfig,
-                        syntaxTree,
-                        removeAllTabstops,
-                        tabstopsStateField,
-                        (view: EditorViewC) =>
-                            expandSnippets(
-                                view,
-                                ChangeSet,
-                                isolateHistory,
-                                addTabstops,
-                                getTabstopGroupsFromView,
-                                getNextTabstopColor,
-                                startSnippet,
-                                endSnippet,
-                                EditorSelection,
-                                Decoration,
-                            ),
-                    );
+                    return onKeydown(event, view);
                 },
             }),
         ),
-        EditorView.updateListener.of((update: ViewUpdateC) =>
-            handleUpdate(update, latexSuiteConfig, handleUndoRedo),
-        ),
-        create_snippet_extensions(tabstopsStateField, snippetInvertedEffects),
+        EditorView.updateListener.of(handleUpdate),
+        create_snippet_extensions(),
         latexSuiteConfig.of(CMSettings),
     ];
     extensions.push(...snippet_leaf_extension);
-    const conceal_plugin = mkConcealPlugin(
-        settings.concealRevealTimeout,
-        ViewPlugin,
-        EditorView,
-        Decoration,
-        WidgetType,
-        RangeSet,
-        RangeSetBuilder,
-        RangeValue,
-        syntaxTree,
-        latexSuiteConfig,
-    );
+    const conceal_plugin = mkConcealPlugin(settings.concealRevealTimeout);
 
     extensions.push(conceal_plugin);
 
     const highlighting_brackets = [
-        colorPairedBracketsPluginLowestPrec(
-            Prec,
-            ViewPlugin,
-            Decoration,
-            syntaxTree,
-            latexSuiteConfig,
-        ),
-        highlightCursorBracketsPlugin(
-            ViewPlugin,
-            Decoration,
-            latexSuiteConfig,
-            syntaxTree,
-        ),
+        colorPairedBracketsPluginLowestPrec(),
+        highlightCursorBracketsPlugin(),
     ];
     extensions.push(...highlighting_brackets);
     const dark_theme_extension = EditorView.baseTheme({

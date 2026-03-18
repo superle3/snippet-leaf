@@ -1,22 +1,18 @@
 import type { EditorView } from "@codemirror/view";
 import { setCursor } from "src/utils/editor_utils";
-import type { LatexSuiteFacet } from "src/settings/settings";
 import { getLatexSuiteConfig } from "src/settings/settings";
 import type { Context } from "src/utils/context";
-import type { syntaxTree as syntaxTreeC } from "@codemirror/language";
 
 export const runMatrixShortcuts = (
     view: EditorView,
     ctx: Context,
     key: string,
     shiftKey: boolean,
-    latexSuiteConfig: LatexSuiteFacet,
-    syntaxTree: typeof syntaxTreeC,
 ): boolean => {
-    const settings = getLatexSuiteConfig(view, latexSuiteConfig);
+    const settings = getLatexSuiteConfig(view);
 
     // Check whether we are inside a matrix / align / case environment
-    const envName = ctx.getEnvironmentName(syntaxTree);
+    const envName = ctx.getEnvironmentName();
     if (!envName || !settings.matrixShortcutsEnvNames.includes(envName)) {
         return false;
     }
@@ -27,7 +23,7 @@ export const runMatrixShortcuts = (
         return true;
     } else if (key === "Enter") {
         if (shiftKey) {
-            const bounds = ctx.getOuterBounds(syntaxTree);
+            const bounds = ctx.getOuterBounds();
             setCursor(view, bounds.end);
         } else if (ctx.mode.blockMath) {
             const d = view.state.doc;

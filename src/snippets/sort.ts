@@ -24,7 +24,7 @@ export function sortSnippets(snippets: Snippet[]): Snippet[] {
             // sort resultant tuples representing the snippets
             .sort(schwartzianSnippetCompare)
             // and get back the snippets
-            .map(([p, t, i]) => snippets[i])
+            .map(([_, __, i]) => snippets[i])
     );
 }
 

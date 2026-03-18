@@ -15,7 +15,7 @@ export const tabout = (
     if (!ctx.mode.inMath()) {
         return false;
     }
-    const result = ctx.getInnerBounds(syntaxTree);
+    const result = ctx.getInnerBounds();
     if (!result) {
         return false;
     }
@@ -49,8 +49,7 @@ export const tabout = (
     // Accounting for whitespace, using trim
     const textBtwnCursorAndEnd = doc.sliceString(pos, end);
     const atEnd = textBtwnCursorAndEnd.trim().length === 0;
-    const { start: startOfEquation, end: endOfEquation } =
-        ctx.getOuterBounds(syntaxTree);
+    const { start: startOfEquation, end: endOfEquation } = ctx.getOuterBounds();
     if (!atEnd) return false;
 
     // Check whether we're in inline math or a block eqn

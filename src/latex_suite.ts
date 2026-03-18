@@ -1,5 +1,4 @@
 import type { EditorView, ViewUpdate } from "@codemirror/view";
-import type { syntaxTree as syntaxTreeC } from "@codemirror/language";
 
 import { runSnippets } from "./features/run_snippets";
 import { runAutoFraction } from "./features/autofraction";
@@ -8,24 +7,17 @@ import { runMatrixShortcuts } from "./features/matrix_shortcuts";
 
 import { Context } from "./utils/context";
 import { replaceRange } from "./utils/editor_utils";
-import {
-    type expandSnippetsC,
-    setSelectionToNextTabstop,
-} from "./snippets/snippet_management";
-import type { create_tabstopsStateField } from "./snippets/codemirror/tabstops_state_field";
-import type { LatexSuiteFacet } from "./settings/settings";
+import { setSelectionToNextTabstop } from "./snippets/snippet_management";
+import { removeAllTabstops } from "./snippets/codemirror/tabstops_state_field";
 import { getLatexSuiteConfig } from "./settings/settings";
-import type { stateEffect_variables } from "./snippets/codemirror/history";
 
 // import { handleMathTooltip } from "./editor_extensions/math_tooltip";
 import { isComposing } from "./utils/editor_utils";
 import { clearSnippetQueue } from "./snippets/codemirror/snippet_queue_state_field";
+import { syntaxTree } from "src/set_codemirror_objects";
+import { handleUndoRedo } from "./snippets/codemirror/history";
 
-export const handleUpdate = (
-    update: ViewUpdate,
-    latexSuiteConfig: LatexSuiteFacet,
-    handleUndoRedo: ReturnType<typeof stateEffect_variables>["handleUndoRedo"],
-) => {
+export const handleUpdate = (update: ViewUpdate) => {
     // const settings = getLatexSuiteConfig(update.state, latexSuiteConfig);
 
     // The math tooltip handler is driven by view updates because it utilizes
@@ -40,15 +32,6 @@ export const handleUpdate = (
 export const onKeydown = (
     event: KeyboardEvent,
     view: EditorView,
-    latexSuiteConfig: LatexSuiteFacet,
-    syntaxTree: typeof syntaxTreeC,
-    removeAllTabstops: ReturnType<
-        typeof create_tabstopsStateField
-    >["removeAllTabstops"],
-    tabstopsStateField: ReturnType<
-        typeof create_tabstopsStateField
-    >["tabstopsStateField"],
-    expandSnippets: expandSnippetsC,
 ): boolean | void => {
     const success = handleKeydown(
         event.key,
@@ -56,11 +39,6 @@ export const onKeydown = (
         event.ctrlKey || event.metaKey,
         isComposing(view, event),
         view,
-        latexSuiteConfig,
-        syntaxTree,
-        removeAllTabstops,
-        tabstopsStateField,
-        expandSnippets,
     );
 
     if (success) event.preventDefault();
@@ -72,17 +50,8 @@ export const handleKeydown = (
     ctrlKey: boolean,
     isIME: boolean,
     view: EditorView,
-    latexSuiteConfig: LatexSuiteFacet,
-    syntaxTree: typeof syntaxTreeC,
-    removeAllTabstops: ReturnType<
-        typeof create_tabstopsStateField
-    >["removeAllTabstops"],
-    tabstopsStateField: ReturnType<
-        typeof create_tabstopsStateField
-    >["tabstopsStateField"],
-    expandSnippets: expandSnippetsC,
 ) => {
-    const settings = getLatexSuiteConfig(view, latexSuiteConfig);
+    const settings = getLatexSuiteConfig(view);
     if (
         !(
             settings.autoDelete$ ||
@@ -94,7 +63,7 @@ export const handleKeydown = (
     ) {
         return false;
     }
-    const ctx = Context.fromView(view, latexSuiteConfig, syntaxTree);
+    const ctx = Context.fromView(view);
 
     let success = false;
 
@@ -124,14 +93,7 @@ export const handleKeydown = (
         // Allows Ctrl + z for undo, instead of triggering a snippet ending with z
         if (!ctrlKey) {
             try {
-                success = runSnippets(
-                    view,
-                    ctx,
-                    key,
-                    latexSuiteConfig,
-                    expandSnippets,
-                    syntaxTree,
-                );
+                success = runSnippets(view, ctx, key);
                 if (success) return true;
             } catch (e) {
                 clearSnippetQueue();
@@ -141,20 +103,14 @@ export const handleKeydown = (
     }
 
     if (key === "Tab") {
-        success = setSelectionToNextTabstop(view, tabstopsStateField);
+        success = setSelectionToNextTabstop(view);
 
         if (success) return true;
     }
 
     if (settings.autofractionEnabled && ctx.mode.strictlyInMath()) {
         if (key === "/") {
-            success = runAutoFraction(
-                view,
-                ctx,
-                latexSuiteConfig,
-                syntaxTree,
-                expandSnippets,
-            );
+            success = runAutoFraction(view, ctx);
 
             if (success) return true;
         }
@@ -162,14 +118,7 @@ export const handleKeydown = (
 
     if (settings.matrixShortcutsEnabled && ctx.mode.strictlyInMath()) {
         if (["Tab", "Enter"].includes(key)) {
-            success = runMatrixShortcuts(
-                view,
-                ctx,
-                key,
-                shiftKey,
-                latexSuiteConfig,
-                syntaxTree,
-            );
+            success = runMatrixShortcuts(view, ctx, key, shiftKey);
 
             if (success) return true;
         }

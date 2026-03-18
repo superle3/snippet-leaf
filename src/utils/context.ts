@@ -6,9 +6,9 @@ import type { EditorView } from "@codemirror/view";
 import { findMatchingBracket, getCloseBracket } from "./editor_utils";
 import { Mode } from "../snippets/options";
 import type { Environment } from "../snippets/environment";
-import type { LatexSuiteFacet } from "src/settings/settings";
 import type { syntaxTree as syntaxTreeC } from "@codemirror/language";
 import type { SyntaxNode, Tree, NodeIterator } from "@lezer/common";
+import { syntaxTree } from "src/set_codemirror_objects";
 
 export interface Bounds {
     start: number;
@@ -23,11 +23,7 @@ export class Context {
     codeblockLanguage: string;
     boundsCache: Map<number, EquationInfo>;
 
-    static fromState(
-        state: EditorStateC,
-        latexSuiteConfig: LatexSuiteFacet,
-        syntaxTree: typeof syntaxTreeC,
-    ): Context {
+    static fromState(state: EditorStateC): Context {
         const ctx = new Context();
         const sel = state.selection;
         ctx.state = state;
@@ -36,7 +32,7 @@ export class Context {
         ctx.mode = new Mode();
         ctx.boundsCache = new Map();
 
-        const mathMode = equationType(state, syntaxTree);
+        const mathMode = equationType(state);
 
         if (mathMode) {
             ctx.mode.textEnv = MathMode.TextEnv === mathMode.type;
@@ -56,22 +52,14 @@ export class Context {
         return ctx;
     }
 
-    static fromView(
-        view: EditorView,
-        latexSuiteConfig: LatexSuiteFacet,
-        syntaxTree: typeof syntaxTreeC,
-    ): Context {
-        return Context.fromState(view.state, latexSuiteConfig, syntaxTree);
+    static fromView(view: EditorView): Context {
+        return Context.fromState(view.state);
     }
 
-    isWithinEnvironment(
-        pos: number,
-        env: Environment,
-        syntaxTree: typeof syntaxTreeC,
-    ): boolean {
+    isWithinEnvironment(pos: number, env: Environment): boolean {
         if (!this.mode.inMath()) return false;
 
-        const bounds = this.getBounds(syntaxTree);
+        const bounds = this.getBounds();
         if (!bounds) return;
 
         const { start, end } = bounds;
@@ -126,99 +114,66 @@ export class Context {
         return false;
     }
 
-    inTextEnvironment(syntaxTree: typeof syntaxTreeC): boolean {
+    inTextEnvironment(): boolean {
         return (
-            this.isWithinEnvironment(
-                this.pos,
-                {
-                    openSymbol: "\\text{",
-                    closeSymbol: "}",
-                },
-                syntaxTree,
-            ) ||
-            this.isWithinEnvironment(
-                this.pos,
-                {
-                    openSymbol: "\\tag{",
-                    closeSymbol: "}",
-                },
-                syntaxTree,
-            ) ||
-            this.isWithinEnvironment(
-                this.pos,
-                {
-                    openSymbol: "\\begin{",
-                    closeSymbol: "}",
-                },
-                syntaxTree,
-            ) ||
-            this.isWithinEnvironment(
-                this.pos,
-                {
-                    openSymbol: "\\end{",
-                    closeSymbol: "}",
-                },
-                syntaxTree,
-            ) ||
-            this.isWithinEnvironment(
-                this.pos,
-                {
-                    openSymbol: "\\mathrm{",
-                    closeSymbol: "}",
-                },
-                syntaxTree,
-            ) ||
-            this.isWithinEnvironment(
-                this.pos,
-                {
-                    openSymbol: "\\color{",
-                    closeSymbol: "}",
-                },
-                syntaxTree,
-            )
+            this.isWithinEnvironment(this.pos, {
+                openSymbol: "\\text{",
+                closeSymbol: "}",
+            }) ||
+            this.isWithinEnvironment(this.pos, {
+                openSymbol: "\\tag{",
+                closeSymbol: "}",
+            }) ||
+            this.isWithinEnvironment(this.pos, {
+                openSymbol: "\\begin{",
+                closeSymbol: "}",
+            }) ||
+            this.isWithinEnvironment(this.pos, {
+                openSymbol: "\\end{",
+                closeSymbol: "}",
+            }) ||
+            this.isWithinEnvironment(this.pos, {
+                openSymbol: "\\mathrm{",
+                closeSymbol: "}",
+            }) ||
+            this.isWithinEnvironment(this.pos, {
+                openSymbol: "\\color{",
+                closeSymbol: "}",
+            })
         );
     }
 
-    getBounds(syntaxTree: typeof syntaxTreeC, pos: number = this.pos): Bounds {
+    getBounds(pos: number = this.pos): Bounds {
         // yes, I also want the cache to work over the produced range instead of just that one through
         // a BTree or the like, but that'd be probably overkill
         if (this.boundsCache.has(pos)) {
             return this.boundsCache.get(pos).inner_bounds;
         }
 
-        const mathMode = equationType(this.state, syntaxTree, pos);
+        const mathMode = equationType(this.state, pos);
         const bounds = mathMode?.inner_bounds;
 
         this.boundsCache.set(pos, mathMode);
         return bounds;
     }
-    getOuterBounds(
-        syntaxTree: typeof syntaxTreeC,
-        pos: number = this.pos,
-    ): Bounds {
+    getOuterBounds(pos: number = this.pos): Bounds {
         const mathMode = this.boundsCache.has(pos)
             ? this.boundsCache.get(pos)
-            : equationType(this.state, syntaxTree, pos);
+            : equationType(this.state, pos);
         if (!mathMode) return;
         return mathMode.outer_bounds;
     }
 
     // Accounts for equations within text environments, e.g. $$\text{... $...$}$$
-    getInnerBounds(
-        syntaxTree: typeof syntaxTreeC,
-        pos: number = this.pos,
-    ): Bounds {
-        const bounds = getInnerEquationBounds(this.state, syntaxTree, pos);
+    getInnerBounds(pos: number = this.pos): Bounds {
+        const bounds = getInnerEquationBounds(this.state, pos);
         return bounds;
     }
 
-    getEnvironmentName(
-        syntaxTree: typeof syntaxTreeC,
-        pos: number = this.pos,
-    ): string | null {
+    getEnvironmentName(pos: number = this.pos): string | null {
         const mathMode = this.boundsCache.has(pos)
             ? this.boundsCache.get(pos)
-            : equationType(this.state, syntaxTree, pos);
+            : equationType(this.state, pos);
         if (!mathMode || !("EnvName" in mathMode)) return null;
         return mathMode.EnvName;
     }
@@ -373,9 +328,7 @@ const mathContext: Record<
 } as const;
 const equationType = (
     state: EditorStateC,
-    syntaxTree: typeof syntaxTreeC,
     pos: number = state.selection.main.to,
-    direction: 1 | -1 = 1,
 ): EquationInfo => {
     const tree: Tree = syntaxTree(state);
 
@@ -446,17 +399,13 @@ export const getEquationBounds = (
     pos?: number,
 ): Bounds | null => {
     if (!pos) pos = state.selection.main.to;
-    return equationType(state, syntaxTree)?.inner_bounds ?? null;
+    return equationType(state)?.inner_bounds ?? null;
 };
 
 // Accounts for equations within text environments, e.g. $$\text{... $...$}$$
-const getInnerEquationBounds = (
-    state: EditorStateC,
-    syntaxTree: typeof syntaxTreeC,
-    pos?: number,
-): Bounds => {
+const getInnerEquationBounds = (state: EditorStateC, pos?: number): Bounds => {
     if (!pos) pos = state.selection.main.to;
-    return equationType(state, syntaxTree, pos, 1)?.inner_bounds;
+    return equationType(state, pos)?.inner_bounds;
 };
 
 const boundsFromNode = (node: SyntaxNode): Bounds | null => {
@@ -466,14 +415,10 @@ const boundsFromNode = (node: SyntaxNode): Bounds | null => {
     return { start, end };
 };
 
-const printSyntaxTree = (
-    state: EditorStateC,
-    syntaxTree: typeof syntaxTreeC,
-    pos: number,
-) => {
+const printSyntaxTree = (state: EditorStateC, pos: number) => {
     console.log("Syntax tree at position", pos);
     const tree = syntaxTree(state);
-    let i = 0;
+    const i = 0;
     const buildTreeString = (node: SyntaxNode, indent: number = 0): string => {
         let str =
             " ".repeat(indent) +

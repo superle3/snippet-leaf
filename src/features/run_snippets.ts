@@ -1,32 +1,21 @@
 import type { EditorView as EditorViewC } from "@codemirror/view";
 import type { EditorState, SelectionRange } from "@codemirror/state";
-import type { LatexSuiteFacet } from "src/settings/settings";
 import { getLatexSuiteConfig } from "src/settings/settings";
 import { Mode } from "src/snippets/options";
 import type { Context } from "src/utils/context";
 import { autoEnlargeBrackets } from "./auto_enlarge_brackets";
-import type { syntaxTree as syntaxTreeC } from "@codemirror/language";
 import { queueSnippet } from "src/snippets/codemirror/snippet_queue_state_field";
+import { expandSnippets } from "src/snippets/snippet_management";
 
 export const runSnippets = (
     view: EditorViewC,
     ctx: Context,
     key: string,
-    latexSuiteConfig: LatexSuiteFacet,
-    expandSnippets: (view: EditorViewC) => boolean,
-    syntaxTree: typeof syntaxTreeC,
 ): boolean => {
     let shouldAutoEnlargeBrackets = false;
 
     for (const range of ctx.ranges) {
-        const result = runSnippetCursor(
-            view,
-            ctx,
-            key,
-            range,
-            latexSuiteConfig,
-            syntaxTree,
-        );
+        const result = runSnippetCursor(view, ctx, key, range);
 
         if (result.shouldAutoEnlargeBrackets) shouldAutoEnlargeBrackets = true;
     }
@@ -34,7 +23,7 @@ export const runSnippets = (
     const success = expandSnippets(view);
 
     if (shouldAutoEnlargeBrackets) {
-        autoEnlargeBrackets(view, latexSuiteConfig, syntaxTree, expandSnippets);
+        autoEnlargeBrackets(view);
     }
 
     return success;
@@ -45,10 +34,8 @@ const runSnippetCursor = (
     ctx: Context,
     key: string,
     range: SelectionRange,
-    latexSuiteConfig: LatexSuiteFacet,
-    syntaxTree: typeof syntaxTreeC,
 ): { success: boolean; shouldAutoEnlargeBrackets: boolean } => {
-    const settings = getLatexSuiteConfig(view, latexSuiteConfig);
+    const settings = getLatexSuiteConfig(view);
     const { from, to } = range;
     const sel = view.state.sliceDoc(from, to);
     const line = view.state.sliceDoc(0, to);
@@ -78,7 +65,7 @@ const runSnippetCursor = (
         // in practice, a snippet should have very few excluded environments, if any,
         // so the cost of this check shouldn't be very high
         for (const environment of snippet.excludedEnvironments) {
-            if (ctx.isWithinEnvironment(to, environment, syntaxTree)) {
+            if (ctx.isWithinEnvironment(to, environment)) {
                 isExcluded = true;
                 break;
             }
@@ -106,7 +93,7 @@ const runSnippetCursor = (
 
         // When in inline math, remove any spaces at the end of the replacement
         if (ctx.mode.inlineMath && settings.removeSnippetWhitespace) {
-            replacement = trimWhitespace(replacement, ctx);
+            replacement = trimWhitespace(replacement);
         }
 
         // Expand the snippet
@@ -138,7 +125,7 @@ const isOnWordBoundary = (
     );
 };
 
-const trimWhitespace = (replacement: string, ctx: Context) => {
+const trimWhitespace = (replacement: string) => {
     let spaceIndex = 0;
 
     if (replacement.endsWith(" ")) {
