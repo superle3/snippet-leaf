@@ -4,19 +4,19 @@
             "updates": [
                 {
                     "version": "0.0.4",
-                    "update_link": "https://github.com/superle3/snippet-leaf/releases/download/v0.0.4/snippet_leaf-0.0.4.xpi"
+                    "update_link": "https://github.com/superle3/snippet-leaf/releases/download/v0.0.4/snippetleaf-0.0.4.xpi"
                 },
                 {
                     "version": "0.0.5",
-                    "update_link": "https://github.com/superle3/snippet-leaf/releases/download/v0.0.5/snippet_leaf-0.0.5.xpi"
+                    "update_link": "https://github.com/superle3/snippet-leaf/releases/download/v0.0.5/snippetleaf-0.0.5.xpi"
                 },
                 {
                     "version": "0.0.6",
-                    "update_link": "https://github.com/superle3/snippet-leaf/releases/download/v0.0.6/snippet_leaf-0.0.6.xpi"
+                    "update_link": "https://github.com/superle3/snippet-leaf/releases/download/v0.0.6/snippetleaf-0.0.6.xpi"
                 },
                 {
                     "version": "0.0.7",
-                    "update_link": "https://github.com/superle3/snippet-leaf/releases/download/v0.0.7/snippet_leaf-0.0.7.xpi"
+                    "update_link": "https://github.com/superle3/snippet-leaf/releases/download/v0.0.7/snippetleaf-0.0.7.xpi"
                 }
             ]
         }
