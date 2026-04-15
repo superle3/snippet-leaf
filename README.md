@@ -39,6 +39,10 @@ Aside from snippets, the plugin also comes with several other features that aim 
 
 ### Firefox
 
+>[!NOTE]
+> It seems mozilla has banned my account without notice. Other devs also have this issue it seems https://discourse.mozilla.org/t/add-on-removed-without-explanation/147949
+> For now I'll wait a bit till they give a response. In the mean time you can install the `.zip` (rename the extension to `.xpi`) file on firefox developer edition or equivalent editions where you can install unsigned addons permanently.
+
 - Go the [latest release](https://github.com/superle3/snippet-leaf/releases/latest) and download the `.xpi` file in the firefox based browser you want to add the extension.
 - There should open a popup, click on `Continue to Installation` and when its done downloading, click `add`.
 - If for whatever reason this doesn't work or you can't download it on that browser, you first hide any sidebar on the left/right and drag-and-drop the `.xpi` file from your file-explorer in firefox. It should give you a popup where it asks you if the addons should be added. Click `add` to install the addon.
