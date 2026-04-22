@@ -1,7 +1,7 @@
 {
     "name": "snippetleaf-monorepo",
     "private": true,
-    "version": "0.0.7",
+    "version": "0.0.9",
     "workspaces": [
         "browser_extension",
         "codemirror_extension"
@@ -18,7 +18,8 @@
         "format": "prettier --write .",
         "format:commit": "pretty-quick --staged",
         "build:rollup": "rollup -c",
-        "build:greasemonkey": "tsx esbuild.config.mts userscript"
+        "build:greasemonkey": "tsx esbuild.config.mts userscript",
+        "version": "tsx version-bump.mts && npm run format && git add ."
     },
     "keywords": [
         "latex",
