@@ -217,9 +217,9 @@ const userscriptBanner = `// ==UserScript==
 
 const userscriptConfig = {
     ...sharedConfig,
-    entryPoints: ["greesemonkey/userscript.ts"],
+    entryPoints: ["greasemonkey/userscript.ts"],
     format: "iife",
-    outdir: "greesemonkey/dist",
+    outdir: "greasemonkey/dist",
     outExtension: { ".js": ".user.js" },
     banner: {
         js: userscriptBanner,
@@ -235,14 +235,14 @@ const userscriptSettingsBundleConfig = {
     ...userscriptConfig,
     banner: undefined,
     entryPoints: [
-        { in: "greesemonkey/settings_bundle.ts", out: "settings_bundle" },
+        { in: "greasemonkey/settings_bundle.ts", out: "settings_bundle" },
         {
             in: "browser_extension/browser_extension.ts",
-            out: "browser_extension",
+            out: "browser_extension/snippetleaf.js",
         },
     ],
     format: "cjs",
-    outdir: "greesemonkey/dist",
+    outdir: "greasemonkey/dist",
     outExtension: { ".js": ".user.js" },
     external: ["path", "fs"],
     mainFields: ["module", "browser", "main"],

@@ -42,8 +42,9 @@ jobs:
               run: |
                   npm run build:greasemonkey
                   version=${{ steps.check_tag.outputs.VERSION }}
-                  mv greesemonkey/dist/browser_extension.user.js greesemonkey/dist/snippetleaf-${version}.user.js
-                  mv greesemonkey/dist/settings_bundle.js greesemonkey/dist/settings_bundle-${version}.user.js
+                  for file in ./greasemonkey/dist/*.user.js; do
+                      mv "$file" "${file%.user.js}-${version}.user.js"
+                  done
             - name: Parse CHANGELOG.md for Release Notes
               id: parse_changelog
               run: |
@@ -71,4 +72,4 @@ jobs:
                   draft: false
                   prerelease: ${{ steps.prerelease_check.outputs.PRERELEASE }}
                   makeLatest: true
-                  artifacts: "browser_extension/artifacts/*.zip,browser_extension/artifacts/*.xpi,greesemonkey/dist/*.user.js"
+                  artifacts: "browser_extension/artifacts/*.zip,browser_extension/artifacts/*.xpi,greasemonkey/dist/*.user.js"
