@@ -2,13 +2,15 @@ import {
     DEFAULT_SNIPPETS_str,
     DEFAULT_SNIPPET_VARIABLES_str,
 } from "codemirror_extension/codemirror_extensions";
-import { LatexSuiteFacet, processLatexSuiteSettings } from "./settings";
-import { LatexSuitePluginSettingsRaw } from "./default_settings";
-import { LatexSuiteCMSettings } from "./default_settings";
-import { LatexSuitePluginSettings } from "./default_settings";
+import type { LatexSuiteFacet } from "./settings";
+import { processLatexSuiteSettings } from "./settings";
+import type { LatexSuitePluginSettingsRaw } from "./default_settings";
+import type { LatexSuiteCMSettings } from "./default_settings";
+import type { LatexSuitePluginSettings } from "./default_settings";
 import { DEFAULT_SETTINGS } from "./default_settings";
-import { Facet, EditorState } from "@codemirror/state";
-import { EditorView } from "@codemirror/view";
+import type { EditorState } from "@codemirror/state";
+import { Facet } from "@codemirror/state";
+import type { EditorView } from "@codemirror/view";
 
 export const DEFAULT_SETTINGS_RAW = {
     ...DEFAULT_SETTINGS,

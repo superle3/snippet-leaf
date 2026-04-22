@@ -6,7 +6,7 @@ import type {
     SnippetVariables,
 } from "codemirror_extension/codemirror_extensions";
 import type { Environment } from "src/snippets/environment";
-import { SnippetType } from "src/snippets/snippets";
+import type { SnippetType } from "src/snippets/snippets";
 import * as v from "valibot";
 import { parseSnippet, RawSnippetSchema } from "src/snippets/parse";
 import json5 from "json5";
@@ -170,9 +170,7 @@ const SnippetSchemaAsync = v.pipeAsync(
     //@ts-expect-error typescript/valibot not working
     SnippetSchemaSync,
 );
-const SettingsSchema = v.pipe(
-    v.intersect([latexSuiteBasicSettingsSchema]),
-);
+const SettingsSchema = v.pipe(v.intersect([latexSuiteBasicSettingsSchema]));
 
 type SnippetSchemaInput = v.InferOutput<typeof SnippetSchema>;
 export interface LatexSuiteBasicSettings {

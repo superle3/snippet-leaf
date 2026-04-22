@@ -1,3 +1,4 @@
+import type { InferOutput } from "valibot";
 import {
     optional,
     object,
@@ -7,7 +8,6 @@ import {
     parse,
     number,
     literal,
-    InferOutput,
     custom,
 } from "valibot";
 import { encode } from "js-base64";

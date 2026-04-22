@@ -5,8 +5,8 @@ import {
     type RawSnippet,
     type SnippetVariables,
 } from "src/snippets/parse";
-import { Facet } from "@codemirror/state";
-import {
+import type { Facet } from "@codemirror/state";
+import type {
     LatexSuiteCMSettings,
     LatexSuitePluginSettings,
 } from "./default_settings";
