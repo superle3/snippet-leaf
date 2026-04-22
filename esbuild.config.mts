@@ -217,8 +217,13 @@ const userscriptBanner = `// ==UserScript==
 
 const userscriptConfig = {
     ...sharedConfig,
-    entryPoints: ["greasemonkey/userscript.ts"],
-    format: "iife",
+    entryPoints: [
+        {
+            in: "browser_extension/browser_extension.ts",
+            out: "snippetleaf.js",
+        },
+    ],
+    format: "cjs",
     outdir: "greasemonkey/dist",
     outExtension: { ".js": ".user.js" },
     banner: {
@@ -228,28 +233,17 @@ const userscriptConfig = {
     mainFields: ["module", "browser", "main"],
     target: ["ES2024"],
     treeShaking: true,
-    minify: false,
+    minify: true,
     sourcemap: false,
 } satisfies BuildOptions;
-const userscriptSettingsBundleConfig = {
+const userscriptSettingsBundleConfigs = {
     ...userscriptConfig,
     banner: undefined,
     entryPoints: [
         { in: "greasemonkey/settings_bundle.ts", out: "settings_bundle" },
-        {
-            in: "browser_extension/browser_extension.ts",
-            out: "browser_extension/snippetleaf.js",
-        },
     ],
     format: "cjs",
-    outdir: "greasemonkey/dist",
-    outExtension: { ".js": ".user.js" },
-    external: ["path", "fs"],
-    mainFields: ["module", "browser", "main"],
-    target: ["ES2024"],
-    treeShaking: true,
     minify: false,
-    sourcemap: false,
 } as const satisfies BuildOptions;
 
 if (web) {
@@ -261,7 +255,8 @@ if (web) {
     codemirrorCtx.watch().catch(() => process.exit(1));
 } else if (userscript) {
     console.log("Building Greasemonkey userscript...");
-    await esbuild.build(userscriptSettingsBundleConfig);
+    await esbuild.build(userscriptSettingsBundleConfigs);
+    await esbuild.build(userscriptConfig);
 } else if (production) {
     console.log("Building for production...");
     await esbuild.build(browserConfig);

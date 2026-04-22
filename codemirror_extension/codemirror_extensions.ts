@@ -31,8 +31,8 @@ import type { LatexSuitePluginSettings } from "src/settings/default_settings";
 import { DEFAULT_SETTINGS } from "src/settings/default_settings";
 import { getSettingsSnippets } from "src/settings/settings_parser";
 import { getSettingsSnippetVariables } from "src/settings/settings_parser";
-import { SETTINGS_EXPLANATIONS } from "src/settings/raw_settings";
-import { DEFAULT_SETTINGS_RAW } from "src/settings/raw_settings";
+import { SETTINGS_EXPLANATIONS } from "src/settings/setting_docs";
+import { DEFAULT_SETTINGS_RAW } from "src/settings/default_raw_settings";
 import {
     DEFAULT_SNIPPETS,
     DEFAULT_SNIPPETS_str,

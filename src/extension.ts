@@ -31,7 +31,6 @@ import type { LatexSuitePluginSettings } from "./settings/default_settings";
 import { create_snippet_extensions } from "./snippets/codemirror/extensions";
 import type { invertedEffects as invertedEffectsC } from "@codemirror/commands";
 import { processLatexSuiteSettings } from "./settings/settings";
-import { DEFAULT_SETTINGS } from "./settings/default_settings";
 import { setLatexSuiteConfig } from "./settings/raw_settings";
 import { stateEffect_variables } from "./snippets/codemirror/history";
 import { create_tabstopsStateField } from "./snippets/codemirror/tabstops_state_field";
@@ -47,6 +46,7 @@ import {
 import { set_codemirror_objects } from "./set_codemirror_objects";
 import { createContextPlugin } from "./latex_context/context";
 import { createMathBoundsPlugin } from "./latex_context/mathbounds";
+import { EMPTY_SETTINGS } from "./settings/empty_settings";
 
 type CodeMirrorExt = {
     Decoration: typeof DecorationC;
@@ -74,7 +74,7 @@ type CodeMirrorExt = {
 
 export function main(
     codemirror_objects: CodeMirrorExt,
-    settings: LatexSuitePluginSettings = DEFAULT_SETTINGS,
+    settings: LatexSuitePluginSettings = EMPTY_SETTINGS,
 ) {
     set_codemirror_objects(codemirror_objects);
     const { Prec, EditorView } = codemirror_objects;

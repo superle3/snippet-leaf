@@ -1,8 +1,5 @@
-import {
-    parseSnippets,
-    parseSnippetVariables,
-    type SnippetVariables,
-} from "codemirror_extension/codemirror_extensions";
+import type { SnippetVariables } from "src/snippets/parse";
+import { parseSnippets, parseSnippetVariables } from "src/snippets/parse";
 
 export function getSettingsSnippetVariables(snippetVariables: string) {
     try {

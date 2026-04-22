@@ -1,10 +1,6 @@
 import { DEFAULT_SNIPPETS } from "src/utils/default_snippets";
 import { DEFAULT_SNIPPET_VARIABLES } from "src/utils/default_snippet_variables";
-import type {
-    RawSnippet,
-    Snippet,
-    SnippetVariables,
-} from "codemirror_extension/codemirror_extensions";
+import type { RawSnippet, SnippetVariables } from "src/snippets/parse";
 import type {
     latexSuiteBasicSettingsSchema,
     LatexSuiteParsedSettingsSchema,
@@ -14,6 +10,7 @@ import type {
     SnippetSchemaAsync,
 } from "./settings";
 import type * as v from "valibot";
+import type { Snippet } from "src/snippets/snippets";
 
 export const DEFAULT_SETTINGS: LatexSuitePluginSettings &
     LatexSuiteRawSettings = {

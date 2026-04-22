@@ -41,9 +41,9 @@ import {
     RangeValue,
 } from "./codemirror_range_objects";
 import type { LatexSuiteCMSettings } from "src/settings/default_settings";
-import { DEFAULT_SETTINGS } from "src/settings/default_settings";
 import { SettingsSchema } from "src/settings/settings";
-import type { LatexSuiteFacet } from "codemirror_extension/codemirror_extensions";
+import type { LatexSuiteFacet } from "src/settings/settings";
+import { EMPTY_SETTINGS } from "src/settings/empty_settings";
 
 type CodeMirrorExt = {
     Decoration: typeof DecorationC;
@@ -103,7 +103,7 @@ async function browser_main() {
                 RangeSetBuilder,
                 RangeValue,
             },
-            DEFAULT_SETTINGS,
+            EMPTY_SETTINGS,
         );
         const latex_suite_extensions = plugin.extension;
         const latexSuiteConfig = plugin.latexSuiteConfig;
