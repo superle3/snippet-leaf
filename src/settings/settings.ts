@@ -1,112 +1,20 @@
 import { ARE_SETTINGS_PARSED, type Snippet } from "../snippets/snippets";
 import type { Environment } from "../snippets/environment";
 import {
-    DEFAULT_SNIPPETS,
-    DEFAULT_SNIPPETS_str,
-} from "../utils/default_snippets";
-import {
-    DEFAULT_SNIPPET_VARIABLES,
-    DEFAULT_SNIPPET_VARIABLES_str,
-} from "../utils/default_snippet_variables";
-import {
-    parseSnippets,
+    parseSnippet,
     parseSnippetsSync,
-    parseSnippetVariables,
+    RawSnippetSchema,
     type RawSnippet,
     type SnippetVariables,
 } from "src/snippets/parse";
-import { Facet, type EditorState } from "@codemirror/state";
-import type { EditorView } from "@codemirror/view";
-
-interface LatexSuiteBasicSettings {
-    snippetsEnabled: boolean;
-    snippetsTrigger: "Tab" | " ";
-    defaultSnippetVersion: 1 | 2;
-    suppressSnippetTriggerOnIME: boolean;
-    removeSnippetWhitespace: boolean;
-    autoDelete$: boolean;
-    concealEnabled: boolean;
-    concealRevealTimeout: number;
-    concealLinewise: boolean;
-    colorPairedBracketsEnabled: boolean;
-    highlightCursorBracketsEnabled: boolean;
-    autofractionEnabled: boolean;
-    autofractionSymbol: string;
-    autofractionBreakingChars: string;
-    matrixShortcutsEnabled: boolean;
-    taboutEnabled: boolean;
-    autoEnlargeBrackets: boolean;
-    wordDelimiters: string;
-}
-
-/**
- * Settings that require further processing (e.g. conversion to an array) before being used.
- */
-export interface LatexSuiteRawSettings {
-    autofractionExcludedEnvs: string;
-    matrixShortcutsEnvNames: string;
-    autoEnlargeBracketsTriggers: string;
-}
-
-interface LatexSuiteParsedSettings {
-    autofractionExcludedEnvs: Environment[];
-    matrixShortcutsEnvNames: string[];
-    autoEnlargeBracketsTriggers: string[];
-}
-
-export type LatexSuitePluginSettings = {
-    snippets: Array<RawSnippet | Snippet>;
-    snippetVariables: SnippetVariables;
-} & LatexSuiteBasicSettings &
-    (LatexSuiteRawSettings | LatexSuiteParsedSettings);
-export type LatexSuitePluginSettingsRaw = {
-    snippets: string;
-    snippetVariables: string;
-} & LatexSuiteBasicSettings &
-    LatexSuiteRawSettings;
-export type LatexSuiteCMSettings = {
-    snippets: Snippet[];
-    snippetVariables: SnippetVariables;
-} & LatexSuiteBasicSettings &
-    LatexSuiteParsedSettings;
-
-export const DEFAULT_SETTINGS: LatexSuitePluginSettings &
-    LatexSuiteRawSettings = {
-    snippets: DEFAULT_SNIPPETS,
-    snippetVariables: DEFAULT_SNIPPET_VARIABLES,
-
-    // Basic settings
-    snippetsEnabled: true,
-    snippetsTrigger: "Tab",
-    defaultSnippetVersion: 2,
-    suppressSnippetTriggerOnIME: true,
-    removeSnippetWhitespace: false,
-    autoDelete$: true,
-    concealEnabled: false,
-    concealRevealTimeout: 0,
-    concealLinewise: false,
-    colorPairedBracketsEnabled: true,
-    highlightCursorBracketsEnabled: true,
-    autofractionEnabled: true,
-    autofractionSymbol: "\\frac",
-    autofractionBreakingChars: "+-=\t",
-    matrixShortcutsEnabled: true,
-    taboutEnabled: true,
-    autoEnlargeBrackets: true,
-    wordDelimiters: "., +-\\n\t:;!?\\/{}[]()=~$",
-
-    // Raw settings
-    autofractionExcludedEnvs: '[\n\t["^{", "}"],\n\t["\\\\pu{", "}"]\n]',
-    matrixShortcutsEnvNames:
-        "pmatrix, cases, align, gather, bmatrix, Bmatrix, vmatrix, Vmatrix, array, matrix",
-    autoEnlargeBracketsTriggers: "sum, int, frac, prod, bigcup, bigcap",
-};
-
-export const DEFAULT_SETTINGS_RAW = {
-    ...DEFAULT_SETTINGS,
-    snippets: DEFAULT_SNIPPETS_str,
-    snippetVariables: DEFAULT_SNIPPET_VARIABLES_str,
-};
+import type { Facet } from "@codemirror/state";
+import type {
+    LatexSuiteCMSettings,
+    LatexSuitePluginSettings,
+} from "./default_settings";
+import * as v from "valibot";
+import { sortSnippets } from "src/snippets/sort";
+import json5 from "json5";
 
 export function processLatexSuiteSettings(
     settings: LatexSuitePluginSettings & {
@@ -183,57 +91,6 @@ export type LatexSuiteFacet = Facet<
     Partial<LatexSuitePluginSettings>,
     LatexSuiteCMSettings
 >;
-let latexSuiteConfig: LatexSuiteFacet;
-export function setLatexSuiteConfig() {
-    latexSuiteConfig = Facet.define<
-        Partial<LatexSuitePluginSettings>,
-        LatexSuiteCMSettings
-    >({
-        combine: (input: Partial<LatexSuitePluginSettings>[]) => {
-            const settings =
-                input.length > 0
-                    ? processLatexSuiteSettings(
-                          Object.assign({}, DEFAULT_SETTINGS, ...input),
-                      )
-                    : processLatexSuiteSettings(DEFAULT_SETTINGS);
-            return settings;
-        },
-    });
-    return latexSuiteConfig;
-}
-
-export function getLatexSuiteConfig(
-    viewOrState: EditorView | EditorState,
-): LatexSuiteCMSettings {
-    // @ts-expect-error Property 'state' does not exist on type 'EditorState | EditorView'.
-    return (viewOrState.state ?? viewOrState).facet(latexSuiteConfig);
-}
-
-export function getSettingsSnippetVariables(snippetVariables: string) {
-    try {
-        return parseSnippetVariables(snippetVariables);
-    } catch (e) {
-        console.error(`Failed to load snippet variables from settings: ${e}`);
-        return {};
-    }
-}
-
-export async function getSettingsSnippets(
-    snippets: string,
-    snippetVariables: SnippetVariables,
-    defaultSnippetVersion: 1 | 2 = 2,
-) {
-    try {
-        return await parseSnippets(
-            snippets,
-            snippetVariables,
-            defaultSnippetVersion,
-        );
-    } catch (e) {
-        console.error(`Failed to load snippets from settings: ${e}`);
-        return [];
-    }
-}
 
 function validateSnippetVariables(
     snippetVariables: Record<string, string>,
@@ -258,170 +115,156 @@ function validateSnippetVariables(
     }
     return snippetVariables;
 }
-
-export type LatexSuitePluginSettingsExplanations = {
-    [P in keyof LatexSuitePluginSettingsRaw]: {
-        title: string;
-        description: string;
-        type: "boolean" | "string" | "array" | Array<string>;
-        defaultValue: LatexSuitePluginSettingsRaw[P];
-    };
-};
-
-export const SETTINGS_EXPLANATIONS: LatexSuitePluginSettingsExplanations = {
-    snippetsEnabled: {
-        title: "Enabled",
-        description: "Whether snippets are enabled.",
-        type: "boolean",
-        defaultValue: DEFAULT_SETTINGS.snippetsEnabled,
-    },
-    snippets: {
-        title: "Snippets",
-        description:
-            'Enter snippets here.  Remember to add a comma after each snippet, and escape all backslashes with an extra \\. Lines starting with "//" will be treated as comments and ignored.',
-        type: "array",
-        defaultValue: DEFAULT_SNIPPETS_str,
-    },
-    snippetVariables: {
-        title: "Snippet variables",
-        description:
-            "Assign snippet variables that can be used as shortcuts when writing snippets.",
-        type: "string",
-        defaultValue: DEFAULT_SNIPPET_VARIABLES_str,
-    },
-    snippetsTrigger: {
-        title: "Key trigger for non-auto snippets",
-        description: "What key to press to expand non-auto snippets.",
-        type: ["Tab", " "],
-        defaultValue: DEFAULT_SETTINGS.snippetsTrigger,
-    },
-    suppressSnippetTriggerOnIME: {
-        title: "Don't trigger snippets when IME is active",
-        description:
-            "Whether to suppress snippets triggering when an IME is active.",
-        type: "boolean",
-        defaultValue: DEFAULT_SETTINGS.suppressSnippetTriggerOnIME,
-    },
-    removeSnippetWhitespace: {
-        title: "Remove trailing whitespaces in snippets in inline math",
-        description:
-            "Whether to remove trailing whitespaces when expanding snippets at the end of inline math blocks.",
-        type: "boolean",
-        defaultValue: DEFAULT_SETTINGS.removeSnippetWhitespace,
-    },
-    autoDelete$: {
-        title: "Remove closing $ when backspacing inside blank inline math",
-        description:
-            "Whether to also remove the closing $ when you delete the opening $ symbol inside blank inline math.",
-        type: "boolean",
-        defaultValue: DEFAULT_SETTINGS.autoDelete$,
-    },
-    autofractionEnabled: {
-        title: "Enabled",
-        description: "Whether auto-fraction is enabled.",
-        type: "boolean",
-        defaultValue: DEFAULT_SETTINGS.autofractionEnabled,
-    },
-    autofractionSymbol: {
-        title: "Fraction symbol",
-        description:
-            "The fraction symbol to use in the replacement. e.g. \\frac, \\dfrac, \\tfrac",
-        type: ["\\frac", "\\dfrac", "\\tfrac"],
-        defaultValue: DEFAULT_SETTINGS.autofractionSymbol,
-    },
-    autofractionBreakingChars: {
-        title: "Breaking characters",
-        description:
-            'A list of characters that denote the start/end of a fraction. e.g. if + is included in the list, "a+b/c" will expand to "a+\\frac{b}{c}". If + is not in the list, it will expand to "\\frac{a+b}{c}".',
-        type: "string",
-        defaultValue: DEFAULT_SETTINGS.autofractionBreakingChars,
-    },
-    matrixShortcutsEnabled: {
-        title: "Enabled",
-        description: "Whether matrix shortcuts are enabled.",
-        type: "boolean",
-        defaultValue: DEFAULT_SETTINGS.matrixShortcutsEnabled,
-    },
-    taboutEnabled: {
-        title: "Enabled",
-        description: "Whether tabout is enabled",
-        type: "boolean",
-        defaultValue: DEFAULT_SETTINGS.taboutEnabled,
-    },
-    autoEnlargeBrackets: {
-        title: "Auto enlarge brackets",
-        description:
-            "Whether to automatically enlarge brackets containing e.g. sum, int, frac.",
-        type: "boolean",
-        defaultValue: DEFAULT_SETTINGS.autoEnlargeBrackets,
-    },
-    wordDelimiters: {
-        title: "Word delimiters",
-        description:
-            'Symbols that will be treated as word delimiters, for use with the "w" snippet option.',
-        type: "string",
-        defaultValue: DEFAULT_SETTINGS.wordDelimiters,
-    },
-    autofractionExcludedEnvs: {
-        title: "Excluded autofraction environments",
-        description:
-            'A list of environments to exclude auto-fraction from running in. For example, to exclude auto-fraction from running while inside an exponent, such as e^{...}, use  ["^{", "}"]',
-        type: "string",
-        defaultValue: DEFAULT_SETTINGS.autofractionExcludedEnvs,
-    },
-    matrixShortcutsEnvNames: {
-        title: "Matrix environments",
-        description:
-            "A list of environment names to run the matrix shortcuts in, separated by commas.",
-        type: "string",
-        defaultValue: DEFAULT_SETTINGS.matrixShortcutsEnvNames,
-    },
-    autoEnlargeBracketsTriggers: {
-        title: "Auto enlarge bracket triggers",
-        description:
-            'A list of triggers that will cause brackets to be automatically enlarged. e.g. ["sum", "int", "frac"]',
-        type: "string",
-        defaultValue: DEFAULT_SETTINGS.autoEnlargeBracketsTriggers,
-    },
-    concealEnabled: {
-        title: "Conceal enabled",
-        description:
-            " Make equations more readable by hiding LaTeX syntax and instead displaying it in a pretty format.\n e.g. <code>\\dot{x}^{2} + \\dot{y}^{2}</code> will display as ẋ² + ẏ², and <code>\\sqrt{ 1-\\beta^{2} }</code> will display as √{ 1-β² }.\n LaTeX beneath the cursor will be revealed.\n Disabled by default to not confuse new users. However, I recommend turning this on once you are comfortable with the plugin!.",
-        type: "boolean",
-        defaultValue: DEFAULT_SETTINGS.concealEnabled,
-    },
-    concealRevealTimeout: {
-        title: "Reveal delay (ms)",
-        description:
-            " How long to delay the reveal of LaTeX for, in milliseconds, when the cursor moves over LaTeX. Defaults to 0 (LaTeX under the cursor is revealed immediately).\n Can be set to a positive number, e.g. 300, to delay the reveal of LaTeX, making it much easier to navigate equations using arrow keys.\n Must be an integer ≥ 0. ",
-        type: "string",
-        defaultValue: DEFAULT_SETTINGS.concealRevealTimeout,
-    },
-    concealLinewise: {
-        title: "Conceal linewise",
-        description:
-            "Whether to reveal entire lines when the cursor is on that line. If false, only LaTeX directly beneath the cursor is revealed.",
-        type: "boolean",
-        defaultValue: DEFAULT_SETTINGS.concealLinewise,
-    },
-    colorPairedBracketsEnabled: {
-        title: "Color paired brackets",
-        description: "Whether to colorize matching brackets.",
-        type: "boolean",
-        defaultValue: DEFAULT_SETTINGS.colorPairedBracketsEnabled,
-    },
-    highlightCursorBracketsEnabled: {
-        title: "Highlight matching bracket beneath cursor",
-        description:
-            "When the cursor is adjacent to a bracket, highlight the matching bracket.",
-        type: "boolean",
-        defaultValue: DEFAULT_SETTINGS.highlightCursorBracketsEnabled,
-    },
-    defaultSnippetVersion: {
-        title: "Default snippet version",
-        description:
-            "The default snippet version to use for the snippet syntax. Version 2 is recommended for most users.",
-        type: ["1", "2"],
-        defaultValue: DEFAULT_SETTINGS.defaultSnippetVersion,
-    },
-} as const;
+export const EnvironmentSchema = v.object({
+    openSymbol: v.string(),
+    closeSymbol: v.string(),
+});
+export const StrToArraySchema = v.union([
+    v.pipe(
+        v.string(),
+        v.transform((str) => str.replace(/\s/g, "").split(",")),
+    ),
+]);
+export const LatexSuiteParsedSettingsSchema = v.object({
+    autofractionExcludedEnvs: v.array(EnvironmentSchema),
+    matrixShortcutsEnvNames: v.array(v.string()),
+    autoEnlargeBracketsTriggers: v.array(v.string()),
+});
+export const LatexSuiteRawSettingsSchema = v.object({
+    autofractionExcludedEnvs: v.pipe(
+        v.string(),
+        v.parseJson(),
+        v.array(
+            v.pipe(
+                v.tuple([v.string(), v.string()]),
+                v.transform(([openSymbol, closeSymbol]) => ({
+                    openSymbol,
+                    closeSymbol,
+                })),
+            ),
+        ),
+    ),
+    matrixShortcutsEnvNames: StrToArraySchema,
+    autoEnlargeBracketsTriggers: StrToArraySchema,
+});
+export const LatexSuiteRawOrParsedSettingsSchema = v.union([
+    LatexSuiteRawSettingsSchema,
+    LatexSuiteParsedSettingsSchema,
+]);
+export const latexSuiteBasicSettingsSchema = v.object({
+    snippetsEnabled: v.boolean(),
+    snippetsTrigger: v.union([v.literal("Tab"), v.literal(" ")]),
+    defaultSnippetVersion: v.union([v.literal(1), v.literal(2)]),
+    suppressSnippetTriggerOnIME: v.boolean(),
+    removeSnippetWhitespace: v.boolean(),
+    autoDelete$: v.boolean(),
+    concealEnabled: v.boolean(),
+    concealRevealTimeout: v.number(),
+    concealLinewise: v.boolean(),
+    colorPairedBracketsEnabled: v.boolean(),
+    highlightCursorBracketsEnabled: v.boolean(),
+    autofractionEnabled: v.boolean(),
+    autofractionSymbol: v.string(),
+    autofractionBreakingChars: v.string(),
+    matrixShortcutsEnabled: v.boolean(),
+    taboutEnabled: v.boolean(),
+    autoEnlargeBrackets: v.boolean(),
+    wordDelimiters: v.string(),
+});
+export type NestedRawSnippetArray = Array<RawSnippet | NestedRawSnippetArray>;
+export const NestedRawSnippetArraySchema: v.GenericSchema<NestedRawSnippetArray> =
+    v.lazy(() =>
+        v.array(v.union([RawSnippetSchema, NestedRawSnippetArraySchema])),
+    );
+export async function importString(
+    source: string,
+    identifier: string = "snippets.js",
+) {
+    const blob = new Blob([source], { type: "text/javascript" });
+    const file = new File([blob], identifier, { type: "text/javascript" });
+    const url = URL.createObjectURL(file);
+    const module = await import(url);
+    return module;
+}
+export async function importSnippets(source: string): Promise<unknown> {
+    const module_default = await importString(source, "snippets.js");
+    if (module_default.default) return module_default.default;
+    const module = await importString(
+        "export default " + source,
+        "snippets_with_export.js",
+    );
+    return module.default;
+}
+export const UnParsedSnippetSnippetVariablesSchema = v.pipe(
+    v.string(),
+    v.transform((str): unknown => json5.parse(str)),
+);
+export const SnippetVariablesSchema = v.pipe(
+    v.union([
+        v.pipe(
+            UnParsedSnippetSnippetVariablesSchema,
+            v.record(v.string(), v.string()),
+        ),
+        v.record(v.string(), v.string()),
+    ]),
+    v.transform((rawSnippetVariables: Record<string, string>) => {
+        const snippetVariables: SnippetVariables = {};
+        for (const [variable, value] of Object.entries(rawSnippetVariables)) {
+            if (variable.startsWith("${")) {
+                if (!variable.endsWith("}")) {
+                    throw `Invalid snippet variable name '${variable}': Starts with '\${' but does not end with '}'. You need to have both or neither.`;
+                }
+                snippetVariables[variable as `$\{${string}}`] = value;
+            } else {
+                if (variable.endsWith("}")) {
+                    throw `Invalid snippet variable name '${variable}': Ends with '}' but does not start with '\${'. You need to have both or neither.`;
+                }
+                snippetVariables[("${" + variable + "}") as `$\{${string}}`] =
+                    value;
+            }
+        }
+        return snippetVariables;
+    }),
+);
+export const SnippetSchemaSync = v.pipe(
+    v.object({
+        snippets: v.pipe(
+            NestedRawSnippetArraySchema,
+            v.transform((arr) => arr.flat(<20>Infinity)),
+            v.array(RawSnippetSchema),
+        ),
+        snippetVariables: SnippetVariablesSchema,
+        version: v.optional(v.union([v.literal(1), v.literal(2)]), 2),
+    }),
+    v.transform(({ snippets, snippetVariables, version }) => {
+        const parsed_snippets = snippets.map((raw) => {
+            return parseSnippet(raw, snippetVariables, version);
+        });
+        return { snippets: sortSnippets(parsed_snippets), snippetVariables };
+    }),
+);
+export const SnippetSchemaAsync = v.pipeAsync(
+    v.objectAsync({
+        snippets: v.pipeAsync(
+            v.string(),
+            v.transform(importSnippets),
+            v.awaitAsync(),
+        ),
+        snippetVariables: v.pipe(
+            v.string(),
+            UnParsedSnippetSnippetVariablesSchema,
+            SnippetVariablesSchema,
+        ),
+        version: v.optional(v.union([v.literal(1), v.literal(2)]), 2),
+    }),
+    v.transform((obj) => v.parse(SnippetSchemaSync, obj)),
+);
+export const SnippetSchema = v.unionAsync([
+    SnippetSchemaAsync,
+    SnippetSchemaSync,
+]);
+export const SettingsSchema = v.intersectAsync([
+    latexSuiteBasicSettingsSchema,
+    LatexSuiteRawSettingsSchema,
+    SnippetSchema,
+]);

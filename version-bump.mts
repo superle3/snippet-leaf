@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync } from "fs";
 import path from "path";
 
-const semanticBump = process.argv[2];
+const semanticBump = process.env.npm_package_version;
 
 const files = [
     "package.json",
@@ -10,8 +10,7 @@ const files = [
     "package-lock.json",
 ];
 const dir = path.dirname(new URL(import.meta.url).pathname);
-/** @type {string[]} */
-const versions = [];
+const versions: string[] = [];
 for (const filename of files) {
     const file = path.join(dir, filename);
     const content = readFileSync(file, "utf-8");
@@ -30,20 +29,13 @@ const maxVersion = versions.reduce((a, b) => {
 
 const [major, minor, patch] = maxVersion.split(".").map(Number);
 /** @type {string} */
-let newVersion;
-if (semanticBump === "major") {
-    newVersion = `${major + 1}.0.0`;
-} else if (semanticBump === "minor") {
-    newVersion = `${major}.${minor + 1}.0`;
-} else {
-    newVersion = `${major}.${minor}.${patch + 1}`;
-}
+console.log(semanticBump, major, minor, patch);
 
 for (const filename of files) {
     const file = path.join(dir, filename);
     const content = readFileSync(file, "utf-8");
     const json = JSON.parse(content);
-    json.version = newVersion;
+    json.version = semanticBump;
     writeFileSync(file, JSON.stringify(json, null, 4) + "\n", "utf-8");
-    console.log(`Bumped version in ${filename} to ${newVersion}`);
+    console.log(`Bumped version in ${filename} to ${semanticBump}`);
 }

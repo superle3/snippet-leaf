@@ -1,24 +1,25 @@
 {
     "name": "snippetleaf-monorepo",
     "private": true,
-    "version": "0.0.7",
+    "version": "0.0.9",
     "workspaces": [
         "browser_extension",
         "codemirror_extension"
     ],
     "license": "MIT",
     "scripts": {
-        "web:watch": "node esbuild.config.mjs web",
-        "web:build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production && env --chdir=./browser_extension -S npm run build",
-        "web:sign": "npm run web:build && dotenv -e .env -- env --chdir=./browser_extension -S npm run lint && env --chdir=./browser_extension -S npm run sign",
-        "web:lint": "eslint --ext .ts,.js src browser_extension --fix && env --chdir=./browser_extension -S web-ext lint",
+        "web:watch": "tsx esbuild.config.mts web",
+        "web:build": "tsc -noEmit -skipLibCheck && tsx esbuild.config.mts production && cd ./browser_extension && npm run build",
+        "web:sign": "npm run web:build && dotenv -e .env -- cd ./browser_extension && npm run lint &&  npm run sign",
+        "web:lint": "eslint --ext .ts,.js src browser_extension --fix && cd ./browser_extension && web-ext lint",
         "web:full": "concurrently \"npm run web:ext\" \"npm run web:watch\"",
-        "web:ext": "env --chdir=./browser_extension -S web-ext run",
+        "web:ext": "cd./browser_extension && web-ext run",
         "lint": "eslint --ext .ts,.js src browser_extension codemirror_extension --fix",
-        "prepare": "npm run build:rollup",
         "format": "prettier --write .",
         "format:commit": "pretty-quick --staged",
-        "build:rollup": "rollup -c"
+        "build:rollup": "rollup -c",
+        "build:greasemonkey": "tsx esbuild.config.mts userscript",
+        "version": "tsx version-bump.mts && npm run format && git add ."
     },
     "keywords": [
         "latex",
@@ -31,7 +32,7 @@
     "dependencies": {
         "js-base64": "^3.7.7",
         "json5": "^2.2.3",
-        "valibot": "^0.24.1"
+        "valibot": "^1.3.1"
     },
     "devDependencies": {
         "@codemirror/autocomplete": "^6.0.0",
@@ -50,14 +51,15 @@
         "@rollup/plugin-terser": "^0.4.4",
         "@rollup/plugin-typescript": "^12.1.4",
         "@types/firefox-webext-browser": "^120.0.4",
-        "@types/node": "^24.1.0",
+        "@types/node": "^24.12.2",
         "@types/web": "^0.0.263",
         "@typescript-eslint/eslint-plugin": "^8.38.0",
         "@typescript-eslint/parser": "^8.38.0",
         "concurrently": "^9.2.0",
         "dotenv-cli": "^11.0.0",
-        "esbuild": "^0.20.2",
+        "esbuild": "^0.28.0",
         "esbuild-plugin-inline-import": "^1.0.2",
+        "esbuild-plugin-json5": "^0.0.1",
         "eslint": "^9.32.0",
         "eslint-import-resolver-typescript": "^4.4.4",
         "eslint-plugin-import": "^2.32.0",
@@ -68,6 +70,7 @@
         "rollup": "^4.46.1",
         "rollup-plugin-dts": "^6.2.1",
         "tslib": "2.3.1",
+        "tsx": "^4.21.0",
         "typescript-eslint": "^8.39.1",
         "web-ext": "^9.1.0"
     },
@@ -76,7 +79,6 @@
     "main": "codemirror_extension/dist/index.js",
     "pre-commit": [
         "web:build",
-        "build:rollup",
         "format:commit"
     ]
 }

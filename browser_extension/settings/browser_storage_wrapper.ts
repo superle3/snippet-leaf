@@ -1,7 +1,7 @@
 /// <reference types="firefox-webext-browser" />
 import browser from "webextension-polyfill";
 import { compressToUint8Array, decompressFromUint8Array } from "lz-string";
-import { DEFAULT_SETTINGS_RAW } from "../../src/settings/settings";
+import { DEFAULT_SETTINGS_RAW } from "src/settings/default_raw_settings";
 
 function uint8ArrayToBase64(uint8Array: Uint8Array): string {
     return btoa(String.fromCharCode(...uint8Array));

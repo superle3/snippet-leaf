@@ -1,0 +1,186 @@
+import type {
+    EditorSelection as EditorSelectionC,
+    Extension as ExtensionC,
+    StateEffect as StateEffectC,
+    StateField as StateFieldC,
+    Prec as PrecC,
+    Facet as FacetC,
+    RangeSet as RangeSetC,
+    RangeValue as RangeValueC,
+    RangeSetBuilder as RangeSetBuilderC,
+    ChangeSet as ChangeSetC,
+    Compartment as CompartmentC,
+} from "@codemirror/state";
+import type {
+    undo as undoC,
+    redo as redoC,
+    isolateHistory as isolateHistoryC,
+    invertedEffects as invertedEffectsC,
+} from "@codemirror/commands";
+import type {
+    Decoration as DecorationC,
+    EditorView as EditorViewC,
+    KeyBinding as KeyBindingC,
+    ViewPlugin as ViewPluginC,
+    ViewUpdate as ViewUpdateC,
+    WidgetType as WidgetTypeC,
+    hoverTooltip as hoverTooltipC,
+} from "@codemirror/view";
+import type { syntaxTree as syntaxTreeC } from "@codemirror/language";
+
+import { main } from "../src/extension";
+import {
+    RangeSet,
+    RangeSetBuilder,
+    RangeValue,
+} from "../browser_extension/codemirror_range_objects";
+import { processLatexSuiteSettings } from "../src/settings/settings";
+import type { LatexSuitePluginSettingsRaw } from "src/settings/default_settings";
+import type { LatexSuitePluginSettings } from "src/settings/default_settings";
+import { getSettingsSnippets } from "src/settings/settings_parser";
+import { getSettingsSnippetVariables } from "src/settings/settings_parser";
+
+type CodeMirrorExt = {
+    Decoration: typeof DecorationC;
+    EditorSelection: typeof EditorSelectionC;
+    EditorView: typeof EditorViewC;
+    Prec: typeof PrecC;
+    StateField: typeof StateFieldC;
+    StateEffect: typeof StateEffectC;
+    ViewPlugin: typeof ViewPluginC;
+    ViewUpdate: typeof ViewUpdateC;
+    WidgetType: typeof WidgetTypeC;
+    hoverTooltip: typeof hoverTooltipC;
+    keymap: FacetC<readonly KeyBindingC[]>;
+    syntaxTree: typeof syntaxTreeC;
+    invertedEffects: typeof invertedEffectsC;
+    ChangeSet: typeof ChangeSetC;
+    undo: typeof undoC;
+    redo: typeof redoC;
+    isolateHistory: typeof isolateHistoryC;
+};
+
+type extraExtensions = {
+    RangeSet: typeof RangeSetC;
+    RangeValue: typeof RangeValueC;
+    RangeSetBuilder: typeof RangeSetBuilderC;
+};
+declare global {
+    var SNIPPETLEAF_USER_SETTINGS: LatexSuitePluginSettings;
+}
+
+async function userscript_main() {
+    // Inject settings into a global variable for easy access
+    // Use document.currentScript.dataset or similar if settings need to be passed at runtime
+    const settings = processLatexSuiteSettings(SNIPPETLEAF_USER_SETTINGS);
+
+    // Listen for CodeMirror editor instances being created
+    // This handles sites like Overleaf that use CodeMirror
+    window.addEventListener("UNSTABLE_editor:extensions", async (e) => {
+        const evt = e as unknown as CustomEvent<{
+            CodeMirror: CodeMirrorExt;
+            extensions: ExtensionC[];
+            CodeMirrorVim?: any;
+            extraExtensions?: extraExtensions;
+        }>;
+
+        const { CodeMirror, extensions } = evt.detail;
+        const { keymap } = CodeMirror;
+        const Facet = Object.getPrototypeOf(keymap)
+            .constructor as typeof FacetC;
+
+        const { extension: latex_suite_extensions, latexSuiteConfig } = main(
+            {
+                ...CodeMirror,
+                Facet,
+                //@ts-ignore
+                RangeSet,
+                //@ts-ignore
+                RangeSetBuilder,
+                RangeValue,
+            },
+            settings,
+        );
+
+        extensions.push(latex_suite_extensions);
+
+        // Set up configuration compartment for runtime updates
+        let view: EditorViewC | null = null;
+        await new Promise((resolve) => {
+            //@ts-expect-error - not correctly typed.
+            view = CodeMirror.EditorView.findFromDOM(document);
+            const conf_interval = setInterval(() => {
+                //@ts-expect-error - internal type.
+                if (view.state?.config.base.length > 0) resolve(true);
+                clearInterval(conf_interval);
+            }, 100);
+        });
+
+        //@ts-expect-error - internal type.
+        const Compartment: typeof CompartmentC = view.state.config.compartments
+            .keys()
+            .next().value.constructor;
+        const latexSuiteConfigCompartment = new Compartment();
+        extensions.push(
+            latexSuiteConfigCompartment.of(latexSuiteConfig.of(settings)),
+        );
+        window.addEventListener("snippet_leaf_config_send", (e) => {
+            const evt = e as CustomEvent<string>;
+            const config = JSON.parse(evt.detail);
+            processRawLatexSuiteSettings(config).then((parsed_settings) => {
+                if (parsed_settings) {
+                    view.dispatch({
+                        effects: latexSuiteConfigCompartment.reconfigure(
+                            latexSuiteConfig.of(parsed_settings),
+                        ),
+                    });
+                    const messageBox = document.createElement("div");
+                    messageBox.style.position = "fixed";
+                    messageBox.style.top = "2rem";
+                    messageBox.style.right = "1rem";
+                    messageBox.style.backgroundColor = "rgba(0, 0, 0, 0.7)";
+                    messageBox.style.color = "white";
+                    messageBox.style.padding = "10px";
+                    messageBox.style.borderRadius = "5px";
+                    messageBox.style.zIndex = "1000";
+                    messageBox.textContent = "Snippetleaf settings updated!";
+                    window.document.body.appendChild(messageBox);
+
+                    setTimeout(() => {
+                        document.body.removeChild(messageBox);
+                    }, 3000);
+                }
+            });
+        });
+        window.dispatchEvent(new CustomEvent("snippet_leaf_config_listen"));
+    });
+}
+
+userscript_main().catch((err) => {
+    console.error("SnippetLeaf userscript error:", err);
+});
+
+async function processRawLatexSuiteSettings(
+    rawSettings: LatexSuitePluginSettingsRaw & {
+        snippetVariables: string;
+        snippets: string;
+    },
+): Promise<LatexSuitePluginSettings | null> {
+    const snippetVariables = getSettingsSnippetVariables(
+        rawSettings.snippetVariables,
+    );
+    const snippets = await getSettingsSnippets(
+        rawSettings.snippets,
+        snippetVariables,
+        rawSettings.defaultSnippetVersion,
+    );
+    if (!snippets || !snippetVariables) {
+        console.error("Failed to process settings snippets or variables");
+        return null;
+    }
+    return {
+        ...rawSettings,
+        snippets,
+        snippetVariables,
+    };
+}

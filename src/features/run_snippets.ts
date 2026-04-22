@@ -1,6 +1,6 @@
 import type { EditorView } from "@codemirror/view";
 import type { EditorState, SelectionRange } from "@codemirror/state";
-import { getLatexSuiteConfig } from "src/settings/settings";
+import { getLatexSuiteConfig } from "src/settings/raw_settings";
 import { Mode } from "src/snippets/options";
 import { getContextPlugin } from "src/latex_context/context";
 import { autoEnlargeBrackets } from "./auto_enlarge_brackets";

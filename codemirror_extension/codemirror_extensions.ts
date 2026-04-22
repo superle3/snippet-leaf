@@ -27,14 +27,12 @@ import {
 import { syntaxTree } from "@codemirror/language";
 
 import { main } from "../src/extension";
-import type { LatexSuitePluginSettings } from "../src/settings/settings";
-import {
-    DEFAULT_SETTINGS,
-    DEFAULT_SETTINGS_RAW,
-    getSettingsSnippets,
-    getSettingsSnippetVariables,
-    SETTINGS_EXPLANATIONS,
-} from "../src/settings/settings";
+import type { LatexSuitePluginSettings } from "src/settings/default_settings";
+import { DEFAULT_SETTINGS } from "src/settings/default_settings";
+import { getSettingsSnippets } from "src/settings/settings_parser";
+import { getSettingsSnippetVariables } from "src/settings/settings_parser";
+import { SETTINGS_EXPLANATIONS } from "src/settings/setting_docs";
+import { DEFAULT_SETTINGS_RAW } from "src/settings/default_raw_settings";
 import {
     DEFAULT_SNIPPETS,
     DEFAULT_SNIPPETS_str,
@@ -99,7 +97,7 @@ export type {
     LatexSuitePluginSettingsRaw,
     LatexSuiteCMSettings,
     LatexSuitePluginSettings,
-    LatexSuiteFacet,
-    LatexSuitePluginSettingsExplanations,
-} from "../src/settings/settings";
+} from "../src/settings/default_settings";
+export type { LatexSuitePluginSettingsExplanations } from "../src/settings/raw_settings";
 export type { Snippet } from "../src/snippets/snippets.ts";
+export { LatexSuiteFacet } from "src/settings/settings";
