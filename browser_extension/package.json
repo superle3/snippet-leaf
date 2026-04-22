@@ -1,6 +1,6 @@
 {
     "name": "snippetleaf",
-    "version": "0.0.7",
+    "version": "0.0.10",
     "private": true,
     "description": "Browser extension project",
     "type": "module",
