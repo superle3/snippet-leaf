@@ -9,7 +9,7 @@
     "license": "MIT",
     "scripts": {
         "web:watch": "node esbuild.config.mts web",
-        "web:build": "tsc -noEmit -skipLibCheck && node esbuild.config.mts production && env --chdir=./browser_extension -S npm run build",
+        "web:build": "tsc -noEmit -skipLibCheck && node esbuild.config.mts production && cd ./browser_extension && npm run build",
         "web:sign": "npm run web:build && dotenv -e .env -- env --chdir=./browser_extension -S npm run lint && env --chdir=./browser_extension -S npm run sign",
         "web:lint": "eslint --ext .ts,.js src browser_extension --fix && env --chdir=./browser_extension -S web-ext lint",
         "web:full": "concurrently \"npm run web:ext\" \"npm run web:watch\"",
