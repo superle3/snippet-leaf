@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.0.10 (2026-04-23)
+
+### Features
+
+- Add support for greasemonkey
+
 ## 0.0.7 (2026-03-18)
 
 ### Bug fixes
