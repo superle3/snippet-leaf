@@ -10,7 +10,7 @@
     "scripts": {
         "web:watch": "tsx esbuild.config.mts web",
         "web:build": "tsc -noEmit -skipLibCheck && tsx esbuild.config.mts production && cd ./browser_extension && npm run build",
-        "web:sign": "npm run web:build && dotenv -e .env -- cd ./browser_extension && npm run lint &&  npm run sign",
+        "web:sign": "npm run web:build && cd ./browser_extension && dotenv -e .env -- npm run lint &&  npm run sign",
         "web:lint": "eslint --ext .ts,.js src browser_extension --fix && cd ./browser_extension && web-ext lint",
         "web:full": "concurrently \"npm run web:ext\" \"npm run web:watch\"",
         "web:ext": "cd./browser_extension && web-ext run",
