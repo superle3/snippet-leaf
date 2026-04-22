@@ -5,7 +5,7 @@ import { debounce } from "src/utils/debounce";
 
 async function send_config(): Promise<void> {
     const config = await get_transpiled_settings();
-    document.dispatchEvent(
+    window.dispatchEvent(
         new CustomEvent("snippet_leaf_config_send", {
             detail: JSON.stringify(config),
             bubbles: true,
@@ -98,7 +98,7 @@ const compiler = (source: string) => {
 };
 
 const delayed_send_config = debounce(send_config, 3000);
-document.addEventListener("snippet_leaf_config_listen", async () => {
+window.addEventListener("snippet_leaf_config_listen", async () => {
     await send_config();
 });
 

@@ -124,7 +124,7 @@ async function userscript_main() {
         extensions.push(
             latexSuiteConfigCompartment.of(latexSuiteConfig.of(settings)),
         );
-        document.addEventListener("snippet_leaf_config_send", (e) => {
+        window.addEventListener("snippet_leaf_config_send", (e) => {
             const evt = e as CustomEvent<string>;
             const config = JSON.parse(evt.detail);
             processRawLatexSuiteSettings(config).then((parsed_settings) => {
@@ -152,7 +152,7 @@ async function userscript_main() {
                 }
             });
         });
-        document.dispatchEvent(new CustomEvent("snippet_leaf_config_listen"));
+        window.dispatchEvent(new CustomEvent("snippet_leaf_config_listen"));
     });
 }
 

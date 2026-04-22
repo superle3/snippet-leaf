@@ -204,10 +204,14 @@ const SnippetSchemaAsync = v.pipeAsync(
     v.transform((obj) => v.parse(SnippetSchemaSync, obj)),
 );
 
-const SnippetSchema = v.unionAsync([SnippetSchemaAsync, SnippetSchemaSync]);
+export const SnippetSchema = v.unionAsync([
+    SnippetSchemaAsync,
+    SnippetSchemaSync,
+]);
+
 export const SettingsSchema = v.intersectAsync([
     latexSuiteBasicSettingsSchema,
-    LatexSuiteRawOrParsedSettingsSchema,
+    LatexSuiteRawSettingsSchema,
     SnippetSchema,
 ]);
 
