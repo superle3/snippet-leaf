@@ -26,15 +26,13 @@ import type {
 } from "@codemirror/view";
 import type { syntaxTree as syntaxTreeC } from "@codemirror/language";
 import { handleUpdate, onKeydown } from "./latex_suite";
-import type { LatexSuiteCMSettings } from "./settings/settings";
-import type { LatexSuitePluginSettings } from "./settings/settings";
+import type { LatexSuiteCMSettings } from "./settings/default_settings";
+import type { LatexSuitePluginSettings } from "./settings/default_settings";
 import { create_snippet_extensions } from "./snippets/codemirror/extensions";
 import type { invertedEffects as invertedEffectsC } from "@codemirror/commands";
-import {
-    DEFAULT_SETTINGS,
-    processLatexSuiteSettings,
-    setLatexSuiteConfig,
-} from "./settings/settings";
+import { processLatexSuiteSettings } from "./settings/settings";
+import { DEFAULT_SETTINGS } from "./settings/default_settings";
+import { setLatexSuiteConfig } from "./settings/raw_settings";
 import { stateEffect_variables } from "./snippets/codemirror/history";
 import { create_tabstopsStateField } from "./snippets/codemirror/tabstops_state_field";
 import { mkConcealPlugin } from "./conceal_plugin/conceal";

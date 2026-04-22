@@ -2,7 +2,7 @@
 
 import type { ConcealCachedEquations } from "./conceal_fns";
 import { conceal } from "./conceal_fns";
-import { getLatexSuiteConfig } from "src/settings/settings";
+import { getLatexSuiteConfig } from "src/settings/raw_settings";
 import { debounce } from "src/utils/debounce";
 import {
     Decoration,

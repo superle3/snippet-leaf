@@ -9,7 +9,7 @@ import { getContextPlugin } from "./latex_context/context";
 import { replaceRange } from "./utils/editor_utils";
 import { setSelectionToNextTabstop } from "./snippets/snippet_management";
 import { removeAllTabstops } from "./snippets/codemirror/tabstops_state_field";
-import { getLatexSuiteConfig } from "./settings/settings";
+import { getLatexSuiteConfig } from "./settings/raw_settings";
 
 // import { handleMathTooltip } from "./editor_extensions/math_tooltip";
 import { isComposing } from "./utils/editor_utils";

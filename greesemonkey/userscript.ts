@@ -27,21 +27,16 @@ import type {
     hoverTooltip as hoverTooltipC,
 } from "@codemirror/view";
 import type { syntaxTree as syntaxTreeC } from "@codemirror/language";
-import type {
-    CodeMirror as CodeMirrorVimC,
-    Vim as VimC,
-    getCM as getCMC,
-} from "@replit/codemirror-vim";
 
 import { main } from "../src/extension";
 import {
     RangeSet,
     RangeSetBuilder,
     RangeValue,
-} from "./codemirror_range_objects";
-import type { LatexSuitePluginSettingsRaw } from "src/settings/default_settings";
-import type { LatexSuitePluginSettings } from "src/settings/default_settings";
-import { DEFAULT_SETTINGS } from "src/settings/default_settings";
+} from "../browser_extension/codemirror_range_objects";
+import { processLatexSuiteSettings } from "../src/settings/settings";
+import { LatexSuitePluginSettingsRaw } from "src/settings/default_settings";
+import { LatexSuitePluginSettings } from "src/settings/default_settings";
 import { getSettingsSnippets } from "src/settings/settings_parser";
 import { getSettingsSnippetVariables } from "src/settings/settings_parser";
 
@@ -65,33 +60,35 @@ type CodeMirrorExt = {
     isolateHistory: typeof isolateHistoryC;
 };
 
-type CodeMirrorVimExt = {
-    Vim: typeof VimC;
-    getCM: typeof getCMC;
-    CodeMirror: typeof CodeMirrorVimC;
-};
 type extraExtensions = {
     RangeSet: typeof RangeSetC;
     RangeValue: typeof RangeValueC;
     RangeSetBuilder: typeof RangeSetBuilderC;
 };
+declare global {
+    var SNIPPETLEAF_USER_SETTINGS: LatexSuitePluginSettings;
+}
 
-type OverleafEventDetail = {
-    CodeMirror: CodeMirrorExt;
-    extensions: ExtensionC[];
-    CodeMirrorVim: CodeMirrorVimExt;
-    extraExtensions?: extraExtensions;
-};
+async function userscript_main() {
+    // Inject settings into a global variable for easy access
+    // Use document.currentScript.dataset or similar if settings need to be passed at runtime
+    const settings = processLatexSuiteSettings(SNIPPETLEAF_USER_SETTINGS);
 
-type Overleaf_event = CustomEvent<OverleafEventDetail>;
-
-async function browser_main() {
+    // Listen for CodeMirror editor instances being created
+    // This handles sites like Overleaf that use CodeMirror
     window.addEventListener("UNSTABLE_editor:extensions", async (e) => {
-        const evt = e as unknown as Overleaf_event;
+        const evt = e as unknown as CustomEvent<{
+            CodeMirror: CodeMirrorExt;
+            extensions: ExtensionC[];
+            CodeMirrorVim?: any;
+            extraExtensions?: extraExtensions;
+        }>;
+
         const { CodeMirror, extensions } = evt.detail;
         const { keymap } = CodeMirror;
         const Facet = Object.getPrototypeOf(keymap)
             .constructor as typeof FacetC;
+
         const { extension: latex_suite_extensions, latexSuiteConfig } = main(
             {
                 ...CodeMirror,
@@ -102,9 +99,12 @@ async function browser_main() {
                 RangeSetBuilder,
                 RangeValue,
             },
-            DEFAULT_SETTINGS,
+            settings,
         );
+
         extensions.push(latex_suite_extensions);
+
+        // Set up configuration compartment for runtime updates
         let view: EditorViewC | null = null;
         await new Promise((resolve) => {
             //@ts-expect-error - not correctly typed.
@@ -115,15 +115,15 @@ async function browser_main() {
                 clearInterval(conf_interval);
             }, 100);
         });
+
         //@ts-expect-error - internal type.
         const Compartment: typeof CompartmentC = view.state.config.compartments
             .keys()
             .next().value.constructor;
         const latexSuiteConfigCompartment = new Compartment();
         extensions.push(
-            latexSuiteConfigCompartment.of(latexSuiteConfig.of({})),
+            latexSuiteConfigCompartment.of(latexSuiteConfig.of(settings)),
         );
-
         document.addEventListener("snippet_leaf_config_send", (e) => {
             const evt = e as CustomEvent<string>;
             const config = JSON.parse(evt.detail);
@@ -155,7 +155,10 @@ async function browser_main() {
         document.dispatchEvent(new CustomEvent("snippet_leaf_config_listen"));
     });
 }
-browser_main();
+
+userscript_main().catch((err) => {
+    console.error("SnippetLeaf userscript error:", err);
+});
 
 async function processRawLatexSuiteSettings(
     rawSettings: LatexSuitePluginSettingsRaw & {

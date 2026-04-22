@@ -17,6 +17,7 @@
     "include": [
         "src/**/*.ts",
         "codemirror_extension/**/*.ts",
-        "browser_extension/**/*.ts"
+        "browser_extension/**/*.ts",
+        "greesemonkey/**/*.ts"
     ]
 }

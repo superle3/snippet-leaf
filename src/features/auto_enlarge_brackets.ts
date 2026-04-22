@@ -4,7 +4,7 @@ import { expandSnippets } from "src/snippets/snippet_management";
 import { getContextPlugin } from "src/latex_context/context";
 import { escapeRegex } from "src/conceal_plugin/conceal_fns";
 import { isContains, inObject } from "src/utils/type_utils";
-import { getLatexSuiteConfig } from "src/settings/settings";
+import { getLatexSuiteConfig } from "src/settings/raw_settings";
 
 const sizeControls = [
     "\\big",

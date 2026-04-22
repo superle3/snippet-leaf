@@ -1,4 +1,3 @@
-import type { Output } from "valibot";
 import {
     optional,
     object,
@@ -7,11 +6,12 @@ import {
     instance,
     parse,
     number,
-    special,
     literal,
+    InferOutput,
+    custom,
 } from "valibot";
 import { encode } from "js-base64";
-import type { Snippet } from "./snippets";
+import type { Snippet, SnippetType } from "./snippets";
 import {
     RegexSnippet,
     serializeSnippetLike,
@@ -152,11 +152,11 @@ async function importModuleDefault(module: string): Promise<unknown> {
 
 /** raw snippet IR */
 
-const RawSnippetSchema = object({
+export const RawSnippetSchema = object({
     trigger: union([string_(), instance(RegExp)]),
     replacement: union([
         string_(),
-        special<AnyFunction>((x) => typeof x === "function"),
+        custom<AnyFunction>((x) => typeof x === "function"),
     ]),
     options: string_(),
     flags: optional(string_()),
@@ -165,7 +165,7 @@ const RawSnippetSchema = object({
     version: optional(union([literal(1), literal(2)])),
 });
 
-export type RawSnippet = Output<typeof RawSnippetSchema>;
+export type RawSnippet = InferOutput<typeof RawSnippetSchema>;
 
 /**
  * tries to parse an unknown value as an array of raw snippets
@@ -193,7 +193,7 @@ function validateRawSnippets(snippets: unknown): RawSnippet[] {
  * - `options.regex` and `options.visual` are set properly
  * - if it is a regex snippet, the trigger is represented as a RegExp instance with flags set
  */
-function parseSnippet(
+export function parseSnippet(
     raw: RawSnippet,
     snippetVariables: SnippetVariables,
     defaultSnippetVersion: 1 | 2 = 2,

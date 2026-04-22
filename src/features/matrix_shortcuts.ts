@@ -1,6 +1,6 @@
 import type { EditorView } from "@codemirror/view";
 import { setCursor } from "src/utils/editor_utils";
-import { getLatexSuiteConfig } from "src/settings/settings";
+import { getLatexSuiteConfig } from "src/settings/raw_settings";
 import { getContextPlugin } from "src/latex_context/context";
 import { queueSnippet } from "src/snippets/codemirror/snippet_queue_state_field";
 import { expandSnippets } from "src/snippets/snippet_management";

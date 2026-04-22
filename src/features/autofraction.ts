@@ -3,7 +3,7 @@ import type { SelectionRange } from "@codemirror/state";
 import { findMatchingBracket, getOpenBracket } from "src/utils/editor_utils";
 import { expandSnippets } from "../snippets/snippet_management";
 import { autoEnlargeBrackets } from "./auto_enlarge_brackets";
-import { getLatexSuiteConfig } from "src/settings/settings";
+import { getLatexSuiteConfig } from "src/settings/raw_settings";
 import { queueSnippet } from "src/snippets/codemirror/snippet_queue_state_field";
 import { getContextPlugin } from "src/latex_context/context";
 

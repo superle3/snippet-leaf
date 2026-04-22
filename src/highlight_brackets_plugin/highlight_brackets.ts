@@ -8,7 +8,7 @@ import {
 } from "../utils/editor_utils";
 import type { Context } from "src/latex_context/context";
 import { getContextPlugin } from "src/latex_context/context";
-import { getLatexSuiteConfig } from "src/settings/settings";
+import { getLatexSuiteConfig } from "src/settings/raw_settings";
 import { getMathBoundsPlugin } from "src/latex_context/mathbounds";
 const Ncolors = 3;
 
