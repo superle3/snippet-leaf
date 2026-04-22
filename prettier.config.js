@@ -13,7 +13,7 @@ const config = {
                 "browser_extension/**/*.ts",
                 "codemirror_extension/**/*.ts",
                 "src/**/*.ts",
-                "esbuild.config.mjs",
+                "esbuild.config.mts",
                 "rollup.config.mjs",
                 "eslint.config.mjs",
                 "prettier.config.js",
