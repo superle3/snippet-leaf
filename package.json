@@ -17,7 +17,8 @@
         "lint": "eslint --ext .ts,.js src browser_extension codemirror_extension --fix",
         "format": "prettier --write .",
         "format:commit": "pretty-quick --staged",
-        "build:rollup": "rollup -c"
+        "build:rollup": "rollup -c",
+        "build:greesemonkey": "tsx esbuild.config.mts userscript"
     },
     "keywords": [
         "latex",
@@ -68,6 +69,7 @@
         "rollup": "^4.46.1",
         "rollup-plugin-dts": "^6.2.1",
         "tslib": "2.3.1",
+        "tsx": "^4.21.0",
         "typescript-eslint": "^8.39.1",
         "web-ext": "^9.1.0"
     },
