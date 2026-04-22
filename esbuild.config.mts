@@ -234,7 +234,13 @@ const userscriptConfig = {
 const userscriptSettingsBundleConfig = {
     ...userscriptConfig,
     banner: undefined,
-    entryPoints: ["greesemonkey/settings_bundle.ts"],
+    entryPoints: [
+        { in: "greesemonkey/settings_bundle.ts", out: "settings_bundle" },
+        {
+            in: "browser_extension/browser_extension.ts",
+            out: "browser_extension",
+        },
+    ],
     format: "cjs",
     outdir: "greesemonkey/dist",
     outExtension: { ".js": ".user.js" },

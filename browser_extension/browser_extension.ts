@@ -40,19 +40,10 @@ import {
     RangeSetBuilder,
     RangeValue,
 } from "./codemirror_range_objects";
-import type {
-    LatexSuiteCMSettings,
-    LatexSuitePluginSettingsRaw,
-} from "src/settings/default_settings";
-import type { LatexSuitePluginSettings } from "src/settings/default_settings";
-import {
-    DEFAULT_SETTINGS,
-    SettingsSchema,
-    SnippetSchema,
-} from "src/settings/default_settings";
-import { getSettingsSnippets } from "src/settings/settings_parser";
-import { getSettingsSnippetVariables } from "src/settings/settings_parser";
-import { LatexSuiteFacet } from "codemirror_extension/codemirror_extensions";
+import type { LatexSuiteCMSettings } from "src/settings/default_settings";
+import { DEFAULT_SETTINGS } from "src/settings/default_settings";
+import { SettingsSchema } from "src/settings/settings";
+import type { LatexSuiteFacet } from "codemirror_extension/codemirror_extensions";
 
 type CodeMirrorExt = {
     Decoration: typeof DecorationC;
@@ -174,7 +165,10 @@ const loadSettings = () => {
         const latexSuiteConfigCompartmentTemp = latexSuiteConfigCompartment;
         const latexSuiteConfigTemp = latexSuiteConfig;
         const evt = e as CustomEvent<string>;
-        const config: unknown = JSON.parse(evt.detail);
+        const config: unknown =
+            typeof evt.detail === "string"
+                ? JSON.parse(evt.detail)
+                : evt.detail;
         v.safeParseAsync(SettingsSchema, config).then((parsed_settings) => {
             if (!parsed_settings.success) {
                 return;

@@ -35,8 +35,8 @@ import {
     RangeValue,
 } from "../browser_extension/codemirror_range_objects";
 import { processLatexSuiteSettings } from "../src/settings/settings";
-import { LatexSuitePluginSettingsRaw } from "src/settings/default_settings";
-import { LatexSuitePluginSettings } from "src/settings/default_settings";
+import type { LatexSuitePluginSettingsRaw } from "src/settings/default_settings";
+import type { LatexSuitePluginSettings } from "src/settings/default_settings";
 import { getSettingsSnippets } from "src/settings/settings_parser";
 import { getSettingsSnippetVariables } from "src/settings/settings_parser";
 
