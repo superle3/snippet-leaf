@@ -5,13 +5,10 @@ import type {
     Snippet,
     SnippetVariables,
 } from "codemirror_extension/codemirror_extensions";
-import type { Environment } from "src/snippets/environment";
-import type { SnippetType } from "src/snippets/snippets";
 import * as v from "valibot";
 import { parseSnippet, RawSnippetSchema } from "src/snippets/parse";
 import json5 from "json5";
 import { sortSnippets } from "src/snippets/sort";
-import snippets from "src/default_snippets";
 
 export const DEFAULT_SETTINGS: LatexSuitePluginSettings &
     LatexSuiteRawSettings = {
@@ -49,15 +46,48 @@ export type LatexSuitePluginSettings = {
     snippets: Array<RawSnippet | Snippet>;
     snippetVariables: SnippetVariables;
 } & LatexSuiteBasicSettings &
-    (LatexSuiteRawSettings | LatexSuiteParsedSettings); /**
+    v.InferInput<typeof LatexSuiteRawOrParsedSettingsSchema>; /**
  * Settings that require further processing (e.g. conversion to an array) before being used.
  */
+const EnvironmentSchema = v.object({
+    openSymbol: v.string(),
+    closeSymbol: v.string(),
+});
+const StrToArraySchema = v.union([
+    v.pipe(
+        v.string(),
+        v.transform((str) => str.replace(/\s/g, "").split(",")),
+    ),
+]);
+const LatexSuiteParsedSettingsSchema = v.object({
+    autofractionExcludedEnvs: v.array(EnvironmentSchema),
+    matrixShortcutsEnvNames: v.array(v.string()),
+    autoEnlargeBracketsTriggers: v.array(v.string()),
+});
 
-export interface LatexSuiteRawSettings {
-    autofractionExcludedEnvs: string;
-    matrixShortcutsEnvNames: string;
-    autoEnlargeBracketsTriggers: string;
-}
+const LatexSuiteRawSettingsSchema = v.object({
+    autofractionExcludedEnvs: v.pipe(
+        v.string(),
+        v.parseJson(),
+        v.array(
+            v.pipe(
+                v.tuple([v.string(), v.string()]),
+                v.transform(([openSymbol, closeSymbol]) => ({
+                    openSymbol,
+                    closeSymbol,
+                })),
+            ),
+        ),
+    ),
+    matrixShortcutsEnvNames: StrToArraySchema,
+    autoEnlargeBracketsTriggers: StrToArraySchema,
+});
+
+const LatexSuiteRawOrParsedSettingsSchema = v.union([
+    LatexSuiteRawSettingsSchema,
+    LatexSuiteParsedSettingsSchema,
+]);
+
 const latexSuiteBasicSettingsSchema = v.object({
     snippetsEnabled: v.boolean(),
     snippetsTrigger: v.union([v.literal("Tab"), v.literal(" ")]),
@@ -77,7 +107,8 @@ const latexSuiteBasicSettingsSchema = v.object({
     taboutEnabled: v.boolean(),
     autoEnlargeBrackets: v.boolean(),
     wordDelimiters: v.string(),
-} satisfies { [key in keyof LatexSuiteBasicSettings]: any });
+});
+
 type NestedRawSnippetArray = Array<RawSnippet | NestedRawSnippetArray>;
 
 const NestedRawSnippetArraySchema: v.GenericSchema<NestedRawSnippetArray> =
@@ -110,7 +141,6 @@ const UnParsedSnippetSnippetVariablesSchema = v.pipe(
     v.string(),
     v.transform((str): unknown => json5.parse(str)),
 );
-const SnippetSchema = v.union([v.string(), NestedRawSnippetArraySchema]);
 const SnippetVariablesSchema = v.pipe(
     v.union([
         v.pipe(
@@ -153,7 +183,7 @@ const SnippetSchemaSync = v.pipe(
         const parsed_snippets = snippets.map((raw) => {
             return parseSnippet(raw, snippetVariables, version);
         });
-        return sortSnippets(parsed_snippets);
+        return { snippets: sortSnippets(parsed_snippets), snippetVariables };
     }),
 );
 
@@ -164,47 +194,34 @@ const SnippetSchemaAsync = v.pipeAsync(
             v.transform(importSnippets),
             v.awaitAsync(),
         ),
-        snippetVariables: SnippetVariablesSchema,
+        snippetVariables: v.pipe(
+            v.string(),
+            UnParsedSnippetSnippetVariablesSchema,
+            SnippetVariablesSchema,
+        ),
         version: v.optional(v.union([v.literal(1), v.literal(2)]), 2),
     }),
-    //@ts-expect-error typescript/valibot not working
-    SnippetSchemaSync,
+    v.transform((obj) => v.parse(SnippetSchemaSync, obj)),
 );
-const SettingsSchema = v.pipe(v.intersect([latexSuiteBasicSettingsSchema]));
 
-type SnippetSchemaInput = v.InferOutput<typeof SnippetSchema>;
-export interface LatexSuiteBasicSettings {
-    snippetsEnabled: boolean;
-    snippetsTrigger: "Tab" | " ";
-    defaultSnippetVersion: 1 | 2;
-    suppressSnippetTriggerOnIME: boolean;
-    removeSnippetWhitespace: boolean;
-    autoDelete$: boolean;
-    concealEnabled: boolean;
-    concealRevealTimeout: number;
-    concealLinewise: boolean;
-    colorPairedBracketsEnabled: boolean;
-    highlightCursorBracketsEnabled: boolean;
-    autofractionEnabled: boolean;
-    autofractionSymbol: string;
-    autofractionBreakingChars: string;
-    matrixShortcutsEnabled: boolean;
-    taboutEnabled: boolean;
-    autoEnlargeBrackets: boolean;
-    wordDelimiters: string;
-}
-export interface LatexSuiteParsedSettings {
-    autofractionExcludedEnvs: Environment[];
-    matrixShortcutsEnvNames: string[];
-    autoEnlargeBracketsTriggers: string[];
-}
-export type LatexSuiteCMSettings = {
-    snippets: Snippet<SnippetType>[];
-    snippetVariables: SnippetVariables;
-} & LatexSuiteBasicSettings &
-    LatexSuiteParsedSettings;
-export type LatexSuitePluginSettingsRaw = {
-    snippets: string;
-    snippetVariables: string;
-} & LatexSuiteBasicSettings &
-    LatexSuiteRawSettings;
+const SnippetSchema = v.unionAsync([SnippetSchemaAsync, SnippetSchemaSync]);
+export const SettingsSchema = v.intersectAsync([
+    latexSuiteBasicSettingsSchema,
+    LatexSuiteRawOrParsedSettingsSchema,
+    SnippetSchema,
+]);
+
+export type LatexSuiteBasicSettings = v.InferOutput<
+    typeof latexSuiteBasicSettingsSchema
+>;
+export type LatexSuiteRawSettings = v.InferInput<
+    typeof LatexSuiteRawSettingsSchema
+>;
+export type LatexSuiteParsedSettings = v.InferInput<
+    typeof LatexSuiteParsedSettingsSchema
+>;
+
+export type LatexSuiteCMSettings = v.InferOutput<typeof SettingsSchema>;
+export type LatexSuitePluginSettingsRaw = v.InferInput<typeof SettingsSchema> &
+    v.InferInput<typeof SnippetSchemaAsync> &
+    v.InferInput<typeof LatexSuiteRawSettingsSchema>;

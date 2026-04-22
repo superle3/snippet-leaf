@@ -11,7 +11,7 @@ import {
     custom,
 } from "valibot";
 import { encode } from "js-base64";
-import type { Snippet, SnippetType } from "./snippets";
+import type { Snippet } from "./snippets";
 import {
     RegexSnippet,
     serializeSnippetLike,
