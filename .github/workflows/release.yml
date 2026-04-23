@@ -69,7 +69,8 @@ jobs:
                   tag: ${{ github.ref_name }}
                   name: ${{ github.ref_name }}
                   body: ${{ steps.parse_changelog.outputs.RELEASE_NOTES }}
-                  draft: false
+                  draft: true
                   prerelease: ${{ steps.prerelease_check.outputs.PRERELEASE }}
                   makeLatest: true
+                  immutableCreate: true
                   artifacts: "browser_extension/artifacts/*.zip,browser_extension/artifacts/*.xpi,greasemonkey/dist/*.user.js"
