@@ -13,6 +13,8 @@ if you want to view the source, please visit https://github.com/superle3/snippet
 `;
 const version = JSON.parse(await fs.readFile("package.json", "utf-8")).version;
 
+const version = JSON.parse(await fs.readFile("package.json", "utf-8")).version;
+
 const production = process.argv[2] === "production";
 const web = process.argv[2] === "web" || process.argv.length === 2;
 const codemirror = process.argv[2] === "codemirror";
@@ -211,9 +213,21 @@ const userscriptBanner = `// ==UserScript==
 // @author       superle3
 // @match        https://www.overleaf.com/*
 // @grant        none
+// @require      https://github.com/suprele3/snippet-leaf/releases/download/v${version}/settings_bundle-${version}.user.js
 // @run-at       document-start
 // ==/UserScript==
+`;
 
+const userscriptSettingsBanner = `// ==UserScript==
+// @name         SnippetLeaf Settings Bundle
+// @namespace    https://github.com/superle3/snippet-leaf
+// @version      ${version}
+// @description  Settings bundle for SnippetLeaf userscript
+// @author       superle3
+// @match        https://www.overleaf.com/*
+// @grant        none
+// @run-at       document-start
+// ==/UserScript==
 `;
 
 const userscriptConfig = {
@@ -239,7 +253,9 @@ const userscriptConfig = {
 } satisfies BuildOptions;
 const userscriptSettingsBundleConfigs = {
     ...userscriptConfig,
-    banner: undefined,
+    banner: {
+        js: userscriptSettingsBanner,
+    },
     entryPoints: [
         { in: "greasemonkey/settings_bundle.ts", out: "settings_bundle" },
     ],
