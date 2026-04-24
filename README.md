@@ -59,6 +59,13 @@ To check if the installation succeeded, reload your overleaf website and there s
 > For pictures of the installation on brave see https://github.com/superle3/snippet-leaf/discussions/23#discussioncomment-14723470.
 > This addon relies on a very recent patch of overleaf which has not been brought into `overleaf-toolkit`. Thus if you self-host your overleaf instance and you can patch your instance, see https://github.com/superle3/snippet-leaf/discussions/23#discussioncomment-14732840 on how to patch your `overleaf-toolkit`.
 
+### Userscript/Greasemonkey (i.e. Violentmonkey, Tampermonkey, etc)
+
+- Go to the [latest release](https://github.com/superle3/snippet-leaf/releases/latest).
+- Download `snippetleaf-<version-number>.user.js` and `settings_bundle-<version-number>.user.js`.
+- Create a userscript for each file and paste the contents of that file into the userscript.
+- Then the `settings_bundle-<version-number>.user.js` are your settings snippets that you can change and a script that sends the settings to the other userscript.
+
 ### Safari/other browsers
 
 Not supported, use a chromium/firefox browser. If anyone is willing to release this addon for safari you can open an issue and I'll redirect it to that version. As for other browsers, you can open up an issue asking for support if its not already supported.
