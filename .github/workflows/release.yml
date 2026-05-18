@@ -41,10 +41,6 @@ jobs:
               id: build-userscript
               run: |
                   npm run build:greasemonkey
-                  version=${{ steps.check_tag.outputs.VERSION }}
-                  for file in ./greasemonkey/dist/*.user.js; do
-                      mv "$file" "${file%.user.js}-${version}.user.js"
-                  done
             - name: Parse CHANGELOG.md for Release Notes
               id: parse_changelog
               run: |
