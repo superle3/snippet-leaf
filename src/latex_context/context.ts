@@ -210,8 +210,8 @@ const BracketMathOffset: Bounds = {
     end: -2,
 };
 const InlineMathOffset: Bounds = {
-    start: 0,
-    end: -1,
+    start: -1,
+    end: 1,
 };
 const ParenMathOffset: Bounds = {
     start: 2,
@@ -243,7 +243,10 @@ export const mathContext: Record<
 > = {
     InlineMath: (node: SyntaxNode): EquationInfo => ({
         type: MathMode.DollarInline,
-        ...boundsFromOffset(node, InlineMathOffset),
+        outer_start: node.from + InlineMathOffset.start,
+        inner_start: node.from,
+        inner_end: node.to,
+        outer_end: node.to + InlineMathOffset.end,
     }),
     ParenMath: (node: SyntaxNode): EquationInfo => ({
         type: MathMode.ParenInline,
