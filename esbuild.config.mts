@@ -249,7 +249,7 @@ const userscriptBanner = (
 // @author       superle3
 // @match        https://www.overleaf.com/project/*
 // @grant        none
-// @require      https://github.com/suprele3/snippet-leaf/releases/download/v${require_version}/settings_bundle-${require_version}.user.js
+// @require      https://github.com/superle3/snippet-leaf/releases/download/v${require_version}/settings_bundle-${require_version}.user.js
 // @run-at       document-start
 // ==/UserScript==
 `;
