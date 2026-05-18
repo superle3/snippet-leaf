@@ -9,9 +9,10 @@ const files = [
     "browser_extension/package.json",
     "package-lock.json",
 ];
-const dir = path.dirname(new URL(import.meta.url).pathname);
+const dir = import.meta.dirname;
 const versions: string[] = [];
 for (const filename of files) {
+    console.log(dir, filename);
     const file = path.join(dir, filename);
     const content = readFileSync(file, "utf-8");
     const version = JSON.parse(content).version;
