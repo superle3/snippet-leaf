@@ -29,7 +29,7 @@ export const EMPTY_SETTINGS: LatexSuitePluginSettings & LatexSuiteRawSettings =
         wordDelimiters: "",
 
         // Raw settings
-        autofractionExcludedEnvs: "",
+        autofractionExcludedEnvs: "[]",
         matrixShortcutsEnvNames: "",
         autoEnlargeBracketsTriggers: "",
     } as const;
