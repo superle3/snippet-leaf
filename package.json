@@ -19,7 +19,8 @@
         "format:commit": "pretty-quick --staged",
         "build:rollup": "rollup -c",
         "build:greasemonkey": "tsx esbuild.config.mts userscript",
-        "version": "tsx version-bump.mts && npm run format && git add ."
+        "version": "tsx version-bump.mts && npm run format && git add .",
+        "web:update_manifest": "tsx scripts/update_manifest.ts"
     },
     "keywords": [
         "latex",

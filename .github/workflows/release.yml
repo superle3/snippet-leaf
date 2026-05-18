@@ -70,3 +70,10 @@ jobs:
                   makeLatest: true
                   immutableCreate: true
                   artifacts: "browser_extension/artifacts/*.zip,browser_extension/artifacts/*.xpi,greasemonkey/dist/*.user.js"
+            - name: Update update_manifest.json
+              run: |
+                  VERSION=$(echo "${{ github.ref_name }}" | sed 's/^v//')
+                  npm run web:update_manifest $VERSION
+                  git add browser_extension/update_manifest.json
+                  git commit -m "chore: update manifest.json to $VERSION"
+                  git push origin main
