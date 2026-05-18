@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.0.12 (2026-05-18)
+
+### Features
+
+- Only when the settings bundle changes, will the version be updated. This doesn't always mean a new setting was added as in this case the userscript banner was added to the settings bundle. Though any time a new setting is added, it will be clearly stated in the releases of that version.
+
+### Bug fixes
+
+- Fix math bounds computation for inline math `$$`
+
 ## 0.0.11 (2026-04-23)
 
 ### Features
