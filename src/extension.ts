@@ -47,6 +47,7 @@ import { set_codemirror_objects } from "./set_codemirror_objects";
 import { createContextPlugin } from "./latex_context/context";
 import { createMathBoundsPlugin } from "./latex_context/mathbounds";
 import { EMPTY_SETTINGS } from "./settings/empty_settings";
+import { getKeymaps } from "./keymaps";
 
 type CodeMirrorExt = {
     Decoration: typeof DecorationC;
@@ -85,7 +86,7 @@ export function main(
     const latexSuiteConfig = setLatexSuiteConfig();
     const extensions: ExtensionC[] = [];
 
-    const snippet_leaf_extension = [
+    const snippet_leaf_extension: ExtensionC[] = [
         Prec.highest(
             EditorView.domEventHandlers({
                 keydown: function (event: KeyboardEvent, view: EditorViewC) {
@@ -95,6 +96,7 @@ export function main(
         ),
         EditorView.updateListener.of(handleUpdate),
         create_snippet_extensions(),
+        getKeymaps(settings),
         latexSuiteConfig.of(CMSettings),
         createContextPlugin(),
         createMathBoundsPlugin(),

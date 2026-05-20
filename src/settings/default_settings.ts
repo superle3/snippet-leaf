@@ -3,6 +3,7 @@ import { DEFAULT_SNIPPET_VARIABLES } from "src/utils/default_snippet_variables";
 import type { RawSnippet, SnippetVariables } from "src/snippets/parse";
 import type {
     latexSuiteBasicSettingsSchema,
+    latexSuiteKeymapSettingsSchema,
     LatexSuiteParsedSettingsSchema,
     LatexSuiteRawOrParsedSettingsSchema,
     LatexSuiteRawSettingsSchema,
@@ -37,6 +38,10 @@ export const DEFAULT_SETTINGS: LatexSuitePluginSettings &
     autoEnlargeBrackets: true,
     wordDelimiters: "., +-\\n\t:;!?\\/{}[]()=~$",
 
+    // keys
+    concealToggleKey: "",
+    toggleAllFeaturesKey: "",
+
     // Raw settings
     autofractionExcludedEnvs: '[\n\t["^{", "}"],\n\t["\\\\pu{", "}"]\n]',
     matrixShortcutsEnvNames:
@@ -44,11 +49,16 @@ export const DEFAULT_SETTINGS: LatexSuitePluginSettings &
     autoEnlargeBracketsTriggers: "sum, int, frac, prod, bigcup, bigcap",
 } as const;
 
+export type LatexSuiteKeymapSettings = v.InferInput<
+    typeof latexSuiteKeymapSettingsSchema
+>;
+
 export type LatexSuitePluginSettings = {
     snippets: Array<RawSnippet | Snippet>;
     snippetVariables: SnippetVariables;
 } & LatexSuiteBasicSettings &
-    v.InferInput<typeof LatexSuiteRawOrParsedSettingsSchema>;
+    v.InferInput<typeof LatexSuiteRawOrParsedSettingsSchema> &
+    LatexSuiteKeymapSettings;
 export type LatexSuiteBasicSettings = v.InferOutput<
     typeof latexSuiteBasicSettingsSchema
 >;

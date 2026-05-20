@@ -27,6 +27,9 @@ export const EMPTY_SETTINGS: LatexSuitePluginSettings & LatexSuiteRawSettings =
         taboutEnabled: false,
         autoEnlargeBrackets: false,
         wordDelimiters: "",
+        // keys
+        concealToggleKey: "",
+        toggleAllFeaturesKey: "",
 
         // Raw settings
         autofractionExcludedEnvs: "[]",

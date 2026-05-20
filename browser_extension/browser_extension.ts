@@ -40,7 +40,10 @@ import {
     RangeSetBuilder,
     RangeValue,
 } from "./codemirror_range_objects";
-import type { LatexSuiteCMSettings } from "src/settings/default_settings";
+import type {
+    LatexSuiteCMSettings,
+    LatexSuitePluginSettings,
+} from "src/settings/default_settings";
 import { SettingsSchema } from "src/settings/settings";
 import type { LatexSuiteFacet } from "src/settings/settings";
 import { EMPTY_SETTINGS } from "src/settings/empty_settings";
@@ -93,20 +96,21 @@ async function browser_main() {
         const { keymap } = CodeMirror;
         const Facet = Object.getPrototypeOf(keymap)
             .constructor as typeof FacetC;
-        const plugin = main(
-            {
-                ...CodeMirror,
-                Facet,
-                //@ts-ignore
-                RangeSet,
-                //@ts-ignore
-                RangeSetBuilder,
-                RangeValue,
-            },
-            EMPTY_SETTINGS,
-        );
+        const main_extension = (settings: LatexSuitePluginSettings) =>
+            main(
+                {
+                    ...CodeMirror,
+                    Facet,
+                    //@ts-ignore
+                    RangeSet,
+                    //@ts-ignore
+                    RangeSetBuilder,
+                    RangeValue,
+                },
+                settings,
+            );
+        const plugin = main_extension(EMPTY_SETTINGS);
         const latex_suite_extensions = plugin.extension;
-        const latexSuiteConfig = plugin.latexSuiteConfig;
         extensions.push(latex_suite_extensions);
         const view = await new Promise(
             (resolve: (view: EditorViewC) => void, reject) => {
@@ -126,32 +130,32 @@ async function browser_main() {
             .keys()
             .next().value.constructor;
         const latexSuiteConfigCompartment = new Compartment();
-        extensions.push(
-            latexSuiteConfigCompartment.of(latexSuiteConfig.of({})),
-        );
-        settingsCallback(view, latexSuiteConfigCompartment, latexSuiteConfig);
+        extensions.push(latexSuiteConfigCompartment.of(extensions));
+        settingsCallback(view, latexSuiteConfigCompartment, main_extension);
     });
 }
 
 const loadSettings = () => {
     let view: EditorViewC | null = null;
     let latexSuiteConfigCompartment: CompartmentC | null = null;
-    let latexSuiteConfig: LatexSuiteFacet | null = null;
     let cachedSettings: LatexSuiteCMSettings | null = null;
+    let main_extension_ref:
+        | ((settings: LatexSuitePluginSettings) => ExtensionC)
+        | null = null;
     const settingsCallback = (
         viewTemp: EditorViewC,
         latexSuiteConfigCompartmentTemp: CompartmentC,
-        latexSuiteConfigTemp: LatexSuiteFacet,
+        main_extension: (settings: LatexSuitePluginSettings) => ExtensionC,
     ) => {
         view = viewTemp;
         latexSuiteConfigCompartment = latexSuiteConfigCompartmentTemp;
-        latexSuiteConfig = latexSuiteConfigTemp;
+        main_extension_ref = main_extension;
         if (!cachedSettings) {
             window.dispatchEvent(new CustomEvent("snippet_leaf_config_listen"));
         } else {
             view.dispatch({
                 effects: latexSuiteConfigCompartment.reconfigure(
-                    latexSuiteConfig.of(cachedSettings),
+                    main_extension(cachedSettings),
                 ),
             });
         }
@@ -160,10 +164,11 @@ const loadSettings = () => {
     settingsCallback.latexSuiteConfigCompartment = null as null | CompartmentC;
     settingsCallback.latexSuiteConfig = null as null | LatexSuiteFacet;
     window.addEventListener("snippet_leaf_config_send", (e) => {
-        if (!view || !latexSuiteConfig || !latexSuiteConfigCompartment) return;
+        if (!view || !latexSuiteConfigCompartment || !main_extension_ref)
+            return;
+        const main_extension = main_extension_ref;
         const viewTemp = view;
         const latexSuiteConfigCompartmentTemp = latexSuiteConfigCompartment;
-        const latexSuiteConfigTemp = latexSuiteConfig;
         const evt = e as CustomEvent<string>;
         const config: unknown =
             typeof evt.detail === "string"
@@ -176,7 +181,7 @@ const loadSettings = () => {
             cachedSettings = parsed_settings.output;
             viewTemp.dispatch({
                 effects: latexSuiteConfigCompartmentTemp.reconfigure(
-                    latexSuiteConfigTemp.of(parsed_settings.output),
+                    main_extension(parsed_settings.output),
                 ),
             });
             const messageBox = document.createElement("div");

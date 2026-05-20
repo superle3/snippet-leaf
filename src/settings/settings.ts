@@ -171,6 +171,12 @@ export const latexSuiteBasicSettingsSchema = v.object({
     autoEnlargeBrackets: v.boolean(),
     wordDelimiters: v.string(),
 });
+
+export const latexSuiteKeymapSettingsSchema = v.object({
+    concealToggleKey: v.string(),
+    toggleAllFeaturesKey: v.string(),
+});
+
 export type NestedRawSnippetArray = Array<RawSnippet | NestedRawSnippetArray>;
 export const NestedRawSnippetArraySchema: v.GenericSchema<NestedRawSnippetArray> =
     v.lazy(() =>
@@ -265,6 +271,7 @@ export const SnippetSchema = v.unionAsync([
 ]);
 export const SettingsSchema = v.intersectAsync([
     latexSuiteBasicSettingsSchema,
+    latexSuiteKeymapSettingsSchema,
     LatexSuiteRawSettingsSchema,
     SnippetSchema,
 ]);

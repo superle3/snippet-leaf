@@ -30,6 +30,10 @@ export function setLatexSuiteConfig() {
     return latexSuiteConfig;
 }
 
+export function getLatexSuiteFacet() {
+    return latexSuiteConfig;
+}
+
 export function getLatexSuiteConfig(
     viewOrState: EditorView | EditorState,
 ): LatexSuiteCMSettings {
