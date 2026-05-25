@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.0.13 (2026-05-25)
+
+### Features
+
+- Add a keymap to toggle the features/conceal temporarily.
+
 ## 0.0.12 (2026-05-18)
 
 ### Features
