@@ -1,30 +1,22 @@
 import type { Extension } from "@codemirror/state";
-import { EditorSelection } from "@codemirror/state";
 import { keymap, type EditorView, type KeyBinding } from "@codemirror/view";
 import {
     getLatexSuiteConfig,
     reloadLatexSuiteFacetCompartment,
 } from "./settings/raw_settings";
 import type { LatexSuitePluginSettings } from "./settings/default_settings";
-
-const shuffleSelection = (view: EditorView): boolean => {
-    const newRanges = view.state.selection.ranges.map((range) =>
-        EditorSelection.range(range.to, range.from, range.assoc),
-    );
-    view.dispatch({
-        selection: EditorSelection.create(newRanges),
-    });
-    return true;
-};
+import { updateConcealEffect } from "./conceal_plugin/conceal";
 
 const toggleConceal = (view: EditorView): boolean => {
     const currentSettings = getLatexSuiteConfig(view);
     view.dispatch({
-        effects: reloadLatexSuiteFacetCompartment({
-            concealEnabled: !currentSettings.concealEnabled,
-        }),
+        effects: [
+            reloadLatexSuiteFacetCompartment({
+                concealEnabled: !currentSettings.concealEnabled,
+            }),
+            updateConcealEffect.of(null),
+        ],
     });
-    shuffleSelection(view);
     return true;
 };
 
