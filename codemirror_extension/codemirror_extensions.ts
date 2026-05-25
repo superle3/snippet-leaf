@@ -8,6 +8,7 @@ import {
     RangeValue,
     RangeSet,
     RangeSetBuilder,
+    Compartment,
 } from "@codemirror/state";
 import {
     undo,
@@ -70,6 +71,7 @@ const codeMirrorExt = {
     RangeValue,
     RangeSet,
     RangeSetBuilder,
+    Compartment,
 };
 export function latex_suite(
     options: LatexSuitePluginSettings = DEFAULT_SETTINGS,

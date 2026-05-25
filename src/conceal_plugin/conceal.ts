@@ -12,8 +12,13 @@ import {
     type ViewUpdate,
 } from "@codemirror/view";
 import type { DecorationSet } from "@codemirror/view";
-import type { Range } from "@codemirror/state";
-import { RangeSet, RangeSetBuilder, RangeValue } from "@codemirror/state";
+import type { Range, StateEffectType } from "@codemirror/state";
+import {
+    RangeSet,
+    RangeSetBuilder,
+    RangeValue,
+    StateEffect,
+} from "@codemirror/state";
 // import { debounce, livePreviewState } from "obsidian";
 
 export type Replacement = {
@@ -274,7 +279,18 @@ function buildAtomicRanges(concealments: Concealment[]) {
     return builder.finish();
 }
 
+export let updateConcealEffect: StateEffectType<null>;
+function isUpdateConcealEffect(update: ViewUpdate): boolean {
+    return update?.transactions.some((tr) =>
+        tr.effects.some((e) =>
+            // @ts-ignore
+            e.is(updateConcealEffect),
+        ),
+    );
+}
+
 export const mkConcealPlugin = (revealTimeout: number) => {
+    updateConcealEffect = StateEffect.define<null>();
     const viewPlugin = ViewPlugin.fromClass(
         class {
             // Stateful ViewPlugin: you should avoid one in general, but here
@@ -290,13 +306,9 @@ export const mkConcealPlugin = (revealTimeout: number) => {
             private mousedown: boolean = false;
 
             constructor(view: EditorView) {
-                console.log(2);
-
                 this.concealments = [];
                 this.decorations = Decoration.none;
                 this.atomicRanges = RangeSet.empty;
-                const revealTimeout =
-                    getLatexSuiteConfig(view).concealRevealTimeout;
                 this.delayEnabled = revealTimeout > 0;
                 view.dom.addEventListener("mousedown", () => {
                     this.mousedown = true;
@@ -338,11 +350,13 @@ export const mkConcealPlugin = (revealTimeout: number) => {
 
             update(update: ViewUpdate) {
                 const settings = getLatexSuiteConfig(update.view);
+                const updateConceal = isUpdateConcealEffect(update);
                 if (
                     !(
                         update.docChanged ||
                         update.viewportChanged ||
-                        update.selectionSet
+                        update.selectionSet ||
+                        updateConceal
                     )
                 )
                     return;
@@ -357,7 +371,11 @@ export const mkConcealPlugin = (revealTimeout: number) => {
                 this.delayedReveal.cancel();
                 // If document/viewport is not changed, the conceal specs stay the same
                 // and only the revealing needs to be updated.
-                if (!update.docChanged && !update.viewportChanged) {
+                if (
+                    !update.docChanged &&
+                    !update.viewportChanged &&
+                    !updateConceal
+                ) {
                     this.updateFromConcealSpecs(
                         this.concealSpecs,
                         update,

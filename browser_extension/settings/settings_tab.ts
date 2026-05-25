@@ -289,6 +289,7 @@ class LatexSuiteSettingTab {
             this.displayMatrixShortcutsSettings();
             this.displayTaboutSettings();
             this.displayAutoEnlargeBracketsSettings();
+            this.displayKeymapSettings();
             this.displayAdvancedSnippetSettings();
             this.displayImportExportSettings();
         }
@@ -852,6 +853,40 @@ class LatexSuiteSettingTab {
                         this.plugin.settings.autoEnlargeBracketsTriggers =
                             value;
 
+                        await this.plugin.saveSettings();
+                    }),
+            );
+    }
+
+    displayKeymapSettings() {
+        const containerEl = this.containerEl;
+        this.addHeading(
+            containerEl,
+            "Keymap settings. Use codemirror keymap syntax, e.g. Mod-shift-c for Ctrl/Cmd + Shift + C.",
+            "keyboard",
+        );
+
+        new Setting(containerEl)
+            .setName("Toggle conceal")
+            .setDesc("The keybinding to toggle conceal on and off.")
+            .addText((text) =>
+                text
+                    .setValue(this.plugin.settings.concealToggleKey)
+                    .onChange(async (value) => {
+                        this.plugin.settings.concealToggleKey = value;
+                        await this.plugin.saveSettings();
+                    }),
+            );
+        new Setting(containerEl)
+            .setName("Toggle all features")
+            .setDesc(
+                "The keybinding to toggle all features of the plugin on and off.",
+            )
+            .addText((text) =>
+                text
+                    .setValue(this.plugin.settings.toggleAllFeaturesKey)
+                    .onChange(async (value) => {
+                        this.plugin.settings.toggleAllFeaturesKey = value;
                         await this.plugin.saveSettings();
                     }),
             );

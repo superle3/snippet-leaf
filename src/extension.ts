@@ -9,6 +9,7 @@ import type {
     RangeValue as RangeValueC,
     RangeSet as RangeSetC,
     RangeSetBuilder as RangeSetBuilderC,
+    Compartment as CompartmentC,
 } from "@codemirror/state";
 import type {
     undo as undoC,
@@ -46,7 +47,7 @@ import {
 import { set_codemirror_objects } from "./set_codemirror_objects";
 import { createContextPlugin } from "./latex_context/context";
 import { createMathBoundsPlugin } from "./latex_context/mathbounds";
-import { EMPTY_SETTINGS } from "./settings/empty_settings";
+import { getKeymaps } from "./keymaps";
 
 type CodeMirrorExt = {
     Decoration: typeof DecorationC;
@@ -70,11 +71,12 @@ type CodeMirrorExt = {
     RangeSet: typeof RangeSetC;
     RangeValue: typeof RangeValueC;
     RangeSetBuilder: typeof RangeSetBuilderC;
+    Compartment: typeof CompartmentC;
 };
 
 export function main(
     codemirror_objects: CodeMirrorExt,
-    settings: LatexSuitePluginSettings = EMPTY_SETTINGS,
+    settings: LatexSuitePluginSettings,
 ) {
     set_codemirror_objects(codemirror_objects);
     const { Prec, EditorView } = codemirror_objects;
@@ -82,10 +84,10 @@ export function main(
         processLatexSuiteSettings(settings);
     stateEffect_variables();
     create_tabstopsStateField();
-    const latexSuiteConfig = setLatexSuiteConfig();
+    const latexSuiteConfig = setLatexSuiteConfig(CMSettings);
     const extensions: ExtensionC[] = [];
 
-    const snippet_leaf_extension = [
+    const snippet_leaf_extension: ExtensionC[] = [
         Prec.highest(
             EditorView.domEventHandlers({
                 keydown: function (event: KeyboardEvent, view: EditorViewC) {
@@ -95,7 +97,8 @@ export function main(
         ),
         EditorView.updateListener.of(handleUpdate),
         create_snippet_extensions(),
-        latexSuiteConfig.of(CMSettings),
+        getKeymaps(settings),
+        latexSuiteConfig,
         createContextPlugin(),
         createMathBoundsPlugin(),
     ];
@@ -149,7 +152,7 @@ export function main(
 
     extensions.push(light_theme_extension, dark_theme_extension);
 
-    return { latexSuiteConfig, extension: extensions };
+    return { extension: extensions };
 }
 
 export type {

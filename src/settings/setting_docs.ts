@@ -159,4 +159,18 @@ export const SETTINGS_EXPLANATIONS: LatexSuitePluginSettingsExplanations = {
         type: ["1", "2"],
         defaultValue: DEFAULT_SETTINGS.defaultSnippetVersion,
     },
+    concealToggleKey: {
+        title: "Key to toggle conceal",
+        description:
+            "The keybinding to toggle conceal on and off. This is useful if you want to quickly switch between readable and raw LaTeX. Set to empty string to disable the toggle keybinding.",
+        type: "string",
+        defaultValue: DEFAULT_SETTINGS.concealToggleKey,
+    },
+    toggleAllFeaturesKey: {
+        title: "Key to toggle all features",
+        description:
+            "The keybinding to toggle all features (except conceal) on and off. This is useful for quickly switching between a clean editor and one with all the snippet expansions and shortcuts. Set to empty string to disable the toggle keybinding.",
+        type: "string",
+        defaultValue: DEFAULT_SETTINGS.toggleAllFeaturesKey,
+    },
 } as const;
