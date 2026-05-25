@@ -76,7 +76,7 @@ const codeMirrorExt = {
 export function latex_suite(
     options: LatexSuitePluginSettings = DEFAULT_SETTINGS,
 ) {
-    return main(codeMirrorExt, options);
+    return main(options);
 }
 export {
     DEFAULT_SETTINGS,

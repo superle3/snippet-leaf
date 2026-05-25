@@ -150,7 +150,9 @@ export const json5Plugin = (): Plugin => ({
     },
 });
 
-const setCodeMirrorPath = path.resolve("src/set_codemirror_objects.ts");
+const setCodeMirrorPath = path.resolve(
+    "browser_extension/set_codemirror_objects.ts",
+);
 
 const codemirrorReroutePlugin: Plugin = {
     name: "codemirror-reroute",

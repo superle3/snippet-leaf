@@ -34,7 +34,6 @@ import type {
 } from "@replit/codemirror-vim";
 import * as v from "valibot";
 
-import { main } from "../src/extension";
 import {
     RangeSet,
     RangeSetBuilder,
@@ -46,6 +45,7 @@ import type {
 } from "src/settings/default_settings";
 import { SettingsSchema } from "src/settings/settings";
 import type { LatexSuiteFacet } from "src/settings/settings";
+import { set_codemirror_objects } from "./set_codemirror_objects";
 
 type CodeMirrorExt = {
     Decoration: typeof DecorationC;
@@ -112,20 +112,19 @@ async function browser_main() {
         const Compartment: typeof CompartmentC = view.state.config.compartments
             .keys()
             .next().value.constructor;
-        const main_extension = (settings: LatexSuitePluginSettings) =>
-            main(
-                {
-                    ...CodeMirror,
-                    Facet,
-                    //@ts-ignore
-                    RangeSet,
-                    //@ts-ignore
-                    RangeSetBuilder,
-                    RangeValue,
-                    Compartment,
-                },
-                settings,
-            );
+        set_codemirror_objects({
+            ...CodeMirror,
+            Facet,
+            // @ts-expect-error
+            RangeSet,
+            // @ts-expect-error
+            RangeSetBuilder,
+            RangeValue,
+            Compartment,
+        });
+        const main_extension = await import("../src/extension").then(
+            (mod) => mod.main,
+        );
 
         const latexSuiteConfigCompartment = new Compartment();
         extensions.push(latexSuiteConfigCompartment.of([]));

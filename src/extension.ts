@@ -1,36 +1,7 @@
-import type {
-    EditorSelection as EditorSelectionC,
-    Extension as ExtensionC,
-    StateEffect as StateEffectC,
-    StateField as StateFieldC,
-    Prec as PrecC,
-    Facet as FacetC,
-    ChangeSet as ChangeSetC,
-    RangeValue as RangeValueC,
-    RangeSet as RangeSetC,
-    RangeSetBuilder as RangeSetBuilderC,
-    Compartment as CompartmentC,
-} from "@codemirror/state";
-import type {
-    undo as undoC,
-    redo as redoC,
-    isolateHistory as isolateHistoryC,
-} from "@codemirror/commands";
-import type {
-    Decoration as DecorationC,
-    EditorView as EditorViewC,
-    KeyBinding as KeyBindingC,
-    ViewPlugin as ViewPluginC,
-    ViewUpdate as ViewUpdateC,
-    WidgetType as WidgetTypeC,
-    hoverTooltip as hoverTooltipC,
-} from "@codemirror/view";
-import type { syntaxTree as syntaxTreeC } from "@codemirror/language";
 import { handleUpdate, onKeydown } from "./latex_suite";
 import type { LatexSuiteCMSettings } from "./settings/default_settings";
 import type { LatexSuitePluginSettings } from "./settings/default_settings";
 import { create_snippet_extensions } from "./snippets/codemirror/extensions";
-import type { invertedEffects as invertedEffectsC } from "@codemirror/commands";
 import { processLatexSuiteSettings } from "./settings/settings";
 import { setLatexSuiteConfig } from "./settings/raw_settings";
 import { stateEffect_variables } from "./snippets/codemirror/history";
@@ -44,53 +15,24 @@ import {
     colorPairedBracketsPluginLowestPrec,
     highlightCursorBracketsPlugin,
 } from "./highlight_brackets_plugin/highlight_brackets";
-import { set_codemirror_objects } from "./set_codemirror_objects";
 import { createContextPlugin } from "./latex_context/context";
 import { createMathBoundsPlugin } from "./latex_context/mathbounds";
 import { getKeymaps } from "./keymaps";
+import { Prec, type Extension } from "@codemirror/state";
+import { EditorView } from "@codemirror/view";
 
-type CodeMirrorExt = {
-    Decoration: typeof DecorationC;
-    EditorSelection: typeof EditorSelectionC;
-    EditorView: typeof EditorViewC;
-    Prec: typeof PrecC;
-    StateField: typeof StateFieldC;
-    StateEffect: typeof StateEffectC;
-    ViewPlugin: typeof ViewPluginC;
-    ViewUpdate: typeof ViewUpdateC;
-    WidgetType: typeof WidgetTypeC;
-    hoverTooltip: typeof hoverTooltipC;
-    keymap: FacetC<readonly KeyBindingC[]>;
-    syntaxTree: typeof syntaxTreeC;
-    invertedEffects: typeof invertedEffectsC;
-    ChangeSet: typeof ChangeSetC;
-    undo: typeof undoC;
-    redo: typeof redoC;
-    isolateHistory: typeof isolateHistoryC;
-    Facet: typeof FacetC;
-    RangeSet: typeof RangeSetC;
-    RangeValue: typeof RangeValueC;
-    RangeSetBuilder: typeof RangeSetBuilderC;
-    Compartment: typeof CompartmentC;
-};
-
-export function main(
-    codemirror_objects: CodeMirrorExt,
-    settings: LatexSuitePluginSettings,
-) {
-    set_codemirror_objects(codemirror_objects);
-    const { Prec, EditorView } = codemirror_objects;
+export function main(settings: LatexSuitePluginSettings) {
     const CMSettings: LatexSuiteCMSettings =
         processLatexSuiteSettings(settings);
     stateEffect_variables();
     create_tabstopsStateField();
     const latexSuiteConfig = setLatexSuiteConfig(CMSettings);
-    const extensions: ExtensionC[] = [];
+    const extensions: Extension[] = [];
 
-    const snippet_leaf_extension: ExtensionC[] = [
+    const snippet_leaf_extension: Extension[] = [
         Prec.highest(
             EditorView.domEventHandlers({
-                keydown: function (event: KeyboardEvent, view: EditorViewC) {
+                keydown: function (event: KeyboardEvent, view: EditorView) {
                     return onKeydown(event, view);
                 },
             }),
