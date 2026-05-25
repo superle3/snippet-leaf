@@ -4,13 +4,16 @@ import type { LatexSuitePluginSettingsRaw } from "./default_settings";
 import type { LatexSuiteCMSettings } from "./default_settings";
 import type { LatexSuitePluginSettings } from "./default_settings";
 import type { EditorState } from "@codemirror/state";
+import { Compartment } from "@codemirror/state";
+import type { Compartment as CompartmentC } from "@codemirror/state";
+
 import { Facet } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
-import { EMPTY_SETTINGS } from "./empty_settings";
 
 let latexSuiteConfig: LatexSuiteFacet;
+let latexSuiteConfigCompartment: CompartmentC;
 
-export function setLatexSuiteConfig() {
+export function setLatexSuiteConfig(CMSettings: LatexSuitePluginSettings) {
     latexSuiteConfig = Facet.define<
         Partial<LatexSuitePluginSettings>,
         LatexSuiteCMSettings
@@ -21,17 +24,22 @@ export function setLatexSuiteConfig() {
             const settings =
                 input.length > 0
                     ? processLatexSuiteSettings(
-                          Object.assign({}, EMPTY_SETTINGS, ...input),
+                          Object.assign({}, CMSettings, ...input),
                       )
-                    : processLatexSuiteSettings(EMPTY_SETTINGS);
+                    : processLatexSuiteSettings(CMSettings);
             return settings;
         },
     });
-    return latexSuiteConfig;
+    latexSuiteConfigCompartment = new Compartment();
+    return latexSuiteConfigCompartment.of(latexSuiteConfig.of({}));
 }
 
-export function getLatexSuiteFacet() {
-    return latexSuiteConfig;
+export function reloadLatexSuiteFacetCompartment(
+    settings: Partial<LatexSuitePluginSettings>,
+) {
+    return latexSuiteConfigCompartment.reconfigure(
+        latexSuiteConfig.of(settings),
+    );
 }
 
 export function getLatexSuiteConfig(

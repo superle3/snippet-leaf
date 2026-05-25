@@ -1,9 +1,9 @@
 import type { Extension } from "@codemirror/state";
-import { EditorSelection, StateEffect } from "@codemirror/state";
+import { EditorSelection } from "@codemirror/state";
 import { keymap, type EditorView, type KeyBinding } from "@codemirror/view";
 import {
     getLatexSuiteConfig,
-    getLatexSuiteFacet,
+    reloadLatexSuiteFacetCompartment,
 } from "./settings/raw_settings";
 import type { LatexSuitePluginSettings } from "./settings/default_settings";
 
@@ -20,11 +20,9 @@ const shuffleSelection = (view: EditorView): boolean => {
 const toggleConceal = (view: EditorView): boolean => {
     const currentSettings = getLatexSuiteConfig(view);
     view.dispatch({
-        effects: StateEffect.appendConfig.of([
-            getLatexSuiteFacet().of({
-                concealEnabled: !currentSettings.concealEnabled,
-            }),
-        ]),
+        effects: reloadLatexSuiteFacetCompartment({
+            concealEnabled: !currentSettings.concealEnabled,
+        }),
     });
     shuffleSelection(view);
     return true;
@@ -41,14 +39,12 @@ const toggleAllFeatures = (view: EditorView): boolean => {
     ] as const satisfies Array<keyof LatexSuitePluginSettings>;
     const on = !featuresToToggle.some((feature) => currentSettings[feature]);
     view.dispatch({
-        effects: StateEffect.appendConfig.of([
-            getLatexSuiteFacet().of(
-                featuresToToggle.reduce((acc, feature) => {
-                    acc[feature] = on;
-                    return acc;
-                }, {} as Partial<LatexSuitePluginSettings>),
-            ),
-        ]),
+        effects: reloadLatexSuiteFacetCompartment(
+            featuresToToggle.reduce((acc, feature) => {
+                acc[feature] = on;
+                return acc;
+            }, {} as Partial<LatexSuitePluginSettings>),
+        ),
     });
     return true;
 };

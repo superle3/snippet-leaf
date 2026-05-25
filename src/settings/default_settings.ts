@@ -13,8 +13,7 @@ import type {
 import type * as v from "valibot";
 import type { Snippet } from "src/snippets/snippets";
 
-export const DEFAULT_SETTINGS: LatexSuitePluginSettings &
-    LatexSuiteRawSettings = {
+export const DEFAULT_SETTINGS = {
     snippets: DEFAULT_SNIPPETS,
     snippetVariables: DEFAULT_SNIPPET_VARIABLES,
 
@@ -47,7 +46,7 @@ export const DEFAULT_SETTINGS: LatexSuitePluginSettings &
     matrixShortcutsEnvNames:
         "pmatrix, cases, align, gather, bmatrix, Bmatrix, vmatrix, Vmatrix, array, matrix",
     autoEnlargeBracketsTriggers: "sum, int, frac, prod, bigcup, bigcap",
-} as const;
+} as const satisfies LatexSuitePluginSettings & LatexSuiteRawSettings;
 
 export type LatexSuiteKeymapSettings = v.InferInput<
     typeof latexSuiteKeymapSettingsSchema

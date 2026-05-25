@@ -46,7 +46,6 @@ import type {
 } from "src/settings/default_settings";
 import { SettingsSchema } from "src/settings/settings";
 import type { LatexSuiteFacet } from "src/settings/settings";
-import { EMPTY_SETTINGS } from "src/settings/empty_settings";
 
 type CodeMirrorExt = {
     Decoration: typeof DecorationC;
@@ -96,22 +95,6 @@ async function browser_main() {
         const { keymap } = CodeMirror;
         const Facet = Object.getPrototypeOf(keymap)
             .constructor as typeof FacetC;
-        const main_extension = (settings: LatexSuitePluginSettings) =>
-            main(
-                {
-                    ...CodeMirror,
-                    Facet,
-                    //@ts-ignore
-                    RangeSet,
-                    //@ts-ignore
-                    RangeSetBuilder,
-                    RangeValue,
-                },
-                settings,
-            );
-        const plugin = main_extension(EMPTY_SETTINGS);
-        const latex_suite_extensions = plugin.extension;
-        extensions.push(latex_suite_extensions);
         const view = await new Promise(
             (resolve: (view: EditorViewC) => void, reject) => {
                 const view = CodeMirror.EditorView.findFromDOM(
@@ -129,8 +112,23 @@ async function browser_main() {
         const Compartment: typeof CompartmentC = view.state.config.compartments
             .keys()
             .next().value.constructor;
+        const main_extension = (settings: LatexSuitePluginSettings) =>
+            main(
+                {
+                    ...CodeMirror,
+                    Facet,
+                    //@ts-ignore
+                    RangeSet,
+                    //@ts-ignore
+                    RangeSetBuilder,
+                    RangeValue,
+                    Compartment,
+                },
+                settings,
+            );
+
         const latexSuiteConfigCompartment = new Compartment();
-        extensions.push(latexSuiteConfigCompartment.of(extensions));
+        extensions.push(latexSuiteConfigCompartment.of([]));
         settingsCallback(view, latexSuiteConfigCompartment, main_extension);
     });
 }
