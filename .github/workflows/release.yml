@@ -21,6 +21,9 @@ jobs:
                   echo "VERSION=${version}" >> $GITHUB_OUTPUT
             - name: Use Node.js
               uses: actions/setup-node@v4
+            - name: Install Dependencies
+              run: |
+                  npm install
               with:
                   node-version: 22
             - name: Build Greasemonkey Userscript
@@ -30,7 +33,6 @@ jobs:
             - name: Build Browser Extension
               id: build
               run: |
-                  npm install
                   npm run web:build
             - name: Sign Browser Extension
               id: sign
