@@ -4,7 +4,7 @@ import type { SyntaxNode, SyntaxNodeRef } from "@lezer/common";
 import type { EquationInfo } from "./context";
 import { mathContext } from "./context";
 import { syntaxTree } from "@codemirror/language";
-export interface FullBounds {
+export interface Bounds {
     inner_start: number;
     inner_end: number;
     outer_start: number;

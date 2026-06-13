@@ -1,3 +1,44 @@
+declare global {
+    interface String {
+        contains: typeof String.prototype.includes;
+    }
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    interface Array<T> {
+        contains: typeof Array.prototype.includes;
+    }
+}
+
+String.prototype.contains = String.prototype.includes;
+
+export function createElement<K extends keyof HTMLElementTagNameMap>(
+    tag: K,
+    options?: Partial<HTMLElementTagNameMap[K]> & {
+        cls?: string | string[];
+        text?: string;
+        children?: HTMLElement[];
+    },
+): HTMLElementTagNameMap[K] {
+    const el = document.createElement(tag);
+    if (options) {
+        const { cls, text, children, ...rest } = options;
+        Object.assign(el, rest);
+        if (cls) {
+            if (Array.isArray(cls)) {
+                el.classList.add(...cls);
+            } else {
+                el.classList.add(cls);
+            }
+        }
+        if (text) {
+            el.textContent = text;
+        }
+        if (children) {
+            children.forEach((child) => el.appendChild(child));
+        }
+    }
+    return el;
+}
+
 /**
  * A standard debounce function.
  *

@@ -1,8 +1,10 @@
 // Conceal functions
 
 import type { EditorView } from "@codemirror/view";
+import { getMathBoundsPlugin } from "src/latex_context/mathbounds";
 import { findMatchingBracket } from "src/utils/editor_utils";
-import type { ConcealSpec, Replacement } from "./conceal";
+import type { ConcealSpec } from "./conceal";
+import { mkConcealSpec } from "./conceal";
 import {
     greek,
     cmd_symbols,
@@ -15,11 +17,6 @@ import {
     operators,
     not_remap as raw_not_remap,
 } from "./conceal_maps";
-import { getMathBoundsPlugin } from "src/latex_context/mathbounds";
-
-function mkConcealSpec(...replacements: Replacement[]) {
-    return replacements;
-}
 
 /**
  *sort by length. This is a workaround for ios devices < 16.4 where lookbehind is not supported.
@@ -187,18 +184,16 @@ function concealSupSub(
 
     const specs: ConcealSpec[] = [];
 
+    // Conceal super/subscript symbols as well
+    const symbolNames = Object.keys(symbolMap);
+    const symbolRegexStr = "\\\\(" + escapeRegex(symbolNames.join("|")) + ")";
+    const symbolRegex = new RegExp(symbolRegexStr, "g");
     for (const match of matches) {
         const exponent = match[1];
         const elementType = superscript ? "sup" : "sub";
 
-        // Conceal super/subscript symbols as well
-        const symbolNames = Object.keys(symbolMap);
-
-        const symbolRegexStr =
-            "\\\\(" + escapeRegex(symbolNames.join("|")) + ")";
-        const symbolRegex = new RegExp(symbolRegexStr, "g");
-
-        const replacement = exponent.replace(symbolRegex, (a, b) => {
+        symbolRegex.lastIndex = 0;
+        const replacement = exponent.replace(symbolRegex, (_a, b: string) => {
             return symbolMap[b];
         });
 
@@ -602,7 +597,7 @@ function concealOperatorname(eqn: string): ConcealSpec[] {
 
     for (const match of matches) {
         const value = match[1];
-        const start2 = match.index!;
+        const start2 = match.index;
         const end2 = start2 + match[0].length;
 
         specs.push(
@@ -631,7 +626,6 @@ export function conceal(
             new_equations[eqn] = cached_equations[eqn];
             continue;
         }
-
         const localSpecs = [
             ...concealSymbols(eqn, "\\^", "", map_super),
             ...concealSymbols(eqn, "_", "", map_sub),

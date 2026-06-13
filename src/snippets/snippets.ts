@@ -1,13 +1,21 @@
 import type { SelectionRange } from "@codemirror/state";
 import type { Options } from "./options";
 import type { Environment } from "./environment";
+import type {
+    ResultInsert,
+    Options as InsertOptions} from "./luasnip_api/node";
+import {
+    BaseNode,
+    ArrayNode,
+    SnippetTabstopOnlyNode,
+    emptyInsertOptions,
+} from "./luasnip_api/node";
+import * as v from "valibot";
 
 /**
  * in visual snippets, if the replacement is a string, this is the magic substring to indicate the selection.
  */
-export const VISUAL_SNIPPET_MAGIC_SELECTION_PLACEHOLDER = new RegExp(
-    "^@\\{VISUAL\\}|[^@]@\\{VISUAL\\}",
-);
+export const VISUAL_SNIPPET_MAGIC_SELECTION_PLACEHOLDER = "${VISUAL}";
 
 /**
  * there are 3 distinct types of snippets:
@@ -24,27 +32,54 @@ export const VISUAL_SNIPPET_MAGIC_SELECTION_PLACEHOLDER = new RegExp(
  */
 export type SnippetType = "visual" | "regex" | "string";
 
+const ReplacementOutputSchema = v.union([
+    v.literal(false),
+    v.string(),
+    v.array(v.instance(BaseNode)),
+]);
+function convertOutputToNode(rawReplacement: unknown): ArrayNode | null {
+    const parseResult = v.safeParse(ReplacementOutputSchema, rawReplacement);
+    if (!parseResult.success) {
+        console.error("Invalid replacement output:", parseResult.issues);
+        return null;
+    }
+    if (parseResult.output === false) {
+        return null;
+    } else if (typeof parseResult.output === "string") {
+        const snippet = new SnippetTabstopOnlyNode(parseResult.output);
+        return new ArrayNode([snippet]);
+    } else if (Array.isArray(parseResult.output)) {
+        return new ArrayNode(parseResult.output);
+    }
+
+    // never happens but ts can't figure that out without a return
+    return parseResult.output;
+}
+
+// output of replacement functions should be the output fo ReplacementOutputSchema,
+// but this would lead to false confidence as user might return something else.
 export type SnippetData<T extends SnippetType> = {
     visual: {
         trigger: string;
-        replacement: string | ((selection: string) => string | false);
+        replacement: ArrayNode | ((selection: string) => unknown);
     };
     regex: {
         trigger: RegExp;
-        replacement: string | ((match: RegExpExecArray) => string);
+        replacement: ArrayNode | ((match: RegExpExecArray) => unknown);
+        triggerAfter?: RegExp;
     };
     string: {
         trigger: string;
-        replacement: string | ((match: string) => string);
+        replacement: ArrayNode | ((match: string) => unknown);
+        triggerAfter?: string;
     };
 }[T];
 
 export type ProcessSnippetResult = {
     triggerPos: number;
-    replacement: string;
+    replacement: ResultInsert;
+    triggerEndPos?: number;
 } | null;
-
-export const ARE_SETTINGS_PARSED = Symbol("areSettingsParsed");
 
 /**
  * a snippet instance contains all the information necessary to run a snippet.
@@ -54,20 +89,21 @@ export abstract class Snippet<T extends SnippetType = SnippetType> {
     type: T;
     data: SnippetData<T>;
     options: Options;
-    priority?: number;
-    description?: string;
+    priority: number;
+    description: string;
+    triggerKey: string;
 
     excludedEnvironments: Environment[];
-    [ARE_SETTINGS_PARSED]: true;
 
     constructor(
         type: T,
         trigger: SnippetData<T>["trigger"],
         replacement: SnippetData<T>["replacement"],
         options: Options,
-        priority?: number | undefined,
-        description?: string | undefined,
-        excludedEnvironments?: Environment[],
+        priority: number = 0,
+        description: string = "no description provided",
+        excludedEnvironments: Environment[] = [],
+        triggerKey: string = "",
     ) {
         this.type = type;
         // @ts-ignore
@@ -75,8 +111,8 @@ export abstract class Snippet<T extends SnippetType = SnippetType> {
         this.options = options;
         this.priority = priority;
         this.description = description;
-        this.excludedEnvironments = excludedEnvironments ?? [];
-        this[ARE_SETTINGS_PARSED] = true;
+        this.excludedEnvironments = excludedEnvironments;
+        this.triggerKey = triggerKey;
     }
 
     // we need to explicitly type the return value here so the derived classes,
@@ -92,6 +128,7 @@ export abstract class Snippet<T extends SnippetType = SnippetType> {
         effectiveLine: string,
         range: SelectionRange,
         sel: string,
+        effectiveLineAfter: () => string,
     ): ProcessSnippetResult;
 
     toString() {
@@ -115,6 +152,7 @@ export class VisualSnippet extends Snippet<"visual"> {
         priority,
         description,
         excludedEnvironments,
+        triggerKey,
     }: CreateSnippet<"visual">) {
         super(
             "visual",
@@ -124,6 +162,7 @@ export class VisualSnippet extends Snippet<"visual"> {
             priority,
             description,
             excludedEnvironments,
+            triggerKey,
         );
     }
 
@@ -144,20 +183,23 @@ export class VisualSnippet extends Snippet<"visual"> {
         }
 
         const triggerPos = range.from;
-        let replacement;
-        if (typeof this.replacement === "string") {
-            replacement = this.replacement.replace(
-                VISUAL_SNIPPET_MAGIC_SELECTION_PLACEHOLDER,
-                sel,
-            );
+        let replacement: ResultInsert;
+        const captures = {
+            match: [],
+            groups: { [VISUAL_SNIPPET_MAGIC_SELECTION_PLACEHOLDER]: sel },
+        };
+        const options: InsertOptions = { captures };
+        if (this.replacement instanceof ArrayNode) {
+            replacement = this.replacement.applyInsert(options);
         } else {
-            replacement = this.replacement(sel);
+            const replacementTemp = convertOutputToNode(this.replacement(sel));
 
             // sanity check - if this.replacement was a function,
-            // we have no way to validate beforehand that it really does return a string
-            if (typeof replacement !== "string") {
+            // we have no way to validate beforehand that it really does returns a valid output.
+            if (replacementTemp === null) {
                 return null;
             }
+            replacement = replacementTemp.applyInsert(options);
         }
 
         return { triggerPos, replacement };
@@ -165,10 +207,6 @@ export class VisualSnippet extends Snippet<"visual"> {
 }
 
 export class RegexSnippet extends Snippet<"regex"> {
-    capture_groups_regex: RegExp;
-    named_capture_groups_regex: RegExp;
-    version: 1 | 2;
-    uncaptured_group_replacement: "" | undefined;
     constructor({
         trigger,
         replacement,
@@ -176,8 +214,9 @@ export class RegexSnippet extends Snippet<"regex"> {
         priority,
         description,
         excludedEnvironments,
-        version,
-    }: CreateSnippet<"regex"> & { version?: 1 | 2 }) {
+        triggerKey,
+        triggerAfter,
+    }: CreateSnippet<"regex">) {
         super(
             "regex",
             trigger,
@@ -186,36 +225,16 @@ export class RegexSnippet extends Snippet<"regex"> {
             priority,
             description,
             excludedEnvironments,
+            triggerKey,
         );
-        this.uncaptured_group_replacement = version === 1 ? undefined : "";
-        const test_result = new RegExp(`|${this.trigger.source}`).exec("");
-        this.capture_groups_regex =
-            test_result.length - 1
-                ? new RegExp(
-                      `@(?:@|\\[(${new Uint8Array(test_result.length - 1)
-                          .map((_, i) => i)
-                          .join("|")})\\])`,
-                      "g",
-                  )
-                : new RegExp("(?!)");
-        const named_capture_groups = test_result.groups
-            ? Object.keys(test_result.groups)
-            : [];
-        const escapedNamedCaptureGroups = named_capture_groups.map((name) =>
-            name.replace(/\$/g, "\\$&"),
-        );
-        this.named_capture_groups_regex = named_capture_groups.length
-            ? new RegExp(
-                  `@(?:@|\\[(${escapedNamedCaptureGroups.join("|")})\\])`,
-                  "g",
-              )
-            : new RegExp("(?!)");
+        this.data.triggerAfter = triggerAfter;
     }
 
     process(
         effectiveLine: string,
-        range: SelectionRange,
+        _range: SelectionRange,
         sel: string,
+        effectiveLineAfter: () => string,
     ): ProcessSnippetResult {
         const hasSelection = !!sel;
         // non-visual snippets only run when there is no selection
@@ -227,41 +246,43 @@ export class RegexSnippet extends Snippet<"regex"> {
         if (result === null) {
             return null;
         }
-
+        const afterResult = this.data.triggerAfter?.exec(effectiveLineAfter());
+        if (this.data.triggerAfter && afterResult === null) {
+            return null;
+        }
         const triggerPos = result.index;
+        const triggerEndPos = afterResult
+            ? effectiveLine.length + afterResult[0].length
+            : undefined;
 
-        let replacement;
-        if (typeof this.replacement === "string") {
-            replacement = this.replacement
-                .replace(this.capture_groups_regex, (match, p1) => {
-                    if (match === "@@") return match;
-                    return (
-                        result[parseInt(p1, 10) + 1]?.replace(/@/g, "@@") ??
-                        this.uncaptured_group_replacement
-                    );
-                })
-                .replace(this.named_capture_groups_regex, (match, p1) => {
-                    if (match === "@@") return match;
-                    return (
-                        result.groups?.[p1]?.replace(/@/g, "@@") ??
-                        this.uncaptured_group_replacement
-                    );
-                });
+        let replacement: ResultInsert;
+        const options: InsertOptions = {
+            captures: { match: result.slice(1), groups: result.groups ?? {} },
+        };
+        if (this.replacement instanceof ArrayNode) {
+            // Compute the replacement string
+            // result.length - 1 = the number of capturing groups
+            replacement = this.replacement.applyInsert(options);
         } else {
-            replacement = this.replacement(result);
+            const replacementTemp = convertOutputToNode(
+                this.replacement(result),
+            );
 
             // sanity check - if this.replacement was a function,
-            // we have no way to validate beforehand that it really does return a string
-            if (typeof replacement !== "string") {
+            // we have no way to validate beforehand that it really does return a valid output.
+            if (replacementTemp === null) {
                 return null;
             }
+            replacement = replacementTemp.applyInsert(options);
         }
 
-        return { triggerPos, replacement };
+        return { triggerPos, replacement, triggerEndPos };
     }
 }
 
 export class StringSnippet extends Snippet<"string"> {
+    data: SnippetData<"string">;
+
     constructor({
         trigger,
         replacement,
@@ -269,6 +290,8 @@ export class StringSnippet extends Snippet<"string"> {
         priority,
         description,
         excludedEnvironments: excludeIn,
+        triggerKey,
+        triggerAfter,
     }: CreateSnippet<"string">) {
         super(
             "string",
@@ -278,13 +301,16 @@ export class StringSnippet extends Snippet<"string"> {
             priority,
             description,
             excludeIn,
+            triggerKey,
         );
+        this.data.triggerAfter = triggerAfter;
     }
 
     process(
         effectiveLine: string,
-        range: SelectionRange,
+        _range: SelectionRange,
         sel: string,
+        effectiveLineAfter: () => string,
     ): ProcessSnippetResult {
         const hasSelection = !!sel;
         // non-visual snippets only run when there is no selection
@@ -296,20 +322,38 @@ export class StringSnippet extends Snippet<"string"> {
         if (!effectiveLine.endsWith(this.trigger)) {
             return null;
         }
-
-        const triggerPos = effectiveLine.length - this.trigger.length;
-        const replacement =
-            typeof this.replacement === "string"
-                ? this.replacement
-                : this.replacement(this.trigger);
-
-        // sanity check - if replacement was a function,
-        // we have no way to validate beforehand that it really does return a string
-        if (typeof replacement !== "string") {
+        if (
+            this.data.triggerAfter &&
+            !effectiveLineAfter().startsWith(this.data.triggerAfter)
+        ) {
             return null;
         }
 
-        return { triggerPos, replacement };
+        const triggerPos = effectiveLine.length - this.trigger.length;
+        const triggerEndPos =
+            this.data.triggerAfter !== undefined
+                ? effectiveLine.length + this.data.triggerAfter.length
+                : undefined;
+        const options: InsertOptions = {
+            captures: { match: [this.trigger], groups: {} },
+        };
+        let replacement: ResultInsert;
+        if (this.replacement instanceof ArrayNode) {
+            replacement = this.replacement.applyInsert(options);
+        } else {
+            const replacementTemp = convertOutputToNode(
+                this.replacement(this.trigger),
+            );
+
+            // sanity check - if replacement was a function,
+            // we have no way to validate beforehand that it really does return a string
+            if (replacementTemp === null) {
+                return null;
+            }
+            replacement = replacementTemp.applyInsert(options);
+        }
+
+        return { triggerPos, replacement, triggerEndPos };
     }
 }
 
@@ -319,7 +363,7 @@ export class StringSnippet extends Snippet<"string"> {
  * @param v
  * @returns
  */
-function replacer(k: string, v: unknown) {
+function replacer(_k: string, v: unknown) {
     if (typeof v === "function") {
         return "[[Function]]";
     }
@@ -334,6 +378,7 @@ type CreateSnippet<T extends SnippetType> = {
     priority?: number;
     description?: string;
     excludedEnvironments?: Environment[];
+    triggerKey?: string;
 } & SnippetData<T>;
 
 /**

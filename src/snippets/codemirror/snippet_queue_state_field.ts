@@ -1,57 +1,87 @@
-import type { EditorState } from "@codemirror/state";
+import type { EditorView} from "@codemirror/view";
+import { ViewPlugin } from "@codemirror/view";
 import { SnippetChangeSpec } from "./snippet_change_spec";
-import type { EditorView } from "@codemirror/view";
-class SnippetQueue {
-    private snippetQueue: SnippetChangeSpec[] = [];
+import { getIndentUnit, indentString } from "@codemirror/language";
+import type { EditorState } from "@codemirror/state";
+import { countColumn } from "@codemirror/state";
+import type { ResultInsert } from "../luasnip_api/node";
+export const snippetQueuePlugin = ViewPlugin.fromClass(
+    class {
+        private snippetQueue: SnippetChangeSpec[] = [];
 
-    clearSnippetQueue() {
-        this.snippetQueue = [];
-    }
+        clearSnippetQueue() {
+            this.snippetQueue = [];
+        }
 
-    QueueSnippets(values: SnippetChangeSpec[]) {
-        this.snippetQueue = this.snippetQueue.concat(values);
-    }
+        QueueSnippets(values: SnippetChangeSpec[]) {
+            this.snippetQueue = this.snippetQueue.concat(values);
+        }
 
-    get snippetQueueValue(): SnippetChangeSpec[] {
-        return this.snippetQueue.map(
-            (s) => new SnippetChangeSpec(s.from, s.to, s.insert, s.keyPressed),
+        get snippetQueueValue(): SnippetChangeSpec[] {
+            return this.snippetQueue.map(
+                (s) =>
+                    new SnippetChangeSpec(
+                        s.from,
+                        s.to,
+                        s.insert,
+                        s.keyPressed,
+                        s.after,
+                    ),
+            );
+        }
+    },
+);
+
+export function getSnippetQueue(view: EditorView) {
+    const plugin = view.plugin(snippetQueuePlugin);
+    if (!plugin) {
+        throw new Error(
+            "SnippetQueue plugin not found, something went wrong with the plugin initialization",
         );
     }
+    return plugin;
 }
-export const snippetQueueStateField = new SnippetQueue();
 
 export function queueSnippet(
     view: EditorView,
     from: number,
     to: number,
-    insert: string,
+    insert: ResultInsert,
     keyPressed?: string,
+    after?: number,
 ) {
-    const snippet = new SnippetChangeSpec(
-        from,
-        to,
-        keepIndentAndCallout(view.state, from, to, insert),
-        keyPressed,
-    );
-    snippetQueueStateField.QueueSnippets([snippet]);
+    insert.insert = keepIndentAndCallout(view.state, from, to, insert.insert);
+    const snippet = new SnippetChangeSpec(from, to, insert, keyPressed, after);
+    getSnippetQueue(view).QueueSnippets([snippet]);
 }
 
-export const CALLOUTREGEX = /^\s*/;
 const keepIndentAndCallout = (
     state: EditorState,
-    from: number,
+    _from: number,
     to: number,
     replacement: string,
 ): string => {
-    const d = state.doc;
-    const lineText = d.lineAt(to).text;
-    const matchIndents = lineText.match(/^\s*/);
-    const leadingIndents = matchIndents ? matchIndents[0] : "";
-    return replacement.replace(/\n(\t*)/g, (_, p1) => {
-        return "\n" + leadingIndents + " ".repeat(4).repeat(p1.length);
+    const line = state.doc.lineAt(to);
+    const lineText = line.text;
+    const calloutAndIndent = lineText.match(/^(>*)(\s*)/);
+    if (!calloutAndIndent) return replacement;
+    const callouts = calloutAndIndent[1];
+    const indentation = calloutAndIndent[2];
+    const originalColIndent = countColumn(indentation, state.tabSize);
+    const indentUnitSize = getIndentUnit(state);
+    const misalignment = originalColIndent % indentUnitSize;
+    replacement = replacement.replace(/\n(\t*)/g, (_, p1: string) => {
+        // not preserving misalignment when indent level is increased
+        const newColIndent =
+            p1.length * indentUnitSize +
+            originalColIndent -
+            (p1.length && misalignment);
+        const indent = indentString(state, newColIndent);
+        return "\n" + callouts + indent;
     });
-};
 
-export function clearSnippetQueue() {
-    snippetQueueStateField.clearSnippetQueue();
+    return replacement;
+};
+export function clearSnippetQueue(view: EditorView) {
+    getSnippetQueue(view).clearSnippetQueue();
 }

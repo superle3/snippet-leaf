@@ -24,7 +24,7 @@ export function sortSnippets(snippets: Snippet[]): Snippet[] {
             // sort resultant tuples representing the snippets
             .sort(schwartzianSnippetCompare)
             // and get back the snippets
-            .map(([_, __, i]) => snippets[i])
+            .map(([_p, _t, i]) => snippets[i])
     );
 }
 
@@ -71,7 +71,7 @@ function comparePriority(a: number, b: number) {
 }
 
 function getPriority(snippet: Snippet) {
-    return snippet.priority || 0;
+    return snippet.priority;
 }
 
 function getTriggerLength(snippet: Snippet) {

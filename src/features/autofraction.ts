@@ -1,16 +1,21 @@
 import type { EditorView } from "@codemirror/view";
 import type { SelectionRange } from "@codemirror/state";
 import { findMatchingBracket, getOpenBracket } from "src/utils/editor_utils";
-import { expandSnippets } from "../snippets/snippet_management";
-import { autoEnlargeBrackets } from "./auto_enlarge_brackets";
-import { getLatexSuiteConfig } from "src/settings/raw_settings";
 import { queueSnippet } from "src/snippets/codemirror/snippet_queue_state_field";
-import { getContextPlugin } from "src/latex_context/context";
+import { expandSnippets } from "src/snippets/snippet_management";
+import { autoEnlargeBrackets } from "./auto_enlarge_brackets";
+import {
+    ArrayNode,
+    emptyInsertOptions,
+    TabstopNode,
+    TextNode,
+} from "src/snippets/luasnip_api/node";
+import { getLatexSuiteConfig } from "src/settings/raw_settings";
+import type { Context } from "src/latex_context/context";
 
-export const runAutoFraction = (view: EditorView): boolean => {
-    const ctx = getContextPlugin(view);
+export const runAutoFraction = (view: EditorView, ctx: Context): boolean => {
     for (const range of ctx.ranges) {
-        runAutoFractionCursor(view, range);
+        runAutoFractionCursor(view, ctx, range);
     }
 
     const success = expandSnippets(view);
@@ -22,12 +27,16 @@ export const runAutoFraction = (view: EditorView): boolean => {
     return success;
 };
 
+const greek =
+    "alpha|beta|gamma|Gamma|delta|Delta|epsilon|varepsilon|zeta|eta|theta|Theta|iota|kappa|lambda|Lambda|mu|nu|omicron|xi|Xi|pi|Pi|rho|sigma|Sigma|tau|upsilon|Upsilon|varphi|phi|Phi|chi|psi|Psi|omega|Omega";
+const regex = new RegExp("(" + greek + ") ([^ ])", "g");
+
 export const runAutoFractionCursor = (
     view: EditorView,
+    ctx: Context,
     range: SelectionRange,
 ): boolean => {
     const settings = getLatexSuiteConfig(view);
-    const ctx = getContextPlugin(view);
     const { from, to } = range;
 
     // Don't run autofraction in excluded environments
@@ -42,7 +51,7 @@ export const runAutoFractionCursor = (
     if (!result) return false;
     const eqnStart = result.inner_start;
 
-    let curLine = view.state.sliceDoc(0, to);
+    let curLine = view.state.sliceDoc(eqnStart, to);
     let start = eqnStart;
 
     if (from != to) {
@@ -56,16 +65,13 @@ export const runAutoFractionCursor = (
 
         // Also, allow spaces after greek letters
         // By replacing spaces after greek letters with a dummy character (#)
-
-        const greek =
-            "alpha|beta|gamma|Gamma|delta|Delta|epsilon|varepsilon|zeta|eta|theta|Theta|iota|kappa|lambda|Lambda|mu|nu|omicron|xi|Xi|pi|Pi|rho|sigma|Sigma|tau|upsilon|Upsilon|varphi|phi|Phi|chi|psi|Psi|omega|Omega";
-        const regex = new RegExp("(" + greek + ") ([^ ])", "g");
+        regex.lastIndex = 0;
         curLine = curLine.replace(regex, "$1#$2");
 
-        for (let i = curLine.length - 1; i >= eqnStart; i--) {
+        for (let i = curLine.length - 1; i >= 0; i--) {
             const curChar = curLine.charAt(i);
 
-            if ([")", "]", "}"].includes(curChar)) {
+            if ([")", "]", "}"].contains(curChar)) {
                 const closeBracket = curChar;
                 const openBracket = getOpenBracket(closeBracket);
 
@@ -81,19 +87,14 @@ export const runAutoFractionCursor = (
 
                 // Skip to the beginnning of the bracket
                 i = j;
-
-                if (i < eqnStart) {
-                    start = eqnStart;
-                    break;
-                }
             }
 
             if (
                 " $([{\n"
                     .concat(settings.autofractionBreakingChars)
-                    .includes(curChar)
+                    .contains(curChar)
             ) {
-                start = i + 1;
+                start = i + 1 + eqnStart;
                 break;
             }
         }
@@ -108,22 +109,32 @@ export const runAutoFractionCursor = (
     let numerator = view.state.sliceDoc(start, to);
 
     // Remove unnecessary outer parentheses
-    if (
-        numerator.charAt(0) === "(" &&
-        numerator.charAt(numerator.length - 1) === ")"
-    ) {
+    if (numerator.at(0) === "(" && numerator.at(-1) === ")") {
         const closing = findMatchingBracket(numerator, 0, "(", ")", false);
         if (closing === numerator.length - 1) {
             numerator = numerator.slice(1, -1);
         }
     }
 
-    const replacement = `${settings.autofractionSymbol}{${numerator.replace(
-        /@/g,
-        "@@",
-    )}}{@0}@1`;
+    const snippet = new ArrayNode([
+        new TextNode(settings.autofractionSymbol + "{"),
+        // If the content inside parentheses is empty, the numerator would be empty and that's rarely desired.
+        numerator === "" ? new TabstopNode(0) : new TextNode(numerator),
+        new TextNode("}{"),
+        new TabstopNode(1),
+        new TextNode("}"),
+        new TabstopNode(2),
+    ]);
+    // The keypressed shouldn't be inserted back in after an undo, if we have a selection.
+    const keyPressed = from != to ? undefined : "/";
 
-    queueSnippet(view, start, to, replacement, "/");
+    queueSnippet(
+        view,
+        start,
+        to,
+        snippet.applyInsert(emptyInsertOptions),
+        keyPressed,
+    );
 
     return true;
 };

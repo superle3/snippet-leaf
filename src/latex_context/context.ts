@@ -4,10 +4,10 @@ import { findMatchingBracket, getCloseBracket } from "../utils/editor_utils";
 import { Mode } from "../snippets/options";
 import type { Environment } from "../snippets/environment";
 import type { SyntaxNode, Tree, NodeIterator } from "@lezer/common";
-import type { FullBounds } from "./mathbounds";
+import type { Bounds } from "./mathbounds";
 import { syntaxTree } from "@codemirror/language";
 
-export interface Bounds {
+export interface SmallBounds {
     start: number;
     end: number;
 }
@@ -18,7 +18,7 @@ export class Context {
     pos: number;
     ranges: SelectionRange[];
     boundsCache: Map<number, EquationInfo>;
-    innerBoundsCache: Map<number, Bounds>;
+    innerBoundsCache: Map<number, SmallBounds>;
     constructor(view: EditorView) {
         this.updateFromView(view);
     }
@@ -148,7 +148,7 @@ export class Context {
         );
     }
 
-    getBounds(pos: number = this.pos): FullBounds {
+    getBounds(pos: number = this.pos): Bounds {
         // yes, I also want the cache to work over the produced range instead of just that one through
         // a BTree or the like, but that'd be probably overkill
         if (this.boundsCache.has(pos)) {
@@ -162,7 +162,7 @@ export class Context {
     }
 
     // Accounts for equations within text environments, e.g. $$\text{... $...$}$$
-    getInnerBounds(pos: number = this.pos): FullBounds {
+    getInnerBounds(pos: number = this.pos): Bounds {
         const bounds = getInnerEquationBounds(this.state, pos);
         return bounds;
     }
@@ -201,25 +201,25 @@ export enum MathMode {
     TextEnv,
 }
 
-const DisplayMathOffset: Bounds = {
+const DisplayMathOffset: SmallBounds = {
     start: 1,
     end: -1,
 };
-const BracketMathOffset: Bounds = {
+const BracketMathOffset: SmallBounds = {
     start: 2,
     end: -2,
 };
-const InlineMathOffset: Bounds = {
+const InlineMathOffset: SmallBounds = {
     start: -1,
     end: 1,
 };
-const ParenMathOffset: Bounds = {
+const ParenMathOffset: SmallBounds = {
     start: 2,
     end: -2,
 };
 
 // TODO: implement this properly somehow
-const TextEnvOffset: Bounds = {
+const TextEnvOffset: SmallBounds = {
     start: 0,
     end: 0,
 };
@@ -234,7 +234,7 @@ export type EquationInfo =
                 EnvName: string;
             }
       ) &
-          FullBounds)
+          Bounds)
     | null;
 
 export const mathContext: Record<
@@ -357,7 +357,7 @@ const equationType = (
     return null;
 };
 
-const boundsFromOffset = (a: SyntaxNode, offset: Bounds): FullBounds => {
+const boundsFromOffset = (a: SyntaxNode, offset: SmallBounds): Bounds => {
     return {
         inner_start: a.from + offset.start,
         inner_end: a.to + offset.end,
@@ -365,7 +365,7 @@ const boundsFromOffset = (a: SyntaxNode, offset: Bounds): FullBounds => {
         outer_end: a.to,
     };
 };
-const addBounds = (...bounds: Bounds[]) => {
+const addBounds = (...bounds: SmallBounds[]) => {
     if (bounds.length === 0) return null;
 
     return bounds.reduce((acc, bound) => {
@@ -382,7 +382,7 @@ const getInnerBoundsFromEquation = (
         name: "EquationEnvironment" | "EquationArrayEnvironment";
     },
     state: EditorState,
-): { EnvName: string; inner_bounds: Bounds } | null => {
+): { EnvName: string; inner_bounds: SmallBounds } | null => {
     const hash_map: Record<string, string> = {
         EquationEnvironment: "EquationEnvName",
         EquationArrayEnvironment: "EquationArrayEnvName",
@@ -414,21 +414,18 @@ const getInnerBoundsFromEquation = (
 export const getEquationBounds = (
     state: EditorState,
     pos?: number,
-): FullBounds | null => {
+): Bounds | null => {
     if (!pos) pos = state.selection.main.to;
     return equationType(state) ?? null;
 };
 
 // Accounts for equations within text environments, e.g. $$\text{... $...$}$$
-const getInnerEquationBounds = (
-    state: EditorState,
-    pos?: number,
-): FullBounds => {
+const getInnerEquationBounds = (state: EditorState, pos?: number): Bounds => {
     if (!pos) pos = state.selection.main.to;
     return equationType(state, pos) ?? null;
 };
 
-const boundsFromNode = (node: SyntaxNode): Bounds | null => {
+const boundsFromNode = (node: SyntaxNode): SmallBounds | null => {
     const start = node.from;
     const end = node.to;
 

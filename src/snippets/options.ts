@@ -1,9 +1,10 @@
 export class Options {
-    mode!: Mode;
+    mode: Mode;
     automatic: boolean;
     regex: boolean;
     onWordBoundary: boolean;
     visual: boolean;
+    undoKey: boolean;
 
     constructor() {
         this.mode = new Mode();
@@ -11,6 +12,7 @@ export class Options {
         this.regex = false;
         this.onWordBoundary = false;
         this.visual = false;
+        this.undoKey = true;
     }
 
     static fromSource(source: string): Options {
@@ -31,6 +33,9 @@ export class Options {
                 case "v":
                     options.visual = true;
                     break;
+                case "U":
+                    options.undoKey = false;
+                    break;
             }
         }
 
@@ -39,14 +44,14 @@ export class Options {
 }
 
 export class Mode {
-    text: boolean;
-    dollarInlineMath: boolean;
-    dollarBlockMath: boolean;
-    parenInlineMath: boolean;
-    bracketBlockMath: boolean;
-    textEnv: boolean;
-    equation: boolean;
-    array: boolean;
+    text: boolean = false;
+    dollarInlineMath: boolean = false;
+    dollarBlockMath: boolean = false;
+    parenInlineMath: boolean = false;
+    bracketBlockMath: boolean = false;
+    textEnv: boolean = false;
+    equation: boolean = false;
+    array: boolean = false;
 
     /** Whether the state is inside an inline math environment. */
     get inlineMath(): boolean {
@@ -61,6 +66,13 @@ export class Mode {
             this.equation ||
             this.array
         );
+    }
+
+    /**
+     * Whether the state is inside an equation bounded by $ or $$ delimeters.
+     */
+    inEquation(): boolean {
+        return this.inlineMath || this.blockMath;
     }
 
     /**
@@ -82,27 +94,12 @@ export class Mode {
     }
 
     inText(): boolean {
-        return this.textEnv || this.text;
-    }
-
-    constructor() {
-        this.text = false;
-        this.textEnv = false;
-        this.bracketBlockMath = false;
-        this.dollarInlineMath = false;
-        this.dollarBlockMath = false;
-        this.parenInlineMath = false;
-        this.equation = false;
-        this.array = false;
+        return this.text || this.textEnv;
     }
 
     invert() {
         this.text = !this.text;
         this.textEnv = !this.textEnv;
-        this.bracketBlockMath = !this.bracketBlockMath;
-        this.dollarInlineMath = !this.dollarInlineMath;
-        this.dollarBlockMath = !this.dollarBlockMath;
-        this.parenInlineMath = !this.parenInlineMath;
     }
 
     static fromSource(source: string): Mode {
