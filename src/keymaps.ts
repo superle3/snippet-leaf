@@ -5,7 +5,7 @@ import {
     reloadLatexSuiteFacetCompartment,
 } from "./settings/raw_settings";
 import type { LatexSuitePluginSettings } from "./settings/default_settings";
-import { updateConcealEffect } from "./conceal_plugin/conceal";
+import { updateConcealEffect } from "./editor_extensions/conceal";
 
 const toggleConceal = (view: EditorView): boolean => {
     const currentSettings = getLatexSuiteConfig(view);

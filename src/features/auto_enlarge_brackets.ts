@@ -2,7 +2,7 @@ import type { EditorView } from "@codemirror/view";
 import { queueSnippet } from "src/snippets/codemirror/snippet_queue_state_field";
 import { expandSnippets } from "src/snippets/snippet_management";
 import { getContextPlugin } from "src/latex_context/context";
-import { escapeRegex } from "src/conceal_plugin/conceal_fns";
+import { escapeRegex } from "src/editor_extensions/conceal_fns";
 import { isContains, inObject } from "src/utils/type_utils";
 import { getLatexSuiteConfig } from "src/settings/raw_settings";
 

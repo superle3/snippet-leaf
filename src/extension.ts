@@ -6,7 +6,7 @@ import { processLatexSuiteSettings } from "./settings/settings";
 import { setLatexSuiteConfig } from "./settings/raw_settings";
 import { stateEffect_variables } from "./snippets/codemirror/history";
 import { create_tabstopsStateField } from "./snippets/codemirror/tabstops_state_field";
-import { mkConcealPlugin } from "./conceal_plugin/conceal";
+import { mkConcealPlugin } from "./editor_extensions/conceal";
 
 import type { RawSnippet, SnippetVariables } from "./snippets/parse";
 import type { TabstopGroup } from "./snippets/tabstop";
@@ -14,7 +14,7 @@ import type { ProcessSnippetResult, SnippetData } from "./snippets/snippets";
 import {
     colorPairedBracketsPluginLowestPrec,
     highlightCursorBracketsPlugin,
-} from "./highlight_brackets_plugin/highlight_brackets";
+} from "./editor_extensions/highlight_brackets";
 import { createContextPlugin } from "./latex_context/context";
 import { createMathBoundsPlugin } from "./latex_context/mathbounds";
 import { getKeymaps } from "./keymaps";
