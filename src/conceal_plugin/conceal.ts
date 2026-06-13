@@ -12,7 +12,7 @@ import {
     type ViewUpdate,
 } from "@codemirror/view";
 import type { DecorationSet } from "@codemirror/view";
-import type { Range, StateEffectType } from "@codemirror/state";
+import type { Range, StateEffectType, Transaction } from "@codemirror/state";
 import {
     RangeSet,
     RangeSetBuilder,
@@ -281,7 +281,7 @@ function buildAtomicRanges(concealments: Concealment[]) {
 
 export let updateConcealEffect: StateEffectType<null>;
 function isUpdateConcealEffect(update: ViewUpdate): boolean {
-    return update?.transactions.some((tr) =>
+    return update?.transactions?.some((tr) =>
         tr.effects.some((e) =>
             // @ts-ignore
             e.is(updateConcealEffect),
@@ -323,11 +323,13 @@ export const mkConcealPlugin = (revealTimeout: number) => {
                     revealTimeout,
                     true,
                 );
+                const transactions: readonly Transaction[] = [];
                 // HACK: trigger an initial concealment calculation
                 this.update({
                     view,
                     state: view.state,
                     docChanged: true,
+                    transactions,
                 } as ViewUpdate);
             }
 
