@@ -1,11 +1,11 @@
 import type { TransactionSpec } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
-import { intersection } from "src/utils/prototype_utils";
-import { getLatexSuiteConfig } from "src/snippets/codemirror/config";
-import type { Context } from "src/utils/context";
+import { getLatexSuiteConfig } from "src/settings/raw_settings";
 import { setCursor, getCharacterAtPos } from "src/utils/editor_utils";
-import type { Token } from "src/utils/tokenizer";
-import { tokenize } from "src/utils/tokenizer";
+import type { Token } from "./tabout_tokenizer";
+import { tokenize } from "./tabout_tokenizer";
+import type { Context } from "src/latex_context/context";
+import { intersection } from "src/utils/prototype_utils";
 
 const LEFT_COMMANDS = new Set<string>([
     "\\left",
@@ -174,7 +174,7 @@ export const tabout = (view: EditorView, ctx: Context): boolean => {
     if (!isAtEnd) return false;
 
     // Check whether we're in inline math or a block eqn
-    if (ctx.mode.inlineMath || ctx.mode.codeMath) {
+    if (ctx.mode.inlineMath) {
         setCursor(view, outer_end);
     } else {
         // First, locate the $$ symbol

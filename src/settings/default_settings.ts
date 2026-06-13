@@ -34,8 +34,12 @@ export const DEFAULT_SETTINGS = {
     autofractionBreakingChars: "+-=\t",
     matrixShortcutsEnabled: true,
     taboutEnabled: true,
+    taboutClosingSymbols:
+        "), ], \\rbrack, \\}, \\rbrace, \\rangle, \\rvert, \\rVert, \\rfloor, \\rceil, \\urcorner, }",
     autoEnlargeBrackets: true,
+    autoEnlargeBracketsSpace: true,
     wordDelimiters: "., +-\\n\t:;!?\\/{}[]()=~$",
+    snippetDebug: "off",
 
     // keys
     concealToggleKey: "",
@@ -45,6 +49,7 @@ export const DEFAULT_SETTINGS = {
     autofractionExcludedEnvs: '[\n\t["^{", "}"],\n\t["\\\\pu{", "}"]\n]',
     matrixShortcutsEnvNames:
         "pmatrix, cases, align, gather, bmatrix, Bmatrix, vmatrix, Vmatrix, array, matrix",
+    matrixShortcutsMacroNames: "eqnarray",
     autoEnlargeBracketsTriggers: "sum, int, frac, prod, bigcup, bigcap",
 } as const satisfies LatexSuitePluginSettings & LatexSuiteRawSettings;
 

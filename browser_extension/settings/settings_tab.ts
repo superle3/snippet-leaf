@@ -11,7 +11,7 @@ import {
     get_settings,
     store_settings,
 } from "./browser_storage_wrapper";
-import { debounce } from "src/utils/debounce";
+import { debounce } from "src/editor_extensions/obsidian_utils";
 
 class Setting {
     container_element: HTMLElement;

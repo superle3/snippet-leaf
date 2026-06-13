@@ -3,14 +3,15 @@ import type { Options } from "./options";
 import type { Environment } from "./environment";
 import type {
     ResultInsert,
-    Options as InsertOptions} from "./luasnip_api/node";
+    Options as InsertOptions,
+} from "./luasnip_api/node";
 import {
     BaseNode,
     ArrayNode,
     SnippetTabstopOnlyNode,
-    emptyInsertOptions,
 } from "./luasnip_api/node";
 import * as v from "valibot";
+// import { ResultInsert } from "./luasnip_api/node";
 
 /**
  * in visual snippets, if the replacement is a string, this is the magic substring to indicate the selection.
@@ -81,6 +82,8 @@ export type ProcessSnippetResult = {
     triggerEndPos?: number;
 } | null;
 
+export const ARE_SETTINGS_PARSED = Symbol("areSettingsParsed");
+
 /**
  * a snippet instance contains all the information necessary to run a snippet.
  * snippet data specific to a certain type of snippet is in its `data` property.
@@ -94,6 +97,7 @@ export abstract class Snippet<T extends SnippetType = SnippetType> {
     triggerKey: string;
 
     excludedEnvironments: Environment[];
+    [ARE_SETTINGS_PARSED] = true;
 
     constructor(
         type: T,
@@ -184,11 +188,12 @@ export class VisualSnippet extends Snippet<"visual"> {
 
         const triggerPos = range.from;
         let replacement: ResultInsert;
-        const captures = {
-            match: [],
-            groups: { [VISUAL_SNIPPET_MAGIC_SELECTION_PLACEHOLDER]: sel },
+        const options: InsertOptions = {
+            captures: {
+                match: [],
+                groups: { [VISUAL_SNIPPET_MAGIC_SELECTION_PLACEHOLDER]: sel },
+            },
         };
-        const options: InsertOptions = { captures };
         if (this.replacement instanceof ArrayNode) {
             replacement = this.replacement.applyInsert(options);
         } else {

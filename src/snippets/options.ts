@@ -41,6 +41,14 @@ export class Options {
 
         return options;
     }
+
+    snippetShouldRunInMode(mode: Mode): boolean {
+        return (
+            (this.mode.inlineMath && mode.inlineMath) ||
+            (this.mode.blockMath && mode.blockMath) ||
+            (this.mode.inText() && mode.inText())
+        );
+    }
 }
 
 export class Mode {
@@ -139,14 +147,4 @@ export class Mode {
 
         return mode;
     }
-
-    static snippetShouldRunInMode = (options: Options, mode: Mode) => {
-        if (
-            (options.mode.inlineMath && mode.inlineMath) ||
-            (options.mode.blockMath && mode.blockMath) ||
-            (options.mode.inText() && mode.inText())
-        ) {
-            return true;
-        }
-    };
 }

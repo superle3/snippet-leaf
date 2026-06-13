@@ -3,16 +3,15 @@ import { setCursor } from "src/utils/editor_utils";
 import { queueSnippet } from "src/snippets/codemirror/snippet_queue_state_field";
 import { expandSnippets } from "src/snippets/snippet_management";
 import { taboutByEnclosedBrackets } from "./tabout";
-import {
-    ArrayNode,
-    emptyInsertOptions,
-    TabstopNode,
-    TextNode,
-} from "src/snippets/luasnip_api/node";
-import type { SmallBounds } from "src/latex_context/context";
 import { getContextPlugin } from "src/latex_context/context";
 import { getLatexSuiteConfig } from "src/settings/raw_settings";
 import type { Bounds } from "src/latex_context/mathbounds";
+import {
+    ArrayNode,
+    TextNode,
+    TabstopNode,
+    emptyInsertOptions,
+} from "src/snippets/luasnip_api/node";
 
 const newlineMatrixShortcutCallback = (view: EditorView): boolean => {
     const ctx = getContextPlugin(view);
@@ -115,3 +114,20 @@ export const addCellMatrixShortcut = matrixShortcutsRunner(
 export const priorityTaboutMatrixShortcut = matrixShortcutsRunner(
     priorityTaboutShortcutCallback,
 );
+
+export function runMatrixShortcuts(
+    view: EditorView,
+    key: string,
+    shift: boolean,
+): boolean {
+    if (key === "Enter" && !shift) {
+        return newlineMatrixShortcut(view);
+    } else if (key === "Enter" && shift) {
+        return exitMatrixShortCut(view);
+    } else if (key === "Tab") {
+        return priorityTaboutMatrixShortcut(view);
+    } else if (key === "&") {
+        return addCellMatrixShortcut(view);
+    }
+    return false;
+}

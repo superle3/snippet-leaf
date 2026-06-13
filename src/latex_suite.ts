@@ -3,7 +3,6 @@ import type { EditorView, ViewUpdate } from "@codemirror/view";
 import { runSnippets } from "./features/run_snippets";
 import { runAutoFraction } from "./features/autofraction";
 import { tabout, shouldTaboutByCloseBracket } from "./features/tabout";
-import { runMatrixShortcuts } from "./features/matrix_shortcuts";
 
 import { getContextPlugin } from "./latex_context/context";
 import { replaceRange } from "./utils/editor_utils";
@@ -15,6 +14,7 @@ import { getLatexSuiteConfig } from "./settings/raw_settings";
 import { isComposing } from "./utils/editor_utils";
 import { clearSnippetQueue } from "./snippets/codemirror/snippet_queue_state_field";
 import { handleUndoRedo } from "./snippets/codemirror/history";
+import { runMatrixShortcuts } from "./features/matrix_shortcuts";
 
 export const handleUpdate = (update: ViewUpdate) => {
     // const settings = getLatexSuiteConfig(update.state, latexSuiteConfig);
@@ -92,24 +92,31 @@ export const handleKeydown = (
         // Allows Ctrl + z for undo, instead of triggering a snippet ending with z
         if (!ctrlKey) {
             try {
-                success = runSnippets(view, key);
+                success = runSnippets(
+                    view,
+                    { key, snippets: settings.snippets },
+                    {
+                        recursive: 0,
+                        debug: "off",
+                    },
+                );
                 if (success) return true;
             } catch (e) {
-                clearSnippetQueue();
+                clearSnippetQueue(view);
                 console.error(e);
             }
         }
     }
 
     if (key === "Tab") {
-        success = setSelectionToNextTabstop(view);
+        success = setSelectionToNextTabstop(view, false);
 
         if (success) return true;
     }
 
     if (settings.autofractionEnabled && ctx.mode.strictlyInMath()) {
         if (key === "/") {
-            success = runAutoFraction(view);
+            success = runAutoFraction(view, ctx);
 
             if (success) return true;
         }
@@ -130,7 +137,7 @@ export const handleKeydown = (
             (key === "Tab" && view.state.selection.main.empty) ||
             shouldTaboutByCloseBracket(view, key)
         ) {
-            success = tabout(view);
+            success = tabout(view, ctx);
 
             if (success) return true;
         }

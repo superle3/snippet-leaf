@@ -1,7 +1,7 @@
 import * as ts from "typescript";
 import { get_settings } from "./browser_storage_wrapper";
 import browser from "webextension-polyfill";
-import { debounce } from "src/utils/debounce";
+import { debounce } from "src/editor_extensions/obsidian_utils";
 
 async function send_config(): Promise<void> {
     const config = await get_transpiled_settings();

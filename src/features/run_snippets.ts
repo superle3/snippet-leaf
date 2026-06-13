@@ -1,13 +1,13 @@
 import type { EditorView } from "@codemirror/view";
 import type { EditorState, SelectionRange } from "@codemirror/state";
 import { queueSnippet } from "src/snippets/codemirror/snippet_queue_state_field";
-import type { Mode, Options } from "src/snippets/options";
 import { expandSnippets } from "src/snippets/snippet_management";
 import { autoEnlargeBrackets } from "./auto_enlarge_brackets";
 import type { snippetDebugLevel } from "src/settings/settings";
 import type { Snippet, SnippetType } from "src/snippets/snippets";
 import { showSnippetInfo } from "src/editor_extensions/obsidian_utils";
-import { Context, getContextPlugin } from "src/latex_context/context";
+import type { Context } from "src/latex_context/context";
+import { getContextPlugin } from "src/latex_context/context";
 import { getLatexSuiteConfig } from "src/settings/raw_settings";
 
 type SnippetInfo = {
@@ -84,7 +84,7 @@ const runSnippetCursor = (
     for (let i = 0; i < snippetInfo.snippets.length; i++) {
         const snippet = snippetInfo.snippets[i];
 
-        if (!Mode.snippetShouldRunInMode(snippet.options, ctx.mode)) {
+        if (!snippet.options.snippetShouldRunInMode(ctx.mode)) {
             continue;
         }
 

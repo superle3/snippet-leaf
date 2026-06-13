@@ -4,8 +4,8 @@ import { expandSnippets } from "src/snippets/snippet_management";
 import { getContextPlugin } from "src/latex_context/context";
 import { escapeRegex } from "src/editor_extensions/conceal_fns";
 import { isContains, inObject } from "src/utils/type_utils";
-import { emptyInsertOptions, TextNode } from "src/snippets/luasnip_api/node";
 import { getLatexSuiteConfig } from "src/settings/raw_settings";
+import { emptyInsertOptions, TextNode } from "src/snippets/luasnip_api/node";
 
 const sizeControls = [
     "\\big",

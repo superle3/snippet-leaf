@@ -1,14 +1,11 @@
 import { handleUpdate, onKeydown } from "./latex_suite";
 import type { LatexSuiteCMSettings } from "./settings/default_settings";
 import type { LatexSuitePluginSettings } from "./settings/default_settings";
-import { create_snippet_extensions } from "./snippets/codemirror/extensions";
 import { processLatexSuiteSettings } from "./settings/settings";
 import { setLatexSuiteConfig } from "./settings/raw_settings";
-import { stateEffect_variables } from "./snippets/codemirror/history";
-import { create_tabstopsStateField } from "./snippets/codemirror/tabstops_state_field";
 import { mkConcealPlugin } from "./editor_extensions/conceal";
 
-import type { RawSnippet, SnippetVariables } from "./snippets/parse";
+import type { SnippetVariables, RawSnippet } from "./snippets/parse";
 import type { TabstopGroup } from "./snippets/tabstop";
 import type { ProcessSnippetResult, SnippetData } from "./snippets/snippets";
 import {
@@ -24,8 +21,6 @@ import { EditorView } from "@codemirror/view";
 export function main(settings: LatexSuitePluginSettings) {
     const CMSettings: LatexSuiteCMSettings =
         processLatexSuiteSettings(settings);
-    stateEffect_variables();
-    create_tabstopsStateField();
     const latexSuiteConfig = setLatexSuiteConfig(CMSettings);
     const extensions: Extension[] = [];
 
@@ -38,7 +33,6 @@ export function main(settings: LatexSuitePluginSettings) {
             }),
         ),
         EditorView.updateListener.of(handleUpdate),
-        create_snippet_extensions(),
         getKeymaps(settings),
         latexSuiteConfig,
         createContextPlugin(),
@@ -50,8 +44,8 @@ export function main(settings: LatexSuitePluginSettings) {
     extensions.push(conceal_plugin);
 
     const highlighting_brackets = [
-        colorPairedBracketsPluginLowestPrec(),
-        highlightCursorBracketsPlugin(),
+        colorPairedBracketsPluginLowestPrec,
+        highlightCursorBracketsPlugin,
     ];
     extensions.push(...highlighting_brackets);
     const dark_theme_extension = EditorView.baseTheme({

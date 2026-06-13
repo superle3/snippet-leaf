@@ -11,6 +11,7 @@ import {
     array,
     pipe,
     transform,
+    literal,
 } from "valibot";
 import type { Snippet } from "./snippets";
 import {
@@ -24,15 +25,15 @@ import { Options } from "./options";
 import { sortSnippets } from "./sort";
 import type { Environment } from "./environment";
 import { EXCLUSIONS } from "./environment";
-import { api } from "./luasnip_api";
-import {
-    ArrayNode,
-    BaseNode,
-    SnippetStringNode,
-    SnippetTabstopOnlyNode,
-    VisualSnippetNode,
-} from "./luasnip_api/node";
+import { api } from "./luasnip_api/index";
 import json5 from "json5";
+import {
+    BaseNode,
+    ArrayNode,
+    SnippetStringNode,
+    VisualSnippetNode,
+    SnippetTabstopOnlyNode,
+} from "./luasnip_api/node";
 
 export type SnippetVariables = Record<string, string>;
 
@@ -40,7 +41,6 @@ function importModule(source: string, identifier: string): Promise<object> {
     const sourceWithSourceURL = `${source}\n//# sourceURL=latex-suite:${identifier}`;
     const blob = new Blob([sourceWithSourceURL], { type: "text/javascript" });
     const url = URL.createObjectURL(blob);
-    // eslint-disable-next-line no-unsanitized/method
     const result = import(url);
     URL.revokeObjectURL(url);
     return result;
@@ -122,8 +122,9 @@ export async function parseSnippets(
     defaultSnippetVersion: 1 | 2,
     identifier: string,
 ) {
+    window.__latex_suite_require = latex_suite_require(snippetVariables);
     const rawSnippets = (await importRaw(
-        snippetsStr,
+        snippetsStr + preamble,
         identifier,
     )) as RawSnippet[];
     return parseSnippetsSync(
@@ -169,7 +170,7 @@ export function parseSnippetsSync(
 
 /** raw snippet IR */
 
-const RawSnippetSchema = object({
+export const RawSnippetSchema = object({
     trigger: union([string_(), instance(RegExp)]),
     triggerAfter: optional(union([string_(), instance(RegExp)])),
     replacement: union([
@@ -184,8 +185,8 @@ const RawSnippetSchema = object({
     flags: optional(string_(), ""),
     priority: optional(number(), 0),
     description: optional(string_(), "no description provided"),
+    version: optional(union([literal(1), literal(2)])),
     triggerKey: optional(string_(), ""),
-    language: optional(string_()),
     excludedEnvs: pipe(
         optional(
             object({
@@ -207,7 +208,7 @@ const RawSnippetSchema = object({
     ),
 });
 
-type RawSnippet = Output<typeof RawSnippetSchema>;
+export type RawSnippet = Output<typeof RawSnippetSchema>;
 
 /**
  * tries to parse an unknown value as an array of raw snippets
@@ -235,7 +236,7 @@ function validateRawSnippets(snippets: unknown): RawSnippet[] {
  * - `options.regex` and `options.visual` are set properly
  * - if it is a regex snippet, the trigger is represented as a RegExp instance with flags set
  */
-function parseSnippet(
+export function parseSnippet(
     raw: RawSnippet,
     snippetVariables: SnippetVariables,
     defaultSnippetVersion: 1 | 2 = 2,
@@ -248,12 +249,15 @@ function parseSnippet(
     } = raw;
     const options = Options.fromSource(raw.options);
     const triggerKey = parseKeyName(raw.triggerKey);
+    const version = raw.version ?? defaultSnippetVersion;
 
     // we have a regex snippet
     if (options.regex || raw.trigger instanceof RegExp) {
         const replacement =
             typeof raw.replacement === "string"
-                ? new ArrayNode([new SnippetStringNode(raw.replacement)])
+                ? new ArrayNode([
+                      new SnippetStringNode(raw.replacement, version),
+                  ])
                 : raw.replacement;
         let triggerStr: string;
         let triggerAfterStr: string | undefined;
@@ -320,10 +324,6 @@ function parseSnippet(
             : undefined;
 
         options.regex = true;
-        // TODO FIXMEEE
-        if (version === 1) {
-            replacement = convert_replacement_v1_to_v2(trigger, replacement);
-        }
 
         const normalised = {
             trigger,
@@ -461,7 +461,11 @@ function normalizeKeyName(name: string) {
         else if (/^s(hift)?$/i.test(mod)) shift = true;
         else if (/^mod$/i.test(mod)) {
             // fixme
-            if (false) meta = true;
+            if (
+                navigator.platform.startsWith("Mac") ||
+                navigator.platform === "iPhone"
+            )
+                meta = true;
             else ctrl = true;
         } else throw new Error("Unrecognized modifier name: " + mod);
     }

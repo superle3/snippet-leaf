@@ -6,6 +6,7 @@ import type { Environment } from "../snippets/environment";
 import type { SyntaxNode, Tree, NodeIterator } from "@lezer/common";
 import type { Bounds } from "./mathbounds";
 import { syntaxTree } from "@codemirror/language";
+import { textAreaEnvs, snippetLessArea } from "src/utils/default_textareas";
 
 export interface SmallBounds {
     start: number;
@@ -61,91 +62,88 @@ export class Context {
         }
     }
 
-    isWithinEnvironment(pos: number, env: Environment): boolean {
-        if (!this.mode.inMath()) return false;
+    isWithinEnvironment<T extends Environment>(
+        pos: number,
+        env: T | T[],
+    ): null | (Bounds & T) {
+        const envs = Array.isArray(env) ? env : [env];
+        if (!this.mode.inMath()) return null;
 
         const bounds = this.getBounds();
-        if (!bounds) return;
+        if (!bounds) return null;
 
         const { inner_start: start, inner_end: end } = bounds;
         const text = this.state.sliceDoc(start, end);
         // pos referred to the absolute position in the whole document, but we just sliced the text
         // so now pos must be relative to the start in order to be any useful
         pos -= start;
+        outer_loop: for (const env of envs) {
+            const openBracket = env.openSymbol.slice(-1);
+            const closeBracket = getCloseBracket(openBracket);
 
-        const openBracket = env.openSymbol.slice(-1);
-        const closeBracket = getCloseBracket(openBracket);
+            // Take care when the open symbol ends with a bracket {, [, or (
+            // as then the closing symbol, }, ] or ), is not unique to this open symbol
+            let offset;
+            let openSearchSymbol;
 
-        // Take care when the open symbol ends with a bracket {, [, or (
-        // as then the closing symbol, }, ] or ), is not unique to this open symbol
-        let offset;
-        let openSearchSymbol;
-
-        if (
-            ["{", "[", "("].includes(openBracket) &&
-            env.closeSymbol === closeBracket
-        ) {
-            offset = env.openSymbol.length - 1;
-            openSearchSymbol = openBracket;
-        } else {
-            offset = 0;
-            openSearchSymbol = env.openSymbol;
-        }
-
-        let left = text.lastIndexOf(env.openSymbol, pos - 1);
-
-        while (left != -1) {
-            const right = findMatchingBracket(
-                text,
-                left + offset,
-                openSearchSymbol,
-                env.closeSymbol,
-                false,
-            );
-
-            if (right === -1) return false;
-
-            // Check whether the cursor lies inside the environment symbols
-            if (right >= pos && pos >= left + env.openSymbol.length) {
-                return true;
+            if (
+                ["{", "[", "("].includes(openBracket) &&
+                env.closeSymbol === closeBracket
+            ) {
+                offset = env.openSymbol.length - 1;
+                openSearchSymbol = openBracket;
+            } else {
+                offset = 0;
+                openSearchSymbol = env.openSymbol;
             }
 
-            if (left <= 0) return false;
+            let left = text.lastIndexOf(env.openSymbol, pos - 1);
 
-            // Find the next open symbol
-            left = text.lastIndexOf(env.openSymbol, left - 1);
+            while (left != -1) {
+                const right = findMatchingBracket(
+                    text,
+                    left + offset,
+                    openSearchSymbol,
+                    env.closeSymbol,
+                    false,
+                );
+
+                if (right === -1) continue outer_loop; // No matching close bracket, so this open symbol is not valid
+
+                // Check whether the cursor lies inside the environment symbols
+                if (right >= pos && pos >= left + env.openSymbol.length) {
+                    return {
+                        ...env,
+                        inner_start: left + env.openSymbol.length + start,
+                        inner_end: right + start,
+                        outer_start: left + start,
+                        outer_end: right + env.closeSymbol.length + start,
+                    };
+                }
+
+                if (left <= 0) continue outer_loop; // No more open symbols to the left, so this environment is not valid
+
+                // Find the next open symbol
+                left = text.lastIndexOf(env.openSymbol, left - 1);
+            }
         }
 
-        return false;
+        return null;
     }
 
     inTextEnvironment(): boolean {
-        return (
-            this.isWithinEnvironment(this.pos, {
-                openSymbol: "\\text{",
-                closeSymbol: "}",
-            }) ||
-            this.isWithinEnvironment(this.pos, {
-                openSymbol: "\\tag{",
-                closeSymbol: "}",
-            }) ||
-            this.isWithinEnvironment(this.pos, {
-                openSymbol: "\\begin{",
-                closeSymbol: "}",
-            }) ||
-            this.isWithinEnvironment(this.pos, {
-                openSymbol: "\\end{",
-                closeSymbol: "}",
-            }) ||
-            this.isWithinEnvironment(this.pos, {
-                openSymbol: "\\mathrm{",
-                closeSymbol: "}",
-            }) ||
-            this.isWithinEnvironment(this.pos, {
-                openSymbol: "\\color{",
-                closeSymbol: "}",
-            })
-        );
+        const result = this.isWithinEnvironment(this.pos, textAreaEnvs);
+        if (!result) return false;
+        const openSymbol = result.openSymbol.slice(1, -1);
+        if (
+            snippetLessArea.includes(
+                openSymbol as (typeof snippetLessArea)[number],
+            )
+        ) {
+            return true;
+        } else {
+            return true;
+        }
     }
 
     getBounds(pos: number = this.pos): Bounds {
@@ -201,10 +199,6 @@ export enum MathMode {
     TextEnv,
 }
 
-const DisplayMathOffset: SmallBounds = {
-    start: 1,
-    end: -1,
-};
 const BracketMathOffset: SmallBounds = {
     start: 2,
     end: -2,

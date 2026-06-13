@@ -22,10 +22,12 @@ export function processLatexSuiteSettings(
         snippetVariables: Record<string, string>;
     },
 ): LatexSuiteCMSettings {
-    function strToArray(str: string | string[]) {
+    function strToArray(str: string | string[] | Set<string>) {
         return Array.isArray(str)
             ? str.map((s) => s.replace(/\s/g, ""))
-            : str.replace(/\s/g, "").split(",");
+            : str instanceof Set
+              ? Array.from(str)
+              : str.replace(/\s/g, "").split(",");
     }
 
     function getAutofractionExcludedEnvs(
@@ -70,6 +72,7 @@ export function processLatexSuiteSettings(
                 (snippet) => !(ARE_SETTINGS_PARSED in snippet),
             ) as RawSnippet[],
             snippetVariables,
+            settings.defaultSnippetVersion,
         ),
     ];
     return {
@@ -82,8 +85,14 @@ export function processLatexSuiteSettings(
             settings.autofractionExcludedEnvs,
         ),
         matrixShortcutsEnvNames: strToArray(settings.matrixShortcutsEnvNames),
+        matrixShortcutsMacroNames: strToArray(
+            settings.matrixShortcutsMacroNames,
+        ),
         autoEnlargeBracketsTriggers: strToArray(
             settings.autoEnlargeBracketsTriggers,
+        ),
+        taboutClosingSymbols: new Set(
+            strToArray(settings.taboutClosingSymbols),
         ),
     };
 }
@@ -128,8 +137,11 @@ export const StrToArraySchema = v.union([
 export const LatexSuiteParsedSettingsSchema = v.object({
     autofractionExcludedEnvs: v.array(EnvironmentSchema),
     matrixShortcutsEnvNames: v.array(v.string()),
+    matrixShortcutsMacroNames: v.array(v.string()),
     autoEnlargeBracketsTriggers: v.array(v.string()),
+    taboutClosingSymbols: v.set(v.string()),
 });
+
 export const LatexSuiteRawSettingsSchema = v.object({
     autofractionExcludedEnvs: v.pipe(
         v.string(),
@@ -145,12 +157,24 @@ export const LatexSuiteRawSettingsSchema = v.object({
         ),
     ),
     matrixShortcutsEnvNames: StrToArraySchema,
+    matrixShortcutsMacroNames: StrToArraySchema,
     autoEnlargeBracketsTriggers: StrToArraySchema,
+    taboutClosingSymbols: v.pipe(
+        StrToArraySchema,
+        v.transform((arr) => new Set(arr)),
+    ),
 });
 export const LatexSuiteRawOrParsedSettingsSchema = v.union([
     LatexSuiteRawSettingsSchema,
     LatexSuiteParsedSettingsSchema,
 ]);
+
+const SnippetDebugLevelSchema = v.union([
+    v.literal("off"),
+    v.literal("info"),
+    v.literal("verbose"),
+]);
+export type snippetDebugLevel = v.InferOutput<typeof SnippetDebugLevelSchema>;
 export const latexSuiteBasicSettingsSchema = v.object({
     snippetsEnabled: v.boolean(),
     snippetsTrigger: v.union([v.literal("Tab"), v.literal(" ")]),
@@ -169,7 +193,9 @@ export const latexSuiteBasicSettingsSchema = v.object({
     matrixShortcutsEnabled: v.boolean(),
     taboutEnabled: v.boolean(),
     autoEnlargeBrackets: v.boolean(),
+    autoEnlargeBracketsSpace: v.boolean(),
     wordDelimiters: v.string(),
+    snippetDebug: SnippetDebugLevelSchema,
 });
 
 export const latexSuiteKeymapSettingsSchema = v.object({
@@ -177,10 +203,10 @@ export const latexSuiteKeymapSettingsSchema = v.object({
     toggleAllFeaturesKey: v.string(),
 });
 
-export type NestedRawSnippetArray = Array<RawSnippet | NestedRawSnippetArray>;
-export const NestedRawSnippetArraySchema: v.GenericSchema<NestedRawSnippetArray> =
+export type NestedArray<T> = Array<T | NestedArray<T>>;
+export const NestedRawSnippetArraySchema: v.GenericSchema<NestedArray<object>> =
     v.lazy(() =>
-        v.array(v.union([RawSnippetSchema, NestedRawSnippetArraySchema])),
+        v.array(v.union([v.looseObject({}), NestedRawSnippetArraySchema])),
     );
 export async function importString(
     source: string,

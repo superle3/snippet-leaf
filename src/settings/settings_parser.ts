@@ -13,12 +13,14 @@ export async function getSettingsSnippets(
     snippets: string,
     snippetVariables: SnippetVariables,
     defaultSnippetVersion: 1 | 2 = 2,
+    identifier: string = "snippets.ts",
 ) {
     try {
         return await parseSnippets(
             snippets,
             snippetVariables,
             defaultSnippetVersion,
+            identifier,
         );
     } catch (e) {
         console.error(`Failed to load snippets from settings: ${e}`);

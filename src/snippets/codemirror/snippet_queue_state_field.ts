@@ -1,4 +1,4 @@
-import type { EditorView} from "@codemirror/view";
+import type { EditorView } from "@codemirror/view";
 import { ViewPlugin } from "@codemirror/view";
 import { SnippetChangeSpec } from "./snippet_change_spec";
 import { getIndentUnit, indentString } from "@codemirror/language";
@@ -7,7 +7,7 @@ import { countColumn } from "@codemirror/state";
 import type { ResultInsert } from "../luasnip_api/node";
 export const snippetQueuePlugin = ViewPlugin.fromClass(
     class {
-        private snippetQueue: SnippetChangeSpec[] = [];
+        snippetQueue: SnippetChangeSpec[] = [];
 
         clearSnippetQueue() {
             this.snippetQueue = [];
