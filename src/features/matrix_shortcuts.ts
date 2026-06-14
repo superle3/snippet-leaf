@@ -125,9 +125,9 @@ export function runMatrixShortcuts(
     } else if (key === "Enter" && shift) {
         return exitMatrixShortCut(view);
     } else if (key === "Tab") {
-        return priorityTaboutMatrixShortcut(view);
-    } else if (key === "&") {
-        return addCellMatrixShortcut(view);
+        return (
+            priorityTaboutMatrixShortcut(view) || addCellMatrixShortcut(view)
+        );
     }
     return false;
 }
