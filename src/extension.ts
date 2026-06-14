@@ -20,7 +20,6 @@ import { EditorView } from "@codemirror/view";
 import { snippetExtensions } from "./snippets/codemirror/extensions";
 
 export function main(settings: LatexSuitePluginSettings) {
-    console.log(settings);
     const CMSettings: LatexSuiteCMSettings =
         processLatexSuiteSettings(settings);
     const latexSuiteConfig = setLatexSuiteConfig(CMSettings);

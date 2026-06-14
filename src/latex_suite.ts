@@ -72,7 +72,6 @@ export const handleKeydown = (
      */
     if (settings.autoDelete$ && key === "Backspace" && ctx.mode.inMath()) {
         const characters = view.state.sliceDoc(ctx.pos - 2, ctx.pos + 2);
-        console.log(characters);
 
         if (characters.slice(1, 3) === "$$") {
             replaceRange(view, ctx.pos - 1, ctx.pos + 1, "");

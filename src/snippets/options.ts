@@ -108,6 +108,10 @@ export class Mode {
     invert() {
         this.text = !this.text;
         this.textEnv = !this.textEnv;
+        this.bracketBlockMath = !this.bracketBlockMath;
+        this.dollarInlineMath = !this.dollarInlineMath;
+        this.dollarBlockMath = !this.dollarBlockMath;
+        this.parenInlineMath = !this.parenInlineMath;
     }
 
     static fromSource(source: string): Mode {

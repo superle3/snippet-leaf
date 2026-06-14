@@ -1122,7 +1122,6 @@ function createCMEditor(content: string, extensions: Extension[]) {
 
 async function main() {
     // await browser.storage.sync.clear();
-    console.time("main");
     const settings = await get_settings();
     new LatexSuiteSettingTab(settings_div, {
         settings,
@@ -1130,7 +1129,6 @@ async function main() {
             await store_settings(this.settings);
         },
     }).display();
-    console.timeEnd("main");
 }
 
 main();

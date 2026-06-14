@@ -129,6 +129,16 @@ export class SnippetNode extends BaseNode {
     }
 }
 
+/**
+ * Version 1 capture: [[\d+]]/ are expanded where there is a captured match with that index-1
+ * Version 1 tabstop: aftewards $\d or ${\d+:placeholder} is expanded to a tabstop.
+ * No escaping is possible for both capture and tabstop
+ * Version 2 capture: @[\d+] and @[<identifier>] are expanded when there is a capture match with index-1
+ * or a group with that identifier.
+ * Version 2 tabstop: afterwards @\d+ @{\d+} @{\d+:placeholder} are expanded as tabstops.
+ * Version 2 escape `@`: to escape `@`, `@@` is ignored and replaced with `@` except in the placeholder where `@@` is left intact
+ * Thus `@[]` can't be escaped inside the placeholder.
+ */
 export class SnippetStringNode extends BaseNode {
     constructor(
         private snippet: string,
@@ -143,11 +153,8 @@ export class SnippetStringNode extends BaseNode {
             const expandedTabstops = this.expandTabstopsv1(expandedCaptures);
             return expandedTabstops;
         } else if (this.version === 2) {
-            console.debug("start", this.snippet);
             const expandedCaptures = this.expandCapturesv2(captures);
-            console.debug("mid", expandedCaptures);
             const expandedTabstops = this.expandTabstopsv2(expandedCaptures);
-            console.debug("end", expandedTabstops);
             return expandedTabstops;
         }
         return this.version satisfies never;
@@ -202,7 +209,6 @@ export class SnippetStringNode extends BaseNode {
         );
         const group_keys_group = `(?<group_key>${group_keys.join("|")})`;
         const raw_pattern = `@@|@\\[(?:${indexes_group}|${group_keys_group})\\]`;
-        console.debug("capture pattern", raw_pattern);
         const pattern = new RegExp(raw_pattern, "g");
         const replacements = [];
         const matches = this.snippet.matchAll(pattern);
@@ -221,7 +227,6 @@ export class SnippetStringNode extends BaseNode {
             }
             replacements.push({ start, end, replacement });
         }
-        console.debug("captures replacements", replacements);
         return applyReplacements(this.snippet, replacements);
     }
 
