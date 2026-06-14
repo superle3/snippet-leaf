@@ -8,7 +8,8 @@ import {
     getCloseBracket,
 } from "../utils/editor_utils";
 import { tempKeyPress } from "src/snippets/snippet_management";
-import { Context, getContextPlugin } from "src/latex_context/context";
+import type { Context } from "src/latex_context/context";
+import { getContextPlugin } from "src/latex_context/context";
 import { getMathBoundsPlugin } from "src/latex_context/mathbounds";
 
 const Ncolors = 3;
@@ -242,7 +243,7 @@ export const colorPairedBracketsPlugin = ViewPlugin.fromClass(
     { decorations: (v) => v.decorations },
 );
 
-export const colorPairedBracketsPluginLowestPrec = Prec.lowest(
+export const colorPairedBracketsPluginLowestPrec = Prec.highest(
     colorPairedBracketsPlugin.extension,
 );
 

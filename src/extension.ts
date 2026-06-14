@@ -2,7 +2,10 @@ import { handleUpdate, onKeydown } from "./latex_suite";
 import type { LatexSuiteCMSettings } from "./settings/default_settings";
 import type { LatexSuitePluginSettings } from "./settings/default_settings";
 import { processLatexSuiteSettings } from "./settings/settings";
-import { setLatexSuiteConfig } from "./settings/raw_settings";
+import {
+    getLatexSuiteConfig,
+    setLatexSuiteConfig,
+} from "./settings/raw_settings";
 import { mkConcealPlugin } from "./editor_extensions/conceal";
 
 import type { SnippetVariables, RawSnippet } from "./snippets/parse";
@@ -17,8 +20,10 @@ import { createMathBoundsPlugin } from "./latex_context/mathbounds";
 import { getKeymaps } from "./keymaps";
 import { Prec, type Extension } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
+import { snippetExtensions } from "./snippets/codemirror/extensions";
 
 export function main(settings: LatexSuitePluginSettings) {
+    console.log(settings);
     const CMSettings: LatexSuiteCMSettings =
         processLatexSuiteSettings(settings);
     const latexSuiteConfig = setLatexSuiteConfig(CMSettings);
@@ -37,6 +42,7 @@ export function main(settings: LatexSuitePluginSettings) {
         latexSuiteConfig,
         createContextPlugin(),
         createMathBoundsPlugin(),
+        snippetExtensions,
     ];
     extensions.push(...snippet_leaf_extension);
     const conceal_plugin = mkConcealPlugin(settings.concealRevealTimeout);

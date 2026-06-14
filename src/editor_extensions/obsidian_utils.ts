@@ -1,5 +1,3 @@
-import type { EditorState } from "@codemirror/state";
-import { StateField } from "@codemirror/state";
 import type { Snippet } from "codemirror_extension/codemirror_extensions";
 import type { SnippetType } from "src/snippets/snippets";
 
@@ -14,6 +12,7 @@ declare global {
 }
 
 String.prototype.contains = String.prototype.includes;
+Array.prototype.contains = Array.prototype.includes;
 export function createElement<K extends keyof HTMLElementTagNameMap>(
     tag: K,
     options?: Partial<HTMLElementTagNameMap[K]> & {
@@ -153,13 +152,9 @@ function createNoticeManager(): NoticeCallback {
     return lastNoticeFunc;
 }
 
-const notice = StateField.define<NoticeCallback>({
-    create: () => createNoticeManager(),
-    update: (value) => value,
-});
-
+const notice = createNoticeManager();
 export function showSnippetInfo(
-    state: EditorState,
+    state: any,
     snippet: Snippet<SnippetType>,
     replacement: string,
     containsTrigger: boolean,
@@ -201,6 +196,6 @@ export function showSnippetInfo(
             }
         }
     });
-    state.field(notice)(fragment, 5000);
+    notice(fragment, 5000);
     console.debug(div.textContent);
 }

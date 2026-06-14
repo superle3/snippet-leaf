@@ -9,6 +9,7 @@ import type {
     RangeSet as RangeSetC,
     RangeSetBuilder as RangeSetBuilderC,
     Compartment as CompartmentC,
+    Annotation as AnnotationC,
 } from "@codemirror/state";
 import type {
     undo as undoC,
@@ -50,6 +51,7 @@ type CodeMirrorExt = {
     RangeValue: typeof RangeValueC;
     RangeSetBuilder: typeof RangeSetBuilderC;
     Compartment: typeof CompartmentC;
+    Annotation: typeof AnnotationC;
 };
 export let Decoration: typeof DecorationC;
 export let EditorSelection: typeof EditorSelectionC;
@@ -73,6 +75,7 @@ export let RangeSet: typeof RangeSetC;
 export let RangeValue: typeof RangeValueC;
 export let RangeSetBuilder: typeof RangeSetBuilderC;
 export let Compartment: typeof CompartmentC;
+export let Annotation: typeof AnnotationC;
 
 export function set_codemirror_objects(codemirror_objects: CodeMirrorExt) {
     Decoration = codemirror_objects.Decoration;
@@ -97,4 +100,5 @@ export function set_codemirror_objects(codemirror_objects: CodeMirrorExt) {
     RangeValue = codemirror_objects.RangeValue;
     RangeSetBuilder = codemirror_objects.RangeSetBuilder;
     Compartment = codemirror_objects.Compartment;
+    Annotation = codemirror_objects.Annotation;
 }

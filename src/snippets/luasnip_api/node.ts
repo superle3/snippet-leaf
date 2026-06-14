@@ -131,18 +131,28 @@ export class SnippetNode extends BaseNode {
 export class SnippetStringNode extends BaseNode {
     constructor(
         private snippet: string,
-        version: 1 | 2 = 2,
+        private version: 1 | 2 = 2,
     ) {
         super((options) => this.parseSnippet(options.captures));
     }
 
     parseSnippet(captures: Captures): BaseNode[] {
-        const expandedCaptures = this.expandCaptures(captures);
-        const expandedTabstops = this.expandTabstops(expandedCaptures);
-        return expandedTabstops;
+        if (this.version === 1) {
+            const expandedCaptures = this.expandCapturesv1(captures);
+            const expandedTabstops = this.expandTabstopsv1(expandedCaptures);
+            return expandedTabstops;
+        } else if (this.version === 2) {
+            console.debug("start", this.snippet);
+            const expandedCaptures = this.expandCapturesv2(captures);
+            console.debug("mid", expandedCaptures);
+            const expandedTabstops = this.expandTabstopsv2(expandedCaptures);
+            console.debug("end", expandedTabstops);
+            return expandedTabstops;
+        }
+        return this.version satisfies never;
     }
 
-    expandCaptures(captures: Captures): string {
+    expandCapturesv1(captures: Captures): string {
         const pattern = /\[\[(\d+)\]\]/g;
         const matches = this.snippet.matchAll(pattern);
         const replacements = [];
@@ -159,7 +169,7 @@ export class SnippetStringNode extends BaseNode {
         return applyReplacements(this.snippet, replacements);
     }
 
-    expandTabstops(snippet: string): BaseNode[] {
+    expandTabstopsv1(snippet: string): BaseNode[] {
         const pattern = /\$(\d)|\$\{(\d+):([^}]*)\}/g;
         const matches = snippet.matchAll(pattern);
         const replacements = [];
@@ -176,6 +186,83 @@ export class SnippetStringNode extends BaseNode {
             nodes.push(new TextNode(snippet.slice(offset, start)));
             nodes.push(new TabstopNode(index, replacement));
             offset = end;
+        }
+        nodes.push(new TextNode(snippet.slice(offset)));
+        return nodes;
+    }
+
+    expandCapturesv2(captures: Captures): string {
+        const indexes = Array.from({ length: captures.match.length }).map(
+            (_, i, arr) => arr.length - i - 1,
+        );
+        const indexes_group = `(?<index>${indexes.join("|")})`;
+        const group_keys = Object.keys(captures.groups).map((key) =>
+            key.replace("$", "\\$"),
+        );
+        const group_keys_group = `(?<group_key>${group_keys.join("|")})`;
+        const raw_pattern = `@@|@\\[(?:${indexes_group}|${group_keys_group})\\]`;
+        console.debug("capture pattern", raw_pattern);
+        const pattern = new RegExp(raw_pattern, "g");
+        const replacements = [];
+        const matches = this.snippet.matchAll(pattern);
+        for (const match of matches) {
+            const start = match.index;
+            const end = start + match[0].length;
+            let replacement = "";
+            if (match[0] === "@@") {
+                continue;
+            } else if (match.groups?.index) {
+                const index = parseInt(match.groups.index);
+                replacement = captures.match[index] ?? "";
+            } else if (match.groups?.group_key) {
+                const key = match.groups.group_key;
+                replacement = captures.groups[key] ?? "";
+            }
+            replacements.push({ start, end, replacement });
+        }
+        console.debug("captures replacements", replacements);
+        return applyReplacements(this.snippet, replacements);
+    }
+
+    expandTabstopsv2(snippet: string): BaseNode[] {
+        const replacement_regex =
+            /(?<escape>@@)|@(?<index>\d+)|@\{(?<index>\d+)\}|@\{(?<index>\d+):(?<placeholder>[^}]+)\}/g;
+        const matches = snippet.matchAll(replacement_regex);
+        type Replacement = {
+            start: number;
+            end: number;
+        } & (
+            | { kind: "escape" }
+            | { kind: "tabstop"; index: number; replacement: string }
+        );
+        const replacements: Replacement[] = [];
+        for (const match of matches) {
+            const start = match.index;
+            const end = start + match[0].length;
+            if (match.groups?.escape) {
+                const kind = "escape";
+                replacements.push({ start, end, kind });
+            }
+            const replacement = match.groups?.placeholder || "";
+            const index = parseInt(match.groups.index!);
+            const kind = "tabstop";
+            replacements.push({ start, end, replacement, index, kind });
+        }
+        const nodes: BaseNode[] = [];
+        let offset = 0;
+        for (const replacement of replacements) {
+            const { start, end } = replacement;
+            nodes.push(new TextNode(snippet.slice(offset, start)));
+            offset = end;
+            if (replacement.kind === "escape") {
+                nodes.push(new TextNode("@"));
+                offset = replacement.end;
+            } else if (replacement.kind === "tabstop") {
+                const { replacement: placeholder, index } = replacement;
+                nodes.push(new TabstopNode(index, placeholder));
+            } else {
+                replacement satisfies never;
+            }
         }
         nodes.push(new TextNode(snippet.slice(offset)));
         return nodes;
