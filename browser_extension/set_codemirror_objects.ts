@@ -28,7 +28,7 @@ import type {
 import type { syntaxTree as syntaxTreeC } from "@codemirror/language";
 import type { invertedEffects as invertedEffectsC } from "@codemirror/commands";
 
-type CodeMirrorExt = {
+export type CodeMirrorExt = {
     Decoration: typeof DecorationC;
     EditorSelection: typeof EditorSelectionC;
     EditorView: typeof EditorViewC;

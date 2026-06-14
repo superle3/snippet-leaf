@@ -47,6 +47,7 @@ import type {
 import { SettingsSchema } from "src/settings/settings";
 import type { LatexSuiteFacet } from "src/settings/settings";
 import { set_codemirror_objects } from "./set_codemirror_objects";
+import { set_api } from "./set_api";
 
 type CodeMirrorExt = {
     Decoration: typeof DecorationC;
@@ -129,6 +130,7 @@ async function browser_main() {
             Annotation,
         };
         set_codemirror_objects(obj);
+        set_api(obj);
         const main_extension = await import("../src/extension").then(
             (mod) => mod.main,
         );
