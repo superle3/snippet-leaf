@@ -5,7 +5,7 @@ import { basicSetup } from "./ui/snippets_editor/codemirror_setup";
 import type { Extension } from "@codemirror/state";
 import { EditorState } from "@codemirror/state";
 import { compiler } from "./typescript";
-import { parseSnippetVariables } from "src/snippets/parse";
+import { parseSnippetVariables, SnippetVersion } from "src/snippets/parse";
 import {
     get_default_snippets,
     get_settings,
@@ -553,7 +553,7 @@ class LatexSuiteSettingTab {
                     .onChange(async (value: string) => {
                         this.plugin.settings.defaultSnippetVersion = parseInt(
                             value,
-                        ) as 1 | 2;
+                        ) as SnippetVersion;
                         await this.plugin.saveSettings();
                     }),
             );

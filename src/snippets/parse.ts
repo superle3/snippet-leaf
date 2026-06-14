@@ -18,7 +18,8 @@ import {
     RegexSnippet,
     serializeSnippetLike,
     StringSnippet,
-    VISUAL_SNIPPET_MAGIC_SELECTION_PLACEHOLDER,
+    VISUAL_SNIPPET_MAGIC_SELECTION_PLACEHOLDERv1,
+    VISUAL_SNIPPET_MAGIC_SELECTION_PLACEHOLDERv2,
     VisualSnippet,
 } from "./snippets";
 import { Options } from "./options";
@@ -119,7 +120,7 @@ declare global {
 export async function parseSnippets(
     snippetsStr: string,
     snippetVariables: SnippetVariables,
-    defaultSnippetVersion: 1 | 2,
+    defaultSnippetVersion: SnippetVersion,
     identifier: string,
 ) {
     window.__latex_suite_require = latex_suite_require(snippetVariables);
@@ -137,7 +138,7 @@ export async function parseSnippets(
 export function parseSnippetsSync(
     rawSnippets: RawSnippet[],
     snippetVariables: SnippetVariables,
-    defaultSnippetVersion: 1 | 2,
+    defaultSnippetVersion: SnippetVersion,
 ) {
     let parsedSnippets;
     try {
@@ -209,6 +210,7 @@ export const RawSnippetSchema = object({
 });
 
 export type RawSnippet = Output<typeof RawSnippetSchema>;
+export type SnippetVersion = RawSnippet["version"];
 
 /**
  * tries to parse an unknown value as an array of raw snippets
@@ -239,7 +241,7 @@ function validateRawSnippets(snippets: unknown): RawSnippet[] {
 export function parseSnippet(
     raw: RawSnippet,
     snippetVariables: SnippetVariables,
-    defaultSnippetVersion: 1 | 2 = 2,
+    defaultSnippetVersion: SnippetVersion = 2,
 ): Snippet {
     const {
         replacement: replacementRaw,
@@ -334,6 +336,7 @@ export function parseSnippet(
             excludedEnvironments,
             triggerKey,
             triggerAfter,
+            version,
         };
 
         return new RegexSnippet(normalised);
@@ -360,9 +363,14 @@ export function parseSnippet(
         ];
 
         // normalize visual replacements
+        const visual_pattern = {
+            1: VISUAL_SNIPPET_MAGIC_SELECTION_PLACEHOLDERv1,
+            2: VISUAL_SNIPPET_MAGIC_SELECTION_PLACEHOLDERv2,
+        }[version];
+
         if (
             typeof replacementRaw === "string" &&
-            replacementRaw.includes(VISUAL_SNIPPET_MAGIC_SELECTION_PLACEHOLDER)
+            replacementRaw.includes(visual_pattern)
         ) {
             options.visual = true;
         }
@@ -370,7 +378,9 @@ export function parseSnippet(
         if (options.visual) {
             const replacement =
                 typeof raw.replacement === "string"
-                    ? new ArrayNode([new VisualSnippetNode(raw.replacement)])
+                    ? new ArrayNode([
+                          new VisualSnippetNode(raw.replacement, version),
+                      ])
                     : raw.replacement;
             const normalised = {
                 trigger,
@@ -387,7 +397,7 @@ export function parseSnippet(
             const replacement =
                 typeof raw.replacement === "string"
                     ? new ArrayNode([
-                          new SnippetTabstopOnlyNode(raw.replacement),
+                          new SnippetTabstopOnlyNode(raw.replacement, version),
                       ])
                     : raw.replacement;
             const normalised = {
@@ -399,6 +409,7 @@ export function parseSnippet(
                 excludedEnvironments,
                 triggerKey,
                 triggerAfter,
+                version,
             };
             return new StringSnippet(normalised);
         }

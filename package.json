@@ -15,6 +15,7 @@
         "web:full": "concurrently \"npm run web:ext\" \"npm run web:watch\"",
         "web:ext": "cd ./browser_extension && web-ext run",
         "lint": "eslint --ext .ts,.js src browser_extension codemirror_extension --fix",
+        "tsc": "tsc -noEmit -skipLibCheck",
         "format": "prettier --write .",
         "format:commit": "pretty-quick --staged",
         "build:rollup": "rollup -c",

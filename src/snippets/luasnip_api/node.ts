@@ -1,4 +1,5 @@
-import { VISUAL_SNIPPET_MAGIC_SELECTION_PLACEHOLDER } from "../snippets";
+import { SnippetVersion } from "../parse";
+import { VISUAL_SNIPPET_MAGIC_SELECTION_PLACEHOLDERv2 } from "../snippets";
 import type { TabstopSpec } from "../tabstop";
 
 type Captures = { match: string[]; groups: Record<string, string> };
@@ -131,7 +132,7 @@ export class SnippetNode extends BaseNode {
 export class SnippetStringNode extends BaseNode {
     constructor(
         private snippet: string,
-        private version: 1 | 2 = 2,
+        private version: SnippetVersion,
     ) {
         super((options) => this.parseSnippet(options.captures));
     }
@@ -270,16 +271,20 @@ export class SnippetStringNode extends BaseNode {
 }
 
 export class VisualSnippetNode extends BaseNode {
-    constructor(public snippet: string) {
+    constructor(
+        private snippet: string,
+        private version: SnippetVersion,
+    ) {
         super((options) =>
             new SnippetStringNode(
                 this.expandVisual(options.captures),
+                version,
             ).parseSnippet({ match: [], groups: {} }),
         );
     }
 
     expandVisual(captures: Captures): string {
-        const pattern = VISUAL_SNIPPET_MAGIC_SELECTION_PLACEHOLDER;
+        const pattern = VISUAL_SNIPPET_MAGIC_SELECTION_PLACEHOLDERv2;
         if (!captures.groups[pattern]) {
             throw new Error(
                 `VisualSnippetNode requires the presence of a capture group named ${pattern} to indicate the position of the visual selection`,
@@ -289,9 +294,9 @@ export class VisualSnippetNode extends BaseNode {
     }
 }
 export class SnippetTabstopOnlyNode extends BaseNode {
-    constructor(snippet: string) {
+    constructor(snippet: string, version: SnippetVersion) {
         super(() =>
-            new SnippetStringNode(snippet).parseSnippet({
+            new SnippetStringNode(snippet, version).parseSnippet({
                 match: [],
                 groups: {},
             }),

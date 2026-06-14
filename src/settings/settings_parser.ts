@@ -1,4 +1,4 @@
-import type { SnippetVariables } from "src/snippets/parse";
+import type { SnippetVariables, SnippetVersion } from "src/snippets/parse";
 import { parseSnippets, parseSnippetVariables } from "src/snippets/parse";
 
 export function getSettingsSnippetVariables(snippetVariables: string) {
@@ -12,7 +12,7 @@ export function getSettingsSnippetVariables(snippetVariables: string) {
 export async function getSettingsSnippets(
     snippets: string,
     snippetVariables: SnippetVariables,
-    defaultSnippetVersion: 1 | 2 = 2,
+    defaultSnippetVersion: SnippetVersion = 2,
     identifier: string = "snippets.ts",
 ) {
     try {

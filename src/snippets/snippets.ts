@@ -11,12 +11,14 @@ import {
     SnippetTabstopOnlyNode,
 } from "./luasnip_api/node";
 import * as v from "valibot";
+import { SnippetVersion } from "./parse";
 // import { ResultInsert } from "./luasnip_api/node";
 
 /**
  * in visual snippets, if the replacement is a string, this is the magic substring to indicate the selection.
  */
-export const VISUAL_SNIPPET_MAGIC_SELECTION_PLACEHOLDER = "${VISUAL}";
+export const VISUAL_SNIPPET_MAGIC_SELECTION_PLACEHOLDERv1 = "${VISUAL}";
+export const VISUAL_SNIPPET_MAGIC_SELECTION_PLACEHOLDERv2 = "@{VISUAL}";
 
 /**
  * there are 3 distinct types of snippets:
@@ -38,7 +40,10 @@ const ReplacementOutputSchema = v.union([
     v.string(),
     v.array(v.instance(BaseNode)),
 ]);
-function convertOutputToNode(rawReplacement: unknown): ArrayNode | null {
+function convertOutputToNode(
+    rawReplacement: unknown,
+    version: SnippetVersion,
+): ArrayNode | null {
     const parseResult = v.safeParse(ReplacementOutputSchema, rawReplacement);
     if (!parseResult.success) {
         console.error("Invalid replacement output:", parseResult.issues);
@@ -47,7 +52,7 @@ function convertOutputToNode(rawReplacement: unknown): ArrayNode | null {
     if (parseResult.output === false) {
         return null;
     } else if (typeof parseResult.output === "string") {
-        const snippet = new SnippetTabstopOnlyNode(parseResult.output);
+        const snippet = new SnippetTabstopOnlyNode(parseResult.output, version);
         return new ArrayNode([snippet]);
     } else if (Array.isArray(parseResult.output)) {
         return new ArrayNode(parseResult.output);
@@ -97,6 +102,7 @@ export abstract class Snippet<T extends SnippetType = SnippetType> {
     triggerKey: string;
 
     excludedEnvironments: Environment[];
+    version: SnippetVersion;
     [ARE_SETTINGS_PARSED] = true;
 
     constructor(
@@ -108,6 +114,7 @@ export abstract class Snippet<T extends SnippetType = SnippetType> {
         description: string = "no description provided",
         excludedEnvironments: Environment[] = [],
         triggerKey: string = "",
+        version: SnippetVersion = 2,
     ) {
         this.type = type;
         // @ts-ignore
@@ -117,6 +124,7 @@ export abstract class Snippet<T extends SnippetType = SnippetType> {
         this.description = description;
         this.excludedEnvironments = excludedEnvironments;
         this.triggerKey = triggerKey;
+        this.version = version;
     }
 
     // we need to explicitly type the return value here so the derived classes,
@@ -157,6 +165,7 @@ export class VisualSnippet extends Snippet<"visual"> {
         description,
         excludedEnvironments,
         triggerKey,
+        version,
     }: CreateSnippet<"visual">) {
         super(
             "visual",
@@ -191,13 +200,16 @@ export class VisualSnippet extends Snippet<"visual"> {
         const options: InsertOptions = {
             captures: {
                 match: [],
-                groups: { [VISUAL_SNIPPET_MAGIC_SELECTION_PLACEHOLDER]: sel },
+                groups: { [VISUAL_SNIPPET_MAGIC_SELECTION_PLACEHOLDERv2]: sel },
             },
         };
         if (this.replacement instanceof ArrayNode) {
             replacement = this.replacement.applyInsert(options);
         } else {
-            const replacementTemp = convertOutputToNode(this.replacement(sel));
+            const replacementTemp = convertOutputToNode(
+                this.replacement(sel),
+                this.version,
+            );
 
             // sanity check - if this.replacement was a function,
             // we have no way to validate beforehand that it really does returns a valid output.
@@ -221,6 +233,7 @@ export class RegexSnippet extends Snippet<"regex"> {
         excludedEnvironments,
         triggerKey,
         triggerAfter,
+        version,
     }: CreateSnippet<"regex">) {
         super(
             "regex",
@@ -231,6 +244,7 @@ export class RegexSnippet extends Snippet<"regex"> {
             description,
             excludedEnvironments,
             triggerKey,
+            version,
         );
         this.data.triggerAfter = triggerAfter;
     }
@@ -271,6 +285,7 @@ export class RegexSnippet extends Snippet<"regex"> {
         } else {
             const replacementTemp = convertOutputToNode(
                 this.replacement(result),
+                this.version,
             );
 
             // sanity check - if this.replacement was a function,
@@ -297,6 +312,7 @@ export class StringSnippet extends Snippet<"string"> {
         excludedEnvironments: excludeIn,
         triggerKey,
         triggerAfter,
+        version,
     }: CreateSnippet<"string">) {
         super(
             "string",
@@ -307,6 +323,7 @@ export class StringSnippet extends Snippet<"string"> {
             description,
             excludeIn,
             triggerKey,
+            version,
         );
         this.data.triggerAfter = triggerAfter;
     }
@@ -348,6 +365,7 @@ export class StringSnippet extends Snippet<"string"> {
         } else {
             const replacementTemp = convertOutputToNode(
                 this.replacement(this.trigger),
+                this.version,
             );
 
             // sanity check - if replacement was a function,
@@ -384,6 +402,7 @@ type CreateSnippet<T extends SnippetType> = {
     description?: string;
     excludedEnvironments?: Environment[];
     triggerKey?: string;
+    version?: SnippetVersion;
 } & SnippetData<T>;
 
 /**

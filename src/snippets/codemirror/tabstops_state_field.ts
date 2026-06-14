@@ -1,5 +1,5 @@
 import { EditorView, Decoration } from "@codemirror/view";
-import type { EditorSelection} from "@codemirror/state";
+import type { EditorSelection } from "@codemirror/state";
 import { StateEffect, StateField } from "@codemirror/state";
 import type { TabstopGroup } from "../tabstop";
 
