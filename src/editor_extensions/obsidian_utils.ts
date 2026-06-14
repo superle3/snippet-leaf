@@ -1,4 +1,5 @@
 import type { Snippet } from "codemirror_extension/codemirror_extensions";
+import type { EditorState } from "@codemirror/state";
 import type { SnippetType } from "src/snippets/snippets";
 
 declare global {
@@ -154,7 +155,7 @@ function createNoticeManager(): NoticeCallback {
 
 const notice = createNoticeManager();
 export function showSnippetInfo(
-    state: any,
+    _state: EditorState,
     snippet: Snippet<SnippetType>,
     replacement: string,
     containsTrigger: boolean,

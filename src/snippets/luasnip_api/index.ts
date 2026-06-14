@@ -1,4 +1,4 @@
-import { SnippetVariables } from "../parse";
+import type { SnippetVariables } from "../parse";
 import { CaptureNode, TabstopNode, TextNode } from "./node";
 
 // For now SnippetNode, VisualSnippetNode and ArrayNode remain internal api only,

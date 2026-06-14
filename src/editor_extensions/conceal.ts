@@ -7,7 +7,7 @@ import {
     ViewPlugin,
     EditorView,
 } from "@codemirror/view";
-import type { Range, StateEffectType, Transaction } from "@codemirror/state";
+import type { Range, Transaction } from "@codemirror/state";
 import {
     EditorSelection,
     RangeSet,

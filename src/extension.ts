@@ -2,10 +2,7 @@ import { handleUpdate, onKeydown } from "./latex_suite";
 import type { LatexSuiteCMSettings } from "./settings/default_settings";
 import type { LatexSuitePluginSettings } from "./settings/default_settings";
 import { processLatexSuiteSettings } from "./settings/settings";
-import {
-    getLatexSuiteConfig,
-    setLatexSuiteConfig,
-} from "./settings/raw_settings";
+import { setLatexSuiteConfig } from "./settings/raw_settings";
 import { mkConcealPlugin } from "./editor_extensions/conceal";
 
 import type { SnippetVariables, RawSnippet } from "./snippets/parse";

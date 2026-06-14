@@ -1,4 +1,4 @@
-import { SnippetVersion } from "../parse";
+import type { SnippetVersion } from "../parse";
 import { VISUAL_SNIPPET_MAGIC_SELECTION_PLACEHOLDERv2 } from "../snippets";
 import type { TabstopSpec } from "../tabstop";
 

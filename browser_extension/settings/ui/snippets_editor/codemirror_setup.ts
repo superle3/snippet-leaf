@@ -74,7 +74,7 @@ export const basicSetup = (snippets: string): Extension[] => {
 
     // Sadly there is no ready-made typescript+jsdoc hover
     // So we create our own where typescript gets highlighted and the jsdoc doesn't
-    const tsJSDocHover = hoverTooltip((view, pos) => {
+    const tsJSDocHover = hoverTooltip((_view, pos) => {
         try {
             const quickInfo = env.languageService.getQuickInfoAtPosition(
                 path,

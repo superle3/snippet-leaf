@@ -1,6 +1,6 @@
 import type { EditorView } from "@codemirror/view";
 import type { EditorSelection } from "@codemirror/state";
-import { Annotation, ChangeSet, StateEffect } from "@codemirror/state";
+import { Annotation, ChangeSet } from "@codemirror/state";
 import { endSnippet, startSnippet } from "./codemirror/history";
 import { isolateHistory } from "@codemirror/commands";
 import type { TabstopSpec } from "./tabstop";

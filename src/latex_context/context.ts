@@ -359,7 +359,7 @@ const boundsFromOffset = (a: SyntaxNode, offset: SmallBounds): Bounds => {
         outer_end: a.to,
     };
 };
-const addBounds = (...bounds: SmallBounds[]) => {
+const _addBounds = (...bounds: SmallBounds[]) => {
     if (bounds.length === 0) return null;
 
     return bounds.reduce((acc, bound) => {
@@ -426,10 +426,10 @@ const boundsFromNode = (node: SyntaxNode): SmallBounds | null => {
     return { start, end };
 };
 
-const printSyntaxTree = (state: EditorState, pos: number) => {
+const _printSyntaxTree = (state: EditorState, pos: number) => {
     console.log("Syntax tree at position", pos);
     const tree = syntaxTree(state);
-    const i = 0;
+    const _i = 0;
     const buildTreeString = (node: SyntaxNode, indent: number = 0): string => {
         let str =
             " ".repeat(indent) +

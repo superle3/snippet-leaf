@@ -11,7 +11,7 @@ import {
     SnippetTabstopOnlyNode,
 } from "./luasnip_api/node";
 import * as v from "valibot";
-import { SnippetVersion } from "./parse";
+import type { SnippetVersion } from "./parse";
 // import { ResultInsert } from "./luasnip_api/node";
 
 /**
@@ -176,6 +176,7 @@ export class VisualSnippet extends Snippet<"visual"> {
             description,
             excludedEnvironments,
             triggerKey,
+            version,
         );
     }
 

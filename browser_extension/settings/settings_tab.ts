@@ -5,7 +5,8 @@ import { basicSetup } from "./ui/snippets_editor/codemirror_setup";
 import type { Extension } from "@codemirror/state";
 import { EditorState } from "@codemirror/state";
 import { compiler } from "./typescript";
-import { parseSnippetVariables, SnippetVersion } from "src/snippets/parse";
+import type { SnippetVersion } from "src/snippets/parse";
+import { parseSnippetVariables } from "src/snippets/parse";
 import {
     get_default_snippets,
     get_settings,
@@ -275,7 +276,7 @@ class LatexSuiteSettingTab {
         this.plugin = plugin;
     }
 
-    addHeading(containerEl: HTMLElement, name: string, icon = "math") {
+    addHeading(containerEl: HTMLElement, name: string, _icon = "math") {
         new Setting(containerEl).setName(name).setHeading();
     }
 

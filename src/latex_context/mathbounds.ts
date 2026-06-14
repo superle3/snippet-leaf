@@ -117,8 +117,8 @@ class MathBoundsPlugin {
      * **Note:** If you intend to use this directly, check out Context.getBounds or this.inMathBound instead, which caches and also takes care of codeblock languages which should behave like math mode.
      */
     private computeEquationBounds = (
-        state: EditorState,
-        pos?: number,
+        _state: EditorState,
+        _pos?: number,
     ): EquationInfo | null => {
         return null;
     };

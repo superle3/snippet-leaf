@@ -49,7 +49,7 @@ import {
     parseSnippetVariablesSync,
 } from "src/snippets/parse";
 
-const codeMirrorExt = {
+const _codeMirrorExt = {
     Decoration,
     EditorSelection,
     EditorView,
