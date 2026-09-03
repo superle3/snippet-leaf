@@ -18,12 +18,10 @@ const production = process.argv[2] === "production";
 const web = process.argv[2] === "web" || process.argv.length === 2;
 const codemirror = process.argv[2] === "codemirror";
 const userscript = process.argv[2] === "userscript";
-const test = process.argv[2] === "test";
-const test_watch = process.argv[2] === "test-watch";
 type InlinePluginOptions = {
     filter: RegExp;
     namespace: string;
-    transform?: (contents: string, args: any) => string | Promise<string>;
+    transform?: (contents: string, args: unknown) => string | Promise<string>;
 };
 
 const getFilePath = async (
@@ -83,7 +81,7 @@ export const inlin_plugin = (options?: InlinePluginOptions): Plugin => {
              */
             transform: async (
                 contents: string,
-                args: { path: string; [key: string]: any },
+                _args: { path: string; [key: string]: unknown },
             ) => contents,
         },
         options,
@@ -92,9 +90,9 @@ export const inlin_plugin = (options?: InlinePluginOptions): Plugin => {
     return {
         name: "esbuild-inline-plugin",
         setup(build) {
-            let alias = Object.entries(build.initialOptions.alias ?? {});
+            const alias = Object.entries(build.initialOptions.alias ?? {});
             build.onResolve({ filter }, async (args) => {
-                let inputPath = alias.reduce((path, [key, val]) => {
+                const inputPath = alias.reduce((path, [key, val]) => {
                     return path.replace(key, val);
                 }, args.path);
                 const filePath = await getFilePath(
@@ -243,12 +241,6 @@ const codemirrorConfig: BuildOptions = {
     outdir: "codemirror_extension/dist",
 };
 
-const testConfig: BuildOptions = {
-    ...codemirrorConfig,
-    entryPoints: ["tests/browser/index.ts"],
-    outdir: "tests/browser/dist",
-};
-
 const userscriptBanner = (
     version: string,
     require_version: string,
@@ -323,11 +315,6 @@ if (web) {
     console.log("Running in development mode, watching for changes...");
     const codemirrorCtx = await esbuild.context(codemirrorConfig);
     codemirrorCtx.watch().catch(() => process.exit(1));
-} else if (test) {
-    await esbuild.build(testConfig).catch(() => process.exit(1));
-} else if (test_watch) {
-    const testWatchCtx = await esbuild.context(testConfig);
-    testWatchCtx.watch().catch(() => process.exit(1));
 } else if (userscript) {
     await userScriptBuild(version);
     // console.log("Building Greasemonkey userscript...");

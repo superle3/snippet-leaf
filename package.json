@@ -22,8 +22,8 @@
         "build:greasemonkey": "tsx esbuild.config.mts userscript",
         "version": "tsx version-bump.mts && npm run format && git add .",
         "web:update_manifest": "tsx scripts/update_manifest.ts",
-        "test": "jiti esbuild.config.mts test && vitest --run",
-        "test:watch": "jiti esbuild.config.mts test-watch && vitest"
+        "test": "vitest --run",
+        "test:watch": "vitest"
     },
     "keywords": [
         "latex",

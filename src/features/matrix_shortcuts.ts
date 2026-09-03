@@ -67,27 +67,32 @@ const addCellMatrixShortcutCallback = (view: EditorView): boolean => {
 };
 
 const matrixShortcutsRunner =
-    (shortcut: (view: EditorView, bounds?: Bounds) => boolean) =>
+    (shortcut: (view: EditorView, bounds: Bounds) => boolean) =>
     (view: EditorView): boolean => {
         const ctx = getContextPlugin(view);
         if (!ctx.mode.strictlyInMath()) return false;
         const settings = getLatexSuiteConfig(view);
+        const { matrixShortcutsEnvNames, matrixShortcutsMacroNames } = settings;
 
-        const envs = settings.matrixShortcutsEnvNames.map((envName) => ({
-            openSymbol: "\\begin{" + envName + "}",
-            closeSymbol: "\\end{" + envName + "}",
-        }));
-        const macros = settings.matrixShortcutsMacroNames.map((macroName) => ({
-            openSymbol: "\\" + macroName + "{",
-            closeSymbol: "}",
-        }));
-        // Check whether we are inside a matrix / align / case environment
-        const envBounds = ctx.isWithinEnvironment(ctx.pos, [
-            ...envs,
-            ...macros,
-        ]);
-        if (!envBounds) return false;
-        return shortcut(view, envBounds);
+        const envName = ctx.getEnvNames(ctx.pos).next().value;
+        if (!envName) return false;
+        if (
+            envName.kind === "environment" &&
+            !matrixShortcutsEnvNames.includes(envName.name)
+        ) {
+            return false;
+        } else if (
+            envName.kind === "command" &&
+            !matrixShortcutsMacroNames.includes(envName.name)
+        ) {
+            return false;
+        } else if (
+            envName.kind !== "command" &&
+            envName.kind !== "environment"
+        ) {
+            return false;
+        }
+        return shortcut(view, envName);
     };
 
 const priorityTaboutShortcutCallback = (view: EditorView): boolean => {

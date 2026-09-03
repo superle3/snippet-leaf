@@ -1,25 +1,44 @@
-import type { EditorState, SelectionRange } from "@codemirror/state";
+import type { EditorState, SelectionRange, Text } from "@codemirror/state";
 import { ViewPlugin, type EditorView, type ViewUpdate } from "@codemirror/view";
 import { findMatchingBracket, getCloseBracket } from "../utils/editor_utils";
 import { Mode } from "../snippets/options";
 import type { Environment } from "../snippets/environment";
 import type { SyntaxNode, Tree, NodeIterator } from "@lezer/common";
-import type { Bounds } from "./mathbounds";
+import { getMathBoundsPlugin, type Bounds } from "./mathbounds";
 import { syntaxTree } from "@codemirror/language";
-import { textAreaEnvs, snippetLessArea } from "src/utils/default_textareas";
+import {
+    snippetLessArea,
+    type MacroArea,
+    allTextAreas,
+} from "src/utils/default_textareas";
+import { stackResolveNodeIterate } from "src/utils/tokenizer";
 
+export type StackOutput = (
+    | {
+          kind: "command";
+          name: string;
+      }
+    | {
+          kind: "environment";
+          name: string;
+      }
+    | { kind: "math" }
+) &
+    Bounds & { node: SyntaxNode };
+
+type MacroStackOutput = StackOutput & { kind: "command" };
 export interface SmallBounds {
     start: number;
     end: number;
 }
 export class Context {
-    view: EditorView;
-    state: EditorState;
+    view!: EditorView;
+    state!: EditorState;
     mode!: Mode;
-    pos: number;
-    ranges: SelectionRange[];
-    boundsCache: Map<number, EquationInfo>;
-    innerBoundsCache: Map<number, SmallBounds>;
+    pos!: number;
+    ranges!: SelectionRange[];
+    boundsCache!: Map<number, EquationInfo>;
+    innerBoundsCache!: Map<number, SmallBounds>;
     constructor(view: EditorView) {
         this.updateFromView(view);
     }
@@ -30,6 +49,8 @@ export class Context {
             update.viewportChanged
         ) {
             this.updateFromView(update.view);
+            // _printSyntaxTree(update.state, this.pos);
+            // console.log(this.mode);
         }
     }
     updateFromView(view: EditorView) {
@@ -42,24 +63,137 @@ export class Context {
         this.mode = new Mode();
         this.boundsCache = new Map();
 
-        const mathMode = equationType(this.state);
+        const mathMode = getMathBoundsPlugin(view).inMathBound(
+            this.state,
+            this.pos,
+        );
 
         if (mathMode) {
-            this.mode.textEnv = MathMode.TextEnv === mathMode.type;
-            this.mode.bracketBlockMath =
-                mathMode.type === MathMode.BracketDisplay;
-            this.mode.dollarBlockMath =
-                mathMode.type === MathMode.DollarDisplay;
-            this.mode.dollarInlineMath =
-                mathMode.type === MathMode.DollarInline;
-            this.mode.parenInlineMath = mathMode.type === MathMode.ParenInline;
-            this.mode.equation = MathMode.Equation === mathMode.type;
-            this.mode.array = MathMode.Array === mathMode.type;
-            this.mode.text = false;
-            this.boundsCache.set(this.pos, mathMode);
+            const inTextEnv = this.inTextEnvironment();
+            if (inTextEnv === "text") {
+                this.mode.textEnv = true;
+            } else if (inTextEnv === "none") {
+                this.mode.snippetlessEnv = true;
+            } else {
+                this.mode.bracketBlockMath =
+                    mathMode.type === MathMode.BracketDisplay;
+                this.mode.dollarBlockMath =
+                    mathMode.type === MathMode.DollarDisplay;
+                this.mode.dollarInlineMath =
+                    mathMode.type === MathMode.DollarInline;
+                this.mode.parenInlineMath =
+                    mathMode.type === MathMode.ParenInline;
+                this.mode.equation = MathMode.Equation === mathMode.type;
+                this.mode.array = MathMode.Array === mathMode.type;
+                this.mode.text = false;
+                this.boundsCache.set(this.pos, mathMode);
+            }
         } else {
             this.mode.text = true;
         }
+    }
+
+    *getEnvNames(
+        pos: number = this.pos,
+    ): Generator<StackOutput, void, unknown> {
+        const boundsPlugin = getMathBoundsPlugin(this.view);
+        const bound = boundsPlugin.inMathBound(this.state, pos);
+        if (!bound) return;
+        const treeNode = syntaxTree(this.state).resolveInner(pos, 1);
+
+        for (const node of stackResolveNodeIterate(treeNode, pos, -1)) {
+            if (node.to <= pos) continue;
+            if (node.name === "LaTeX") {
+                // _printNode2(node, this.state.doc.toString())
+            }
+            const result = this.getEnvNameFromNode(node, this.state.doc);
+            if (!result) continue;
+            yield result;
+        }
+    }
+
+    isWithinMacros(
+        pos: number,
+        macros: readonly MacroArea[],
+    ): (StackOutput & { kind: "command" }) | null {
+        for (const result of this.getEnvNames(pos)) {
+            if (result.kind === "environment") continue;
+            if (result.kind === "math") return null;
+            const verifiedResult = isMacroArgumentCount(result, macros);
+            if (verifiedResult) {
+                return verifiedResult;
+            }
+        }
+        return null;
+    }
+    getEnvNameFromNode(node: SyntaxNode, doc: Text): null | StackOutput {
+        const value = node.name;
+        function createEnvironment(
+            envNode: SyntaxNode | null,
+        ): null | StackOutput {
+            const beginNode = envNode?.getChild("BeginEnv");
+            const envNameNode = beginNode?.getChild("EnvNameGroup");
+            const contentNode = envNode?.getChild("Content");
+            if (!envNameNode || !contentNode || !envNode) {
+                return null;
+            }
+            return {
+                kind: "environment",
+                name: doc.sliceString(envNameNode.from + 1, envNameNode.to - 1),
+                inner_start: contentNode.from,
+                inner_end: contentNode.to,
+                outer_start: envNode.from,
+                outer_end: envNode.to,
+                node,
+            };
+        }
+
+        if (value === "Environment") {
+            return createEnvironment(node);
+        } else if (value === "KnownEnvironment") {
+            return createEnvironment(node.firstChild);
+        } else if (value.endsWith("Argument")) {
+            const parent = node.parent;
+            const command = parent?.firstChild;
+            const openBraced = node?.firstChild;
+            const closeBraced = node?.lastChild;
+            if (!command || !openBraced || !closeBraced) {
+                return null;
+            }
+            return {
+                kind: "command",
+                name: doc.sliceString(command.from + 1, command.to),
+                inner_start: openBraced.to,
+                inner_end: closeBraced.from,
+                outer_start: node.from,
+                outer_end: closeBraced.to,
+                node,
+            };
+        } else if (value === "ParenMath" || value === "DollarInlineMath") {
+            value satisfies "ParenMath" | "DollarInlineMath";
+            let openNode: SyntaxNode | null = null;
+            let closeNode: SyntaxNode | null = null;
+            if (value === "ParenMath") {
+                openNode = node.getChild("OpenParenMath")!;
+                closeNode = node.getChild("CloseParenMath")!;
+            } else if (value === "DollarInlineMath") {
+                const dollars = node.getChildren("Dollar");
+                openNode = dollars[0] ?? null;
+                closeNode = dollars[1] ?? null;
+            }
+            if (!openNode || !closeNode) {
+                return null;
+            }
+            return {
+                kind: "math",
+                inner_end: closeNode.from,
+                inner_start: openNode.to,
+                outer_start: node.from,
+                outer_end: node.to,
+                node,
+            };
+        }
+        return null;
     }
 
     isWithinEnvironment<T extends Environment>(
@@ -131,36 +265,29 @@ export class Context {
         return null;
     }
 
-    inTextEnvironment(): boolean {
-        const result = this.isWithinEnvironment(this.pos, textAreaEnvs);
-        if (!result) return false;
-        const openSymbol = result.openSymbol.slice(1, -1);
-        if (
-            snippetLessArea.includes(
-                openSymbol as (typeof snippetLessArea)[number],
-            )
-        ) {
-            return true;
+    inTextEnvironment(): "text" | "none" | null {
+        const result = this.isWithinMacros(this.pos, allTextAreas);
+        if (!result) return null;
+        const openSymbol = result.name;
+        if (snippetLessArea.some((macro) => macro.name === openSymbol)) {
+            return "none";
         } else {
-            return true;
+            return "text";
         }
     }
 
-    getBounds(pos: number = this.pos): Bounds {
+    getBounds(pos: number = this.pos): Bounds | null {
         // yes, I also want the cache to work over the produced range instead of just that one through
         // a BTree or the like, but that'd be probably overkill
-        if (this.boundsCache.has(pos)) {
-            return this.boundsCache.get(pos);
+        const bound = this.boundsCache.get(pos);
+        if (this.boundsCache.has(pos) && bound !== undefined) {
+            return bound;
         }
-
-        const mathMode = equationType(this.state, pos);
-
-        this.boundsCache.set(pos, mathMode);
-        return mathMode;
+        return null;
     }
 
     // Accounts for equations within text environments, e.g. $$\text{... $...$}$$
-    getInnerBounds(pos: number = this.pos): Bounds {
+    getInnerBounds(pos: number = this.pos): Bounds | null {
         const bounds = getInnerEquationBounds(this.state, pos);
         return bounds;
     }
@@ -218,22 +345,20 @@ const TextEnvOffset: SmallBounds = {
     end: 0,
 };
 
-export type EquationInfo =
-    | ((
-          | {
-                type: Exclude<MathMode, MathMode.Equation | MathMode.Array>;
-            }
-          | {
-                type: MathMode.Equation | MathMode.Array;
-                EnvName: string;
-            }
-      ) &
-          Bounds)
-    | null;
+export type EquationInfo = (
+    | {
+          type: Exclude<MathMode, MathMode.Equation | MathMode.Array>;
+      }
+    | {
+          type: MathMode.Equation | MathMode.Array;
+          EnvName: string;
+      }
+) &
+    Bounds;
 
 export const mathContext: Record<
     string,
-    (node: SyntaxNode, state?: EditorState) => EquationInfo | false
+    (node: SyntaxNode, state: EditorState) => EquationInfo | false
 > = {
     InlineMath: (node: SyntaxNode): EquationInfo => ({
         type: MathMode.DollarInline,
@@ -268,8 +393,8 @@ export const mathContext: Record<
         if (node.to - node.from < 4) {
             return mathContext.InlineMath(node, state) as EquationInfo;
         }
-        const mathNode = node.firstChild.nextSibling;
-        return mathContext[mathNode.name](mathNode) as EquationInfo;
+        const mathNode = node.firstChild!.nextSibling!;
+        return mathContext[mathNode.name](mathNode, state) as EquationInfo;
     },
     BeginEnv: (node: SyntaxNode): EquationInfo => ({
         type: MathMode.TextEnv,
@@ -284,17 +409,18 @@ export const mathContext: Record<
         ...boundsFromOffset(node, TextEnvOffset),
     }),
     EquationEnvironment: (
-        node: SyntaxNode & { name: "EquationEnvironment" },
+        node: SyntaxNode,
         state: EditorState,
-    ) => {
-        const { EnvName, inner_bounds } = getInnerBoundsFromEquation(
-            node,
+    ): EquationInfo | false => {
+        const bounds = getInnerBoundsFromEquation(
+            node as SyntaxNode & { name: "EquationEnvironment" },
             state,
         );
-        if (!inner_bounds) {
+        if (!bounds) {
             console.warn("No bounds found for EquationEnvironment");
             return false;
         }
+        const { EnvName, inner_bounds } = bounds;
         return {
             type: MathMode.Equation,
             inner_start: inner_bounds.start,
@@ -305,21 +431,18 @@ export const mathContext: Record<
         };
     },
     EquationArrayEnvironment: (
-        node: SyntaxNode & { name: "EquationArrayEnvironment" },
+        node: SyntaxNode,
         state: EditorState,
-    ) => {
-        const { EnvName, inner_bounds } = getInnerBoundsFromEquation(
-            node,
+    ): EquationInfo | false => {
+        const bounds = getInnerBoundsFromEquation(
+            node as SyntaxNode & { name: "EquationArrayEnvironment" },
             state,
         );
-        if (!inner_bounds) {
-            console.warn(
-                "No bounds found for EquationArrayEnvironment",
-                EnvName,
-                inner_bounds,
-            );
+        if (!bounds) {
+            console.warn("No bounds found for EquationArrayEnvironment");
             return false;
         }
+        const { EnvName, inner_bounds } = bounds;
         return {
             type: MathMode.Array,
             inner_start: inner_bounds.start,
@@ -333,11 +456,11 @@ export const mathContext: Record<
 const equationType = (
     state: EditorState,
     pos: number = state.selection.main.to,
-): EquationInfo => {
+): EquationInfo | null => {
     const tree: Tree = syntaxTree(state);
 
     // Traverse up the tree to find math context
-    let currentNode: NodeIterator = tree.resolveStack(pos, 0);
+    let currentNode: NodeIterator | null = tree.resolveStack(pos, 0);
     while (currentNode) {
         const context = mathContext[currentNode.node.name];
         if (context !== undefined) {
@@ -383,20 +506,37 @@ const getInnerBoundsFromEquation = (
     };
     const equation_name_node = node
         .getChild("EndEnv")
-        .getChild("EnvNameGroup")
+        ?.getChild("EnvNameGroup")
         ?.getChild(hash_map[node.name]);
     const content = node.getChild("Content");
-    if (!content || !equation_name_node) {
+    const begin_env = node.getChild("BeginEnv");
+    if (!content || !equation_name_node || !begin_env) {
         console.warn(
             `No content or equation name found for ${node.name} at position ${node.from}-${node.to}`,
             content,
             equation_name_node,
+            begin_env,
         );
         return null;
     }
+    const cursor = content.cursor();
+    cursor.prev();
+    let bound = boundsFromNode(cursor.node);
+    // check for special case \\begin{align}\n|\n\\end{align} where | the cursor is.
+    if (
+        cursor.name === "BlankLine" &&
+        cursor.to === begin_env.to &&
+        cursor.to === content.from &&
+        cursor.from - cursor.to === 2
+    ) {
+        bound = {
+            start: cursor.from + 1,
+            end: cursor.to,
+        };
+    }
     return {
         EnvName: state.sliceDoc(equation_name_node.from, equation_name_node.to),
-        inner_bounds: boundsFromNode(content),
+        inner_bounds: bound,
     };
 };
 
@@ -414,12 +554,15 @@ export const getEquationBounds = (
 };
 
 // Accounts for equations within text environments, e.g. $$\text{... $...$}$$
-const getInnerEquationBounds = (state: EditorState, pos?: number): Bounds => {
+const getInnerEquationBounds = (
+    state: EditorState,
+    pos?: number,
+): Bounds | null => {
     if (!pos) pos = state.selection.main.to;
     return equationType(state, pos) ?? null;
 };
 
-const boundsFromNode = (node: SyntaxNode): SmallBounds | null => {
+const boundsFromNode = (node: SyntaxNode): SmallBounds => {
     const start = node.from;
     const end = node.to;
 
@@ -447,3 +590,24 @@ const _printSyntaxTree = (state: EditorState, pos: number) => {
     };
     console.log(buildTreeString(tree.topNode));
 };
+
+export function isMacroArgumentCount(
+    stack: Readonly<MacroStackOutput>,
+    macros: readonly MacroArea[],
+): null | MacroStackOutput {
+    const macro = macros.find((macro) => macro.name === stack.name);
+    if (!macro) return null;
+    if (!macro.arguments) return stack;
+
+    let sibling_count: number = 0;
+    let sibling: SyntaxNode | null = stack.node;
+    while ((sibling = sibling.prevSibling) !== null) {
+        if (sibling.name.endsWith("Argument")) {
+            sibling_count++;
+        }
+    }
+    if (!macro.arguments.includes(sibling_count)) {
+        return null;
+    }
+    return stack;
+}

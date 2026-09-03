@@ -42,7 +42,7 @@ function importModule(source: string, identifier: string): Promise<object> {
     const sourceWithSourceURL = `${source}\n//# sourceURL=latex-suite:${identifier}`;
     const blob = new Blob([sourceWithSourceURL], { type: "text/javascript" });
     const url = URL.createObjectURL(blob);
-    const result = import(url);
+    const result = import(/* @vite-ignore */ url);
     URL.revokeObjectURL(url);
     return result;
 }

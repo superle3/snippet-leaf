@@ -1,22 +1,23 @@
 import type { EditorState } from "@codemirror/state";
 import { ViewPlugin, type EditorView, type ViewUpdate } from "@codemirror/view";
-import type { SyntaxNode, SyntaxNodeRef } from "@lezer/common";
+import type { TreeCursor } from "@lezer/common";
 import type { EquationInfo } from "./context";
 import { mathContext } from "./context";
 import { syntaxTree } from "@codemirror/language";
+import { iterateParents } from "src/utils/tokenizer";
 export interface Bounds {
     inner_start: number;
     inner_end: number;
     outer_start: number;
     outer_end: number;
 }
-type STRICTLY_MATH_MODE =
-    | "ParenMath"
-    | "InlineMath"
-    | "DisplayMath"
-    | "BracketMath"
-    | "EquationArray"
-    | "EquationEnvironment";
+// type STRICTLY_MATH_MODE =
+//     | "ParenMath"
+//     | "InlineMath"
+//     | "DisplayMath"
+//     | "BracketMath"
+//     | "EquationArray"
+//     | "EquationEnvironment";
 
 // type MathBounds = FullBounds & { mode: (typeof STRICTLY_MATH_MODE)[number] };
 
@@ -35,54 +36,88 @@ class MathBoundsPlugin {
         }
     }
 
-    updateMathBounds(view: EditorView) {
-        const tree = syntaxTree(view.state);
-        const math_nodes_viewports: SyntaxNode[][] = [];
-        view.visibleRanges.forEach(({ from, to }, i) => {
-            math_nodes_viewports.push([]);
-            tree.iterate({
-                from,
-                to,
-                enter: (node: SyntaxNodeRef) => {
-                    if (node.name !== "Math") return;
-                    if (
-                        math_nodes_viewports[i].length > 0 &&
-                        node.to <
-                            math_nodes_viewports[i][
-                                math_nodes_viewports[i].length - 1
-                            ].to
-                    )
-                        return;
-                    math_nodes_viewports[i].push(node.node);
-                },
-            });
-        });
-        this.mathBounds = math_nodes_viewports
-            .flat()
-            .filter((node: SyntaxNode, index: number, array: SyntaxNode[]) => {
-                if (index === 0) return true;
-                const prev_node = array[index - 1];
-                return node.from >= prev_node.to;
-            })
-            .map((node: SyntaxNode) => {
-                const parent =
-                    node.parent.name === "Content"
-                        ? node.parent.parent
-                        : node.parent;
-                return mathContext[parent.name as STRICTLY_MATH_MODE](
-                    parent,
-                    view.state,
-                ) as EquationInfo;
-            });
+    getOuterMathBounds(
+        from: number,
+        to: number,
+        view: EditorView,
+    ): EquationInfo[] {
+        const bounds: EquationInfo[] = [];
+        const startCursor = syntaxTree(view.state).cursor();
+        startCursor.moveTo(from, -1);
+        let parentCursor: TreeCursor | undefined;
+        for (const parent of Array.from(
+            iterateParents(startCursor.node),
+        ).reverse()) {
+            const result = mathContext[parent.name]?.(parent, view.state);
+            if (result) {
+                parentCursor = parent.cursor();
+                bounds.push(result);
+                parentCursor.moveTo(parent.to, 1);
+                break;
+            }
+        }
+        const cursor = parentCursor !== undefined ? parentCursor : startCursor;
+        while (parentCursor === undefined && startCursor.to < from) {
+            cursor.next();
+        }
+        let skipMove = false;
+        let counter = 0;
+        do {
+            counter++;
+            skipMove = false;
+            const result = mathContext[cursor.node.name]?.(
+                cursor.node,
+                view.state,
+            );
+            if (result) {
+                bounds.push(result);
+                const node = cursor.node;
+                cursor.moveTo(cursor.to, 1);
+                if (cursor.from < node.to || node.type.isTop) {
+                    break;
+                }
+            }
+        } while (
+            (skipMove || cursor.next()) &&
+            cursor.from < to &&
+            counter < 1000
+        );
+        if (counter >= 1000) {
+            console.warn(
+                "MathBoundsPlugin: Exceeded maximum iterations while searching for math bounds.",
+            );
+        }
+        return bounds;
     }
 
-    inMathBound = (state: EditorState, pos: number): EquationInfo | null => {
+    updateMathBounds(view: EditorView) {
+        const equations: EquationInfo[] = [];
+        view.visibleRanges.forEach(({ from, to }) => {
+            const added_equations = this.getOuterMathBounds(from, to, view);
+            const last_equation = equations[equations.length - 1];
+            let i = 0;
+            if (last_equation) {
+                for (; i < added_equations.length; i++) {
+                    const eq = added_equations[i]!;
+                    if (eq.outer_start > last_equation.outer_end) {
+                        break;
+                    }
+                }
+            }
+            equations.push(...added_equations.slice(i));
+        });
+        this.mathBounds = equations;
+    }
+
+    inMathBound = (_state: EditorState, pos: number): EquationInfo | null => {
         const bounds = this.mathBounds;
-        if (
-            pos <= bounds[0]?.outer_start ||
-            pos >= bounds[bounds.length - 1]?.outer_end
-        ) {
-            return this.getEquationBounds(state, pos);
+        const first_bound = bounds[0];
+        const last_bound = bounds[bounds.length - 1];
+        if (!first_bound || !last_bound) {
+            return null;
+        }
+        if (pos <= first_bound.outer_start || pos >= last_bound.outer_end) {
+            return null;
         }
         // Use binary search to efficiently find if pos is within any math bound
         let left = 0,
@@ -90,17 +125,18 @@ class MathBoundsPlugin {
         while (left <= right) {
             const mid = (left + right) >> 1;
             const bound = bounds[mid];
+            if (!bound) break;
             if (pos < bound.outer_start) {
                 right = mid - 1;
             } else if (pos >= bound.outer_end) {
                 left = mid + 1;
-            } else if (pos <= bound.inner_start || pos >= bound.inner_end) {
+            } else if (pos <= bound.inner_start || pos > bound.inner_end) {
                 break;
             } else {
                 return bound;
             }
         }
-        return this.getEquationBounds(state, pos);
+        return null;
     };
 
     getEquationBounds(state: EditorState, pos?: number): EquationInfo | null {

@@ -302,8 +302,6 @@ export class RegexSnippet extends Snippet<"regex"> {
 }
 
 export class StringSnippet extends Snippet<"string"> {
-    data: SnippetData<"string">;
-
     constructor({
         trigger,
         replacement,

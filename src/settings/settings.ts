@@ -215,7 +215,7 @@ export async function importString(
     const blob = new Blob([source], { type: "text/javascript" });
     const file = new File([blob], identifier, { type: "text/javascript" });
     const url = URL.createObjectURL(file);
-    const module = await import(url);
+    const module = await import(/* @vite-ignore */ url);
     return module;
 }
 export async function importSnippets(source: string): Promise<unknown> {

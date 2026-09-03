@@ -60,6 +60,7 @@ export class Mode {
     textEnv: boolean = false;
     equation: boolean = false;
     array: boolean = false;
+    snippetlessEnv: boolean = false;
 
     /** Whether the state is inside an inline math environment. */
     get inlineMath(): boolean {
