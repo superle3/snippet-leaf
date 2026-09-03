@@ -11,13 +11,22 @@
         "moduleResolution": "bundler",
         "importHelpers": true,
         "declaration": true,
+        "verbatimModuleSyntax": true,
 
-        "lib": ["DOM", "es2022"]
+        "lib": ["DOM", "es2022"],
+        "paths": {
+            "src/*": ["src/*"],
+            "codemirror_extension/*": ["codemirror_extension/*"],
+            "browser_extension/*": ["browser_extension/*"],
+            "tests/*": ["tests/*"],
+            "greasemonkey/*": ["greasemonkey/*"]
+        }
     },
     "include": [
         "src/**/*.ts",
         "codemirror_extension/**/*.ts",
         "browser_extension/**/*.ts",
-        "greasemonkey/**/*.ts"
+        "greasemonkey/**/*.ts",
+        "tests/**/*.ts"
     ]
 }

@@ -102,4 +102,4 @@ export type {
 } from "../src/settings/default_settings";
 export type { LatexSuitePluginSettingsExplanations } from "../src/settings/raw_settings";
 export type { Snippet } from "../src/snippets/snippets.ts";
-export { LatexSuiteFacet } from "src/settings/settings";
+export type { LatexSuiteFacet } from "src/settings/settings";

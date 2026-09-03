@@ -89,7 +89,7 @@ const compiler = (source: string) => {
     const variables: string[] = [];
     const transformer: ts.TransformerFactory<ts.SourceFile> = (context) => {
         return (sourceFile) => {
-            const visitor = (node: ts.Node): ts.Node => {
+            const visitor = (node: ts.Node): ts.Node | undefined => {
                 if (ts.isImportDeclaration(node) && node.moduleSpecifier) {
                     const moduleSpecifier = node.moduleSpecifier;
                     if (ts.isStringLiteral(moduleSpecifier)) {

@@ -21,7 +21,9 @@
         "build:rollup": "rollup -c",
         "build:greasemonkey": "tsx esbuild.config.mts userscript",
         "version": "tsx version-bump.mts && npm run format && git add .",
-        "web:update_manifest": "tsx scripts/update_manifest.ts"
+        "web:update_manifest": "tsx scripts/update_manifest.ts",
+        "test": "jiti esbuild.config.mts test && vitest --run",
+        "test:watch": "jiti esbuild.config.mts test-watch && vitest"
     },
     "keywords": [
         "latex",
@@ -57,6 +59,11 @@
         "@types/web": "^0.0.263",
         "@typescript-eslint/eslint-plugin": "^8.38.0",
         "@typescript-eslint/parser": "^8.38.0",
+        "@vitest/browser-playwright": "^4.1.11",
+        "@vitest/browser-webdriverio": "^4.1.11",
+        "@wdio/cli": "^9.31.5",
+        "codemirror": "^6.0.2",
+        "codemirror-lang-latex": "^0.6.1",
         "concurrently": "^9.2.0",
         "dotenv-cli": "^11.0.0",
         "esbuild": "^0.28.0",
@@ -74,7 +81,10 @@
         "tslib": "2.3.1",
         "tsx": "^4.21.0",
         "typescript-eslint": "^8.39.1",
-        "web-ext": "^9.1.0"
+        "vite-tsconfig-paths": "^6.1.1",
+        "vitest": "^4.1.11",
+        "web-ext": "^9.1.0",
+        "webdriverio": "^9.31.5"
     },
     "type": "module",
     "types": "codemirror_extension/dist/index.d.ts",
@@ -82,5 +92,8 @@
     "pre-commit": [
         "web:build",
         "format:commit"
-    ]
+    ],
+    "overrides": {
+        "yauzl": "^3.4.0"
+    }
 }
