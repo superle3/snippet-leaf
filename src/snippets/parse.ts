@@ -48,13 +48,13 @@ function importModule(source: string, identifier: string): Promise<object> {
 }
 
 async function importRaw(module: string, identifier: string): Promise<unknown> {
-    let data: object;
+    let data: object | undefined;
     try {
         data = await importModule(module, identifier);
     } catch (e) {
         console.error(e);
     }
-    if ("default" in data) {
+    if (data && "default" in data) {
         return data.default;
     } else {
         throw new Error("No default export found");
@@ -103,13 +103,11 @@ function require(module) {
 
 function latex_suite_require(default_snippets: SnippetVariables) {
     const parsed_api = api(default_snippets);
-    const original_require = window.require;
     return (module: string): unknown => {
         if (module === "latex-suite") {
             return parsed_api;
-        } else {
-            return original_require(module);
         }
+        throw new Error(`Module not found: ${module}`);
     };
 }
 
@@ -210,7 +208,7 @@ export const RawSnippetSchema = object({
 });
 
 export type RawSnippet = Output<typeof RawSnippetSchema>;
-export type SnippetVersion = RawSnippet["version"];
+export type SnippetVersion = Exclude<RawSnippet["version"], undefined>;
 
 /**
  * tries to parse an unknown value as an array of raw snippets

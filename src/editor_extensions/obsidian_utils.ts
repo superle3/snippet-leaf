@@ -16,7 +16,7 @@ String.prototype.contains = String.prototype.includes;
 Array.prototype.contains = Array.prototype.includes;
 export function createElement<K extends keyof HTMLElementTagNameMap>(
     tag: K,
-    options?: Partial<HTMLElementTagNameMap[K]> & {
+    options?: Partial<HTMLElement> & {
         cls?: string | string[];
         text?: string;
         children?: HTMLElement[];
@@ -40,7 +40,7 @@ export function createElement(
         children?: HTMLElement[];
     },
     callback?: (el: HTMLElement) => void,
-) {
+): HTMLElement {
     const el = document.createElement(tag);
     if (options) {
         const { cls, text, children, ...rest } = options;

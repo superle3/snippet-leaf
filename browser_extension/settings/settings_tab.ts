@@ -13,6 +13,7 @@ import {
     store_settings,
 } from "./browser_storage_wrapper";
 import { debounce } from "src/editor_extensions/obsidian_utils";
+import type { Diagnostic } from "typescript";
 
 class Setting {
     container_element: HTMLElement;
@@ -255,10 +256,12 @@ class ExtraButtonComponent {
     }
 }
 
-const settings_div = document.getElementById("settings-editor");
-if (!settings_div) {
+const settings_div_temp = document.getElementById("settings-editor");
+if (!settings_div_temp) {
     throw new Error("Settings editor not found");
 }
+const settings_div = settings_div_temp;
+
 class LatexSuiteSettingTab {
     containerEl: HTMLElement;
     plugin: {
@@ -529,14 +532,12 @@ class LatexSuiteSettingTab {
                     .addOption("Tab", "Tab")
                     .addOption(" ", "Space")
                     .setValue(this.plugin.settings.snippetsTrigger)
-                    .onChange(
-                        async (
-                            value: typeof this.plugin.settings.snippetsTrigger,
-                        ) => {
-                            this.plugin.settings.snippetsTrigger = value;
-                            await this.plugin.saveSettings();
-                        },
-                    ),
+                    .onChange(async (value: string) => {
+                        this.plugin.settings.snippetsTrigger = value as
+                            | "Tab"
+                            | " ";
+                        await this.plugin.saveSettings();
+                    }),
             );
 
         new Setting(containerEl)
@@ -1039,13 +1040,31 @@ class LatexSuiteSettingTab {
                 error =
                     "<br>" +
                     diagnostics
-                        .map((d) => {
-                            let result = d.messageText;
-                            const start_line = v.state.doc.lineAt(d.start);
-                            const start_line_number = start_line.number;
-                            const start_char = start_line.from - d.start;
-                            result += ` at Ln ${start_line_number}, Col ${start_char}`;
-                            return result;
+                        .flatMap((d) => {
+                            function getDiagnosticMessageText(
+                                d: Diagnostic,
+                            ): string {
+                                let result: string;
+                                if (typeof d.messageText !== "string") {
+                                    result = d.messageText.messageText;
+                                } else {
+                                    result = d.messageText;
+                                }
+                                if (typeof d.start === "number") {
+                                    const start_line = v.state.doc.lineAt(
+                                        d.start,
+                                    );
+                                    const start_line_number = start_line.number;
+                                    const start_char =
+                                        start_line.from - d.start;
+                                    result += ` at Ln ${start_line_number}, Col ${start_char}`;
+                                }
+                                return result;
+                            }
+                            if (Array.isArray(d)) {
+                                return d.map(getDiagnosticMessageText);
+                            }
+                            return [getDiagnosticMessageText(d)];
                         })
                         .join("<br>");
             }

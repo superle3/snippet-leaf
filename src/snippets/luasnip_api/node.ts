@@ -250,7 +250,7 @@ export class SnippetStringNode extends BaseNode {
                 replacements.push({ start, end, kind });
             }
             const replacement = match.groups?.placeholder || "";
-            const index = parseInt(match.groups.index!);
+            const index = parseInt(match.groups!.index!);
             const kind = "tabstop";
             replacements.push({ start, end, replacement, index, kind });
         }

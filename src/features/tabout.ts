@@ -240,8 +240,10 @@ export const taboutByEnclosedBrackets = (
         closingSymbols,
     );
     const opening_delimiters = new Set(
-        Object.keys(DELIMITERS_MAP).filter((key: keyof typeof DELIMITERS_MAP) =>
-            closing_delimiters.has(DELIMITERS_MAP[key]),
+        Object.keys(DELIMITERS_MAP).filter((key) =>
+            closing_delimiters.has(
+                DELIMITERS_MAP[key as keyof typeof DELIMITERS_MAP],
+            ),
         ),
     );
     for (let i = 0; i < tokens.length; i++) {
