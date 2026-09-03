@@ -1,6 +1,7 @@
 import type { EditorView } from "@codemirror/view";
 import type { SyntaxNode, TreeCursor } from "@lezer/common";
 import type { EditorState } from "@codemirror/state";
+import type { Bounds } from "src/latex_context/mathbounds";
 
 export function replaceRange(
     view: EditorView,
@@ -165,4 +166,12 @@ export function isComposing(view: EditorView, event: KeyboardEvent): boolean {
     // so we need to check for event.keyCode === 229 to prevent IME from triggering keydown events.
     // Note that keyCode is deprecated - it is used here because it is apparently the only way to detect the first keydown event of an IME composition.
     return view.composing || event.keyCode === 229;
+}
+
+export function isBoundMultiline(view: EditorView, bounds: Bounds): boolean {
+    const doc = view.state.doc;
+    const startLine = doc.lineAt(bounds.outer_start);
+    const endLine = doc.lineAt(bounds.outer_end);
+
+    return startLine.number !== endLine.number;
 }

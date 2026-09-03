@@ -1,5 +1,5 @@
 import type { EditorView } from "@codemirror/view";
-import { setCursor } from "src/utils/editor_utils";
+import { isBoundMultiline, setCursor } from "src/utils/editor_utils";
 import { queueSnippet } from "src/snippets/codemirror/snippet_queue_state_field";
 import { expandSnippets } from "src/snippets/snippet_management";
 import { taboutByEnclosedBrackets } from "./tabout";
@@ -13,14 +13,17 @@ import {
     emptyInsertOptions,
 } from "src/snippets/luasnip_api/node";
 
-const newlineMatrixShortcutCallback = (view: EditorView): boolean => {
+const newlineMatrixShortcutCallback = (
+    view: EditorView,
+    bounds: Bounds,
+): boolean => {
     const ctx = getContextPlugin(view);
     const cur_line = view.state.doc.lineAt(ctx.pos);
     const current_matrix_line = cur_line.text.match(
         /(\\begin{[^]]*}|\\\\|^)((?:\s|&)+)/,
     );
     const added_cells = current_matrix_line?.[2].trimStart() ?? "";
-    if (ctx.mode.blockMath) {
+    if (isBoundMultiline(view, bounds)) {
         const snippet = new ArrayNode([
             new TextNode(" \\\\\n" + added_cells),
             new TabstopNode(0, ""),
@@ -44,15 +47,34 @@ const taboutMatrixShortcutCallback = (
     bounds: Bounds,
 ): boolean => {
     const ctx = getContextPlugin(view);
-    if (ctx.mode.blockMath) {
+    if (isBoundMultiline(view, bounds)) {
         // Move cursor to end of next line
         const d = view.state.doc;
 
         const nextLineNo = d.lineAt(ctx.pos).number + 1;
         const nextLine = d.line(nextLineNo);
+        const nextLineText = nextLine.text;
+        const potentialEndMatrix = /\\end{([^}]*)}/.exec(nextLineText);
 
-        setCursor(view, nextLine.to);
-    } else if (ctx.mode.inlineMath) {
+        let to = nextLine.to;
+        if (
+            potentialEndMatrix &&
+            potentialEndMatrix[1] &&
+            potentialEndMatrix.index !== undefined
+        ) {
+            const envName = potentialEndMatrix[1];
+            const settingsEnvNames =
+                getLatexSuiteConfig(view).matrixShortcutsEnvNames;
+            if (settingsEnvNames.includes(envName)) {
+                to =
+                    nextLine.from +
+                    potentialEndMatrix.index +
+                    potentialEndMatrix[0].length;
+            }
+        }
+
+        setCursor(view, to);
+    } else {
         setCursor(view, bounds.outer_end);
     }
     return true;
@@ -71,11 +93,13 @@ const matrixShortcutsRunner =
     (view: EditorView): boolean => {
         const ctx = getContextPlugin(view);
         if (!ctx.mode.strictlyInMath()) return false;
-        const settings = getLatexSuiteConfig(view);
-        const { matrixShortcutsEnvNames, matrixShortcutsMacroNames } = settings;
-
+        const bounds = ctx.getBounds();
+        if (!bounds) return false;
         const envName = ctx.getEnvNames(ctx.pos).next().value;
         if (!envName) return false;
+
+        const { matrixShortcutsEnvNames, matrixShortcutsMacroNames } =
+            getLatexSuiteConfig(view);
         if (
             envName.kind === "environment" &&
             !matrixShortcutsEnvNames.includes(envName.name)
