@@ -204,7 +204,7 @@ const trimWhitespace = (replacement: string, _ctx: Context) => {
         const lastThreeChars = replacement.slice(-3);
         const lastChar = lastThreeChars.slice(-1);
 
-        if (lastThreeChars.slice(0, 2) === " $" && !isNaN(parseInt(lastChar))) {
+        if (lastThreeChars.slice(0, 2) === " @" && !isNaN(parseInt(lastChar))) {
             spaceIndex = -3;
         }
     }
