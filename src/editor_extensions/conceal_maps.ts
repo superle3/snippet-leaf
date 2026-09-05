@@ -188,7 +188,7 @@ export const cmd_symbols: { [name: string]: string } = {
     "jmath": "ȷ",
     "Join": "⋈",
     "land": "∧",
-    "lceil": "⌈",
+    // "lceil": "⌈",
     "ldotp": ".",
     "ldots": "…",
     "le": "≤",
@@ -328,7 +328,7 @@ export const cmd_symbols: { [name: string]: string } = {
     "propto": "∝",
     "qquad": " ",
     "quad": " ",
-    "rceil": "⌉",
+    // "rceil": "⌉",
     "Re": "ℜ",
     "real": "ℜ",
     "restriction": "↾",
@@ -974,7 +974,16 @@ export const hat = {
     "Y": "Ŷ",
 };
 
-export const brackets = {
+export const leftrightBrackets: Record<string, string> = {
+    "<": "⟨",
+    ">": "⟩",
+    ".": "",
+    "/": "/",
+    "\\gt": "⟩",
+    "\\lt": "⟨",
+};
+// brackets also highlighted further by highlight_brackets.ts
+export const brackets: Record<string, string> = {
     // "left(": "(",
     // "left[": "[",
     // "left\\{": "\\{",
@@ -984,8 +993,8 @@ export const brackets = {
     // "left\\langle": "〈",
     // "right\\rangle": "〉",
 
-    "left<": "⟨",
-    "right>": "⟩",
+    // "left<": "⟨",
+    // "right>": "⟩",
     "langle": "⟨",
     "rangle": "⟩",
     "lvert": "|",
@@ -994,8 +1003,6 @@ export const brackets = {
     "rVert": "‖",
     "vert": "|",
     // "|": "‖",
-    ".": "",
-    "/": "/",
     "Arrowvert": "‖",
     // "Downarrow": "⇓",
     // "Uparrow": "⇑",
@@ -1005,22 +1012,18 @@ export const brackets = {
     // "backslash": "\\",
     "bracevert": "⎪",
     // "downarrow": "↓",
-    "left\\gt": "⟩",
-    "right\\gt": "⟩",
     "lbrace": "{",
     "lbrack": "[",
-    // "lceil": "⌈",
+    "lceil": "⌈",
     "lfloor": "⌊",
     "lgroup": "⟮",
     "llcorner": "⌞",
     "lmoustache": "⎰",
     "lparen": "(",
     "lrcorner": "⌟",
-    "left\\lt": "⟨",
-    "right\\lt": "⟨",
     "rbrace": "}",
     "rbrack": "]",
-    // "rceil": "⌉",
+    "rceil": "⌉",
     "rfloor": "⌋",
     "rgroup": "⟯",
     "rmoustache": "⎱",
@@ -1031,7 +1034,7 @@ export const brackets = {
     "urcorner": "⌝",
 };
 
-export const mathbb = {
+export const mathbb: Record<string, string> = {
     " ": " ",
     "0": "𝟘",
     "1": "𝟙",
@@ -1097,7 +1100,7 @@ export const mathbb = {
     "z": "𝕫",
 };
 
-export const mathscrcal = {
+export const mathscrcal: Record<string, string | undefined> = {
     "A": "𝓐",
     "B": "𝓑",
     "C": "𝓒",

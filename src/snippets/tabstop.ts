@@ -1,4 +1,4 @@
-import type { ChangeDesc, SelectionRange, Range } from "@codemirror/state";
+import type { ChangeDesc, SelectionRange } from "@codemirror/state";
 import { EditorSelection } from "@codemirror/state";
 import type { DecorationSet, EditorView } from "@codemirror/view";
 import { Decoration, WidgetType } from "@codemirror/view";
@@ -31,11 +31,7 @@ function getMarkerDecoration(from: number, to: number, color: number) {
         });
         // technically this is a widget decoration but the range should be behaving like a mark
         // and thus increase in size when text is inserted
-        return Decoration.prototype.range.call(
-            marker,
-            from,
-            to,
-        ) as Range<Decoration>;
+        return Decoration.prototype.range.call(marker, from, to);
     } else {
         return Decoration.mark({
             inclusive: true,

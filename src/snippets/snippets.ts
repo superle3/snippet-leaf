@@ -1,6 +1,5 @@
 import type { SelectionRange } from "@codemirror/state";
 import type { Options } from "./options";
-import type { Environment } from "./environment";
 import type {
     ResultInsert,
     Options as InsertOptions,
@@ -12,13 +11,16 @@ import {
 } from "./luasnip_api/node";
 import * as v from "valibot";
 import type { SnippetVersion } from "./parse";
-// import { ResultInsert } from "./luasnip_api/node";
-
-/**
- * in visual snippets, if the replacement is a string, this is the magic substring to indicate the selection.
- */
-export const VISUAL_SNIPPET_MAGIC_SELECTION_PLACEHOLDERv1 = "${VISUAL}";
-export const VISUAL_SNIPPET_MAGIC_SELECTION_PLACEHOLDERv2 = "@{VISUAL}";
+// import type { MacroArea } from "src/utils/default_text_areas";
+// import type { StackOutput } from "src/utils/context";
+// import { isMacroArgumentCount } from "src/utils/context";
+import type { EditorView } from "@codemirror/view";
+import {
+    isMacroArgumentCount,
+    type StackOutput,
+} from "src/latex_context/context";
+import type { MacroArea } from "src/utils/default_textareas";
+import { VISUAL_SNIPPET_MAGIC_SELECTION_PLACEHOLDERv2 } from "./snippet_version";
 
 /**
  * there are 3 distinct types of snippets:
@@ -62,21 +64,37 @@ function convertOutputToNode(
     return parseResult.output;
 }
 
+type SnippetReplacementUnstableApi = {
+    _view: EditorView;
+};
+
 // output of replacement functions should be the output fo ReplacementOutputSchema,
 // but this would lead to false confidence as user might return something else.
 export type SnippetData<T extends SnippetType> = {
     visual: {
         trigger: string;
-        replacement: ArrayNode | ((selection: string) => unknown);
+        replacement:
+            | ArrayNode
+            | ((
+                  selection: string,
+                  api: SnippetReplacementUnstableApi,
+              ) => unknown);
     };
     regex: {
         trigger: RegExp;
-        replacement: ArrayNode | ((match: RegExpExecArray) => unknown);
+        replacement:
+            | ArrayNode
+            | ((
+                  match: RegExpExecArray,
+                  api: SnippetReplacementUnstableApi,
+              ) => unknown);
         triggerAfter?: RegExp;
     };
     string: {
         trigger: string;
-        replacement: ArrayNode | ((match: string) => unknown);
+        replacement:
+            | ArrayNode
+            | ((match: string, api: SnippetReplacementUnstableApi) => unknown);
         triggerAfter?: string;
     };
 }[T];
@@ -88,6 +106,19 @@ export type ProcessSnippetResult = {
 } | null;
 
 export const ARE_SETTINGS_PARSED = Symbol("areSettingsParsed");
+export enum IncludedEnvironmentResult {
+    None,
+    Included,
+    NotIncluded,
+}
+
+type ProccesArgs = {
+    effectiveLine: string;
+    range: SelectionRange;
+    sel: string;
+    effectiveLineAfter: () => string;
+    view: EditorView;
+};
 
 /**
  * a snippet instance contains all the information necessary to run a snippet.
@@ -101,9 +132,11 @@ export abstract class Snippet<T extends SnippetType = SnippetType> {
     description: string;
     triggerKey: string;
 
-    excludedEnvironments: Environment[];
+    excludedEnvironments: string[];
     version: SnippetVersion;
     [ARE_SETTINGS_PARSED] = true;
+    excludedMacros: MacroArea[] = [];
+    includedMacros: MacroArea[] = [];
 
     constructor(
         type: T,
@@ -112,7 +145,9 @@ export abstract class Snippet<T extends SnippetType = SnippetType> {
         options: Options,
         priority: number = 0,
         description: string = "no description provided",
-        excludedEnvironments: Environment[] = [],
+        excludedEnvironments: string[] = [],
+        excludedMacros: MacroArea[] = [],
+        includedMacros: MacroArea[] = [],
         triggerKey: string = "",
         version: SnippetVersion = 2,
     ) {
@@ -123,6 +158,8 @@ export abstract class Snippet<T extends SnippetType = SnippetType> {
         this.priority = priority;
         this.description = description;
         this.excludedEnvironments = excludedEnvironments;
+        this.excludedMacros = excludedMacros;
+        this.includedMacros = includedMacros;
         this.triggerKey = triggerKey;
         this.version = version;
     }
@@ -136,12 +173,44 @@ export abstract class Snippet<T extends SnippetType = SnippetType> {
         return this.data.replacement;
     }
 
-    abstract process(
-        effectiveLine: string,
-        range: SelectionRange,
-        sel: string,
-        effectiveLineAfter: () => string,
-    ): ProcessSnippetResult;
+    abstract process(args: ProccesArgs): ProcessSnippetResult;
+
+    isWithinExcludedScope(stack: StackOutput[]): boolean {
+        if (
+            this.excludedEnvironments.length === 0 &&
+            this.excludedMacros.length === 0
+        )
+            return false;
+        for (const envName of stack) {
+            if (
+                envName.kind === "environment" &&
+                this.excludedEnvironments.includes(envName.name)
+            ) {
+                return true;
+            } else if (envName.kind === "math") {
+                return false;
+                // environments always override the scope whereas macros can sometimes take scope from outer macro
+                // like \textcolor is math or text depending if its inside a \text macro or not.
+            } else if (envName.kind === "environment") {
+                return false;
+            } else if (isMacroArgumentCount(envName, this.excludedMacros)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    isWithinIncludedScope(stack: StackOutput[]): IncludedEnvironmentResult {
+        if (this.includedMacros.length === 0)
+            return IncludedEnvironmentResult.None;
+        if (stack.length === 0) return IncludedEnvironmentResult.NotIncluded;
+        const firstName = stack[0];
+        if (firstName.kind === "math" || firstName.kind === "environment")
+            return IncludedEnvironmentResult.NotIncluded;
+        if (isMacroArgumentCount(firstName, this.includedMacros))
+            return IncludedEnvironmentResult.Included;
+        return IncludedEnvironmentResult.NotIncluded;
+    }
 
     toString() {
         return serializeSnippetLike({
@@ -152,6 +221,7 @@ export abstract class Snippet<T extends SnippetType = SnippetType> {
             priority: this.priority,
             description: this.description,
             excludedEnvironments: this.excludedEnvironments,
+            excludedMacros: this.excludedMacros,
         });
     }
 }
@@ -164,6 +234,8 @@ export class VisualSnippet extends Snippet<"visual"> {
         priority,
         description,
         excludedEnvironments,
+        excludedMacros,
+        includedMacros,
         triggerKey,
         version,
     }: CreateSnippet<"visual">) {
@@ -175,16 +247,19 @@ export class VisualSnippet extends Snippet<"visual"> {
             priority,
             description,
             excludedEnvironments,
+            excludedMacros,
+            includedMacros,
             triggerKey,
             version,
         );
     }
 
-    process(
-        effectiveLine: string,
-        range: SelectionRange,
-        sel: string,
-    ): ProcessSnippetResult {
+    process({
+        effectiveLine,
+        range,
+        sel,
+        view,
+    }: ProccesArgs): ProcessSnippetResult {
         const hasSelection = !!sel;
         // visual snippets only run when there is a selection
         if (!hasSelection) {
@@ -198,17 +273,16 @@ export class VisualSnippet extends Snippet<"visual"> {
 
         const triggerPos = range.from;
         let replacement: ResultInsert;
-        const options: InsertOptions = {
-            captures: {
-                match: [],
-                groups: { [VISUAL_SNIPPET_MAGIC_SELECTION_PLACEHOLDERv2]: sel },
-            },
+        const captures = {
+            match: [],
+            groups: { [VISUAL_SNIPPET_MAGIC_SELECTION_PLACEHOLDERv2]: sel },
         };
+        const options: InsertOptions = { captures };
         if (this.replacement instanceof ArrayNode) {
             replacement = this.replacement.applyInsert(options);
         } else {
             const replacementTemp = convertOutputToNode(
-                this.replacement(sel),
+                this.replacement(sel, { _view: view }),
                 this.version,
             );
 
@@ -232,6 +306,8 @@ export class RegexSnippet extends Snippet<"regex"> {
         priority,
         description,
         excludedEnvironments,
+        excludedMacros,
+        includedMacros,
         triggerKey,
         triggerAfter,
         version,
@@ -244,18 +320,20 @@ export class RegexSnippet extends Snippet<"regex"> {
             priority,
             description,
             excludedEnvironments,
+            excludedMacros,
+            includedMacros,
             triggerKey,
             version,
         );
         this.data.triggerAfter = triggerAfter;
     }
 
-    process(
-        effectiveLine: string,
-        _range: SelectionRange,
-        sel: string,
-        effectiveLineAfter: () => string,
-    ): ProcessSnippetResult {
+    process({
+        effectiveLine,
+        sel,
+        effectiveLineAfter,
+        view: _view,
+    }: ProccesArgs): ProcessSnippetResult {
         const hasSelection = !!sel;
         // non-visual snippets only run when there is no selection
         if (hasSelection) {
@@ -285,7 +363,7 @@ export class RegexSnippet extends Snippet<"regex"> {
             replacement = this.replacement.applyInsert(options);
         } else {
             const replacementTemp = convertOutputToNode(
-                this.replacement(result),
+                this.replacement(result, { _view }),
                 this.version,
             );
 
@@ -309,6 +387,8 @@ export class StringSnippet extends Snippet<"string"> {
         priority,
         description,
         excludedEnvironments: excludeIn,
+        excludedMacros,
+        includedMacros,
         triggerKey,
         triggerAfter,
         version,
@@ -321,18 +401,20 @@ export class StringSnippet extends Snippet<"string"> {
             priority,
             description,
             excludeIn,
+            excludedMacros,
+            includedMacros,
             triggerKey,
             version,
         );
         this.data.triggerAfter = triggerAfter;
     }
 
-    process(
-        effectiveLine: string,
-        _range: SelectionRange,
-        sel: string,
-        effectiveLineAfter: () => string,
-    ): ProcessSnippetResult {
+    process({
+        effectiveLine,
+        sel,
+        effectiveLineAfter,
+        view: _view,
+    }: ProccesArgs): ProcessSnippetResult {
         const hasSelection = !!sel;
         // non-visual snippets only run when there is no selection
         if (hasSelection) {
@@ -363,7 +445,7 @@ export class StringSnippet extends Snippet<"string"> {
             replacement = this.replacement.applyInsert(options);
         } else {
             const replacementTemp = convertOutputToNode(
-                this.replacement(this.trigger),
+                this.replacement(this.trigger, { _view }),
                 this.version,
             );
 
@@ -399,7 +481,9 @@ type CreateSnippet<T extends SnippetType> = {
     options: Options;
     priority?: number;
     description?: string;
-    excludedEnvironments?: Environment[];
+    excludedEnvironments?: string[];
+    excludedMacros?: MacroArea[];
+    includedMacros?: MacroArea[];
     triggerKey?: string;
     version?: SnippetVersion;
 } & SnippetData<T>;

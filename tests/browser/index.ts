@@ -13,7 +13,7 @@ import { contextPlugin } from "src/latex_context/context";
 const extensions: Extension[] = [
     latex(),
     basicSetup,
-    latex_suite(), //
+    latex_suite(),
     StateField.define({
         create(state): null {
             const doc = state.doc.toString();

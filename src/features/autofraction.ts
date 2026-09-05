@@ -10,10 +10,13 @@ import {
     TabstopNode,
     TextNode,
 } from "src/snippets/luasnip_api/node";
-import { getLatexSuiteConfig } from "src/settings/raw_settings";
 import type { Context } from "src/latex_context/context";
+import { getContextPlugin } from "src/latex_context/context";
+import { getLatexSuiteConfig } from "src/settings/raw_settings";
 
-export const runAutoFraction = (view: EditorView, ctx: Context): boolean => {
+export const runAutoFraction = (view: EditorView): boolean => {
+    const ctx = getContextPlugin(view);
+
     for (const range of ctx.ranges) {
         runAutoFractionCursor(view, ctx, range);
     }
@@ -83,7 +86,7 @@ export const runAutoFractionCursor = (
                     true,
                 );
 
-                if (j === -1) return false;
+                if (j === null) return false;
 
                 // Skip to the beginnning of the bracket
                 i = j;

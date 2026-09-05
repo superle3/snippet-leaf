@@ -34,6 +34,7 @@ export const DEFAULT_SETTINGS = {
     autofractionBreakingChars: "+-=\t",
     matrixShortcutsEnabled: true,
     taboutEnabled: true,
+    taboutExitEquationOnlyOnEOL: true,
     taboutClosingSymbols:
         "), ], \\rbrack, \\}, \\rbrace, \\rangle, \\rvert, \\rVert, \\rfloor, \\rceil, \\urcorner, }",
     autoEnlargeBrackets: true,

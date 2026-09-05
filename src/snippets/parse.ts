@@ -18,13 +18,10 @@ import {
     RegexSnippet,
     serializeSnippetLike,
     StringSnippet,
-    VISUAL_SNIPPET_MAGIC_SELECTION_PLACEHOLDERv1,
-    VISUAL_SNIPPET_MAGIC_SELECTION_PLACEHOLDERv2,
     VisualSnippet,
 } from "./snippets";
 import { Options } from "./options";
 import { sortSnippets } from "./sort";
-import type { Environment } from "./environment";
 import { EXCLUSIONS } from "./environment";
 import { api } from "./luasnip_api/index";
 import json5 from "json5";
@@ -35,6 +32,14 @@ import {
     VisualSnippetNode,
     SnippetTabstopOnlyNode,
 } from "./luasnip_api/node";
+import {
+    MacroAreaPipeSchema,
+    type MacroArea,
+} from "src/utils/default_textareas";
+import {
+    VISUAL_SNIPPET_MAGIC_SELECTION_PLACEHOLDERv1,
+    VISUAL_SNIPPET_MAGIC_SELECTION_PLACEHOLDERv2,
+} from "./snippet_version";
 
 export type SnippetVariables = Record<string, string>;
 
@@ -186,25 +191,9 @@ export const RawSnippetSchema = object({
     description: optional(string_(), "no description provided"),
     version: optional(union([literal(1), literal(2)])),
     triggerKey: optional(string_(), ""),
-    excludedEnvs: pipe(
-        optional(
-            object({
-                matrix: optional(array(string_()), []),
-                macros: optional(array(string_()), []),
-            }),
-            {},
-        ),
-        transform(({ matrix, macros }): Environment[] => [
-            ...matrix.map((env) => ({
-                openSymbol: `\\begin{${env}}`,
-                closeSymbol: `\\end{${env}}`,
-            })),
-            ...macros.map((env) => ({
-                openSymbol: `\\${env}{`,
-                closeSymbol: "}",
-            })),
-        ]),
-    ),
+    excludedMacros: MacroAreaPipeSchema,
+    excludedEnvironments: optional(array(string_()), []),
+    includedMacros: MacroAreaPipeSchema,
 });
 
 export type RawSnippet = Output<typeof RawSnippetSchema>;
@@ -245,7 +234,9 @@ export function parseSnippet(
         replacement: replacementRaw,
         priority,
         description,
-        excludedEnvs: userExcludedEnvironments,
+        excludedEnvironments: excludedEnvironments,
+        excludedMacros: userExcludedMacros,
+        includedMacros,
     } = raw;
     const options = Options.fromSource(raw.options);
     const triggerKey = parseKeyName(raw.triggerKey);
@@ -290,9 +281,9 @@ export function parseSnippet(
             insertSnippetVariables(triggerAfterStr, snippetVariables);
 
         // get excluded environment(s) for this trigger, if any
-        const excludedEnvironments = [
-            ...getExcludedEnvironments(triggerStr),
-            ...userExcludedEnvironments,
+        const excludedMacros = [
+            ...getExcludedMacros(triggerStr),
+            ...userExcludedMacros,
         ];
 
         // Add $ so regex matches end of string
@@ -331,7 +322,9 @@ export function parseSnippet(
             options,
             priority,
             description,
+            excludedMacros,
             excludedEnvironments,
+            includedMacros,
             triggerKey,
             triggerAfter,
             version,
@@ -355,9 +348,9 @@ export function parseSnippet(
         }
 
         // get excluded environment(s) for this trigger, if any
-        const excludedEnvironments = [
-            ...getExcludedEnvironments(trigger),
-            ...userExcludedEnvironments,
+        const excludedMacros = [
+            ...getExcludedMacros(trigger),
+            ...userExcludedMacros,
         ];
 
         // normalize visual replacements
@@ -386,7 +379,9 @@ export function parseSnippet(
                 options,
                 priority,
                 description,
+                excludedMacros,
                 excludedEnvironments,
+                includedMacros,
                 triggerKey,
                 triggerAfter,
             };
@@ -404,7 +399,9 @@ export function parseSnippet(
                 options,
                 priority,
                 description,
+                excludedMacros,
                 excludedEnvironments,
+                includedMacros,
                 triggerKey,
                 triggerAfter,
                 version,
@@ -442,7 +439,7 @@ function insertSnippetVariables(trigger: string, variables: SnippetVariables) {
     return trigger;
 }
 
-function getExcludedEnvironments(trigger: string): Environment[] {
+function getExcludedMacros(trigger: string): MacroArea[] {
     const result = [];
     if (trigger in EXCLUSIONS) {
         result.push(...EXCLUSIONS[trigger]);

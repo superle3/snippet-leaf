@@ -192,6 +192,7 @@ export const latexSuiteBasicSettingsSchema = v.object({
     autofractionBreakingChars: v.string(),
     matrixShortcutsEnabled: v.boolean(),
     taboutEnabled: v.boolean(),
+    taboutExitEquationOnlyOnEOL: v.boolean(),
     autoEnlargeBrackets: v.boolean(),
     autoEnlargeBracketsSpace: v.boolean(),
     wordDelimiters: v.string(),

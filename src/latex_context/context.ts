@@ -1,6 +1,10 @@
 import type { EditorState, SelectionRange, Text } from "@codemirror/state";
 import { ViewPlugin, type EditorView, type ViewUpdate } from "@codemirror/view";
-import { findMatchingBracket, getCloseBracket } from "../utils/editor_utils";
+import {
+    findMatchingBracket,
+    getCloseBracket,
+    stackResolveNodeIterate,
+} from "../utils/editor_utils";
 import { Mode } from "../snippets/options";
 import type { Environment } from "../snippets/environment";
 import type { SyntaxNode, Tree, NodeIterator } from "@lezer/common";
@@ -11,7 +15,6 @@ import {
     type MacroArea,
     allTextAreas,
 } from "src/utils/default_textareas";
-import { stackResolveNodeIterate } from "src/utils/tokenizer";
 
 export type StackOutput = (
     | {
@@ -26,11 +29,17 @@ export type StackOutput = (
 ) &
     Bounds & { node: SyntaxNode };
 
-type MacroStackOutput = StackOutput & { kind: "command" };
+export type MacroStackOutput = StackOutput & { kind: "command" };
 export interface SmallBounds {
     start: number;
     end: number;
 }
+
+export interface CMBound {
+    from: number;
+    to: number;
+}
+
 export class Context {
     view!: EditorView;
     state!: EditorState;
@@ -242,7 +251,7 @@ export class Context {
                     false,
                 );
 
-                if (right === -1) continue outer_loop; // No matching close bracket, so this open symbol is not valid
+                if (right === null) continue outer_loop; // No matching close bracket, so this open symbol is not valid
 
                 // Check whether the cursor lies inside the environment symbols
                 if (right >= pos && pos >= left + env.openSymbol.length) {
@@ -354,7 +363,9 @@ export type EquationInfo = (
           EnvName: string;
       }
 ) &
-    Bounds;
+    Bounds & {
+        tree: SyntaxNode;
+    };
 
 export const mathContext: Record<
     string,
@@ -366,14 +377,17 @@ export const mathContext: Record<
         inner_start: node.from,
         inner_end: node.to,
         outer_end: node.to + InlineMathOffset.end,
+        tree: node,
     }),
     ParenMath: (node: SyntaxNode): EquationInfo => ({
         type: MathMode.ParenInline,
         ...boundsFromOffset(node, ParenMathOffset),
+        tree: node,
     }),
     BracketMath: (node: SyntaxNode): EquationInfo => ({
         type: MathMode.BracketDisplay,
         ...boundsFromOffset(node, BracketMathOffset),
+        tree: node,
     }),
     DisplayMath: (node: SyntaxNode): EquationInfo => {
         return {
@@ -382,6 +396,7 @@ export const mathContext: Record<
             inner_end: node.to - 1,
             outer_start: node.from - 1,
             outer_end: node.to + 1,
+            tree: node,
         };
     },
     /**
@@ -399,14 +414,17 @@ export const mathContext: Record<
     BeginEnv: (node: SyntaxNode): EquationInfo => ({
         type: MathMode.TextEnv,
         ...boundsFromOffset(node, TextEnvOffset),
+        tree: node,
     }),
     EndEnv: (node: SyntaxNode): EquationInfo => ({
         type: MathMode.TextEnv,
         ...boundsFromOffset(node, TextEnvOffset),
+        tree: node,
     }),
     TextArgument: (node: SyntaxNode): EquationInfo => ({
         type: MathMode.TextEnv,
         ...boundsFromOffset(node, TextEnvOffset),
+        tree: node,
     }),
     EquationEnvironment: (
         node: SyntaxNode,
@@ -428,6 +446,7 @@ export const mathContext: Record<
             outer_start: node.from,
             outer_end: node.to,
             EnvName,
+            tree: node,
         };
     },
     EquationArrayEnvironment: (
@@ -450,6 +469,7 @@ export const mathContext: Record<
             outer_start: node.from,
             outer_end: node.to,
             EnvName,
+            tree: node,
         };
     },
 } as const;

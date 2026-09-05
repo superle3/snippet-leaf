@@ -1,5 +1,5 @@
 import type { SnippetVersion } from "../parse";
-import { VISUAL_SNIPPET_MAGIC_SELECTION_PLACEHOLDERv2 } from "../snippets";
+import { VISUAL_SNIPPET_MAGIC_SELECTION_PLACEHOLDERv2 } from "../snippet_version";
 import type { TabstopSpec } from "../tabstop";
 
 type Captures = { match: string[]; groups: Record<string, string> };
@@ -22,7 +22,7 @@ export class BaseNode {
         public tabstops: readonly TabstopSpec[] = [],
     ) {}
 
-    applyInsert(options: Options): ResultInsert {
+    applyInsert(options: Options = emptyInsertOptions): ResultInsert {
         if (typeof this.insert === "string") {
             return { insert: this.insert, tabstops: this.tabstops };
         }
@@ -81,12 +81,15 @@ export class CaptureNode extends BaseNode {
     }
 }
 
-type Replacement = {
+export type Replacement = {
     start: number;
     end: number;
     replacement: string;
 };
-function applyReplacements(str: string, replacements: Replacement[]): string {
+export function applyReplacements(
+    str: string,
+    replacements: Replacement[],
+): string {
     replacements.sort((a, b) => a.start - b.start);
     let offset = 0;
     const str_arr: string[] = [];
@@ -108,7 +111,7 @@ export class SnippetNode extends BaseNode {
         super("", []);
     }
 
-    override applyInsert(options: Options): ResultInsert {
+    override applyInsert(options: Options = emptyInsertOptions): ResultInsert {
         const result = new ArrayNode(this.nodes).applyInsert(options);
         const super_tabstop = {
             index: [this.index],
@@ -166,12 +169,12 @@ export class SnippetStringNode extends BaseNode {
         const replacements = [];
         for (const match of matches) {
             const index = parseInt(match[1]);
-            if (captures.match[index] === undefined) {
+            if (index >= captures.match.length) {
                 continue;
             }
             const start = match.index;
             const end = start + match[0].length;
-            const replacement = captures.match[index];
+            const replacement = captures.match[index] ?? "";
             replacements.push({ start, end, replacement });
         }
         return applyReplacements(this.snippet, replacements);
@@ -310,12 +313,10 @@ export class SnippetTabstopOnlyNode extends BaseNode {
 }
 
 // Discourage to nest array nodes this way and a way to normalize tabstops indexes at the end.
-export class ArrayNode extends BaseNode {
-    constructor(private children: BaseNode[]) {
-        super("", []);
-    }
+export class ArrayNode {
+    constructor(private children: BaseNode[]) {}
 
-    applyInsert(options: Options): ResultInsert {
+    applyInsert(options: Options = emptyInsertOptions): ResultInsert {
         return new BaseNode(() => this.children).applyInsert(options);
     }
 }

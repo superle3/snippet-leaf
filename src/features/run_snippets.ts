@@ -5,10 +5,11 @@ import { expandSnippets } from "src/snippets/snippet_management";
 import { autoEnlargeBrackets } from "./auto_enlarge_brackets";
 import type { snippetDebugLevel } from "src/settings/settings";
 import type { Snippet, SnippetType } from "src/snippets/snippets";
+import { IncludedEnvironmentResult } from "src/snippets/snippets";
 import { showSnippetInfo } from "src/editor_extensions/obsidian_utils";
+import { getLatexSuiteConfig } from "src/settings/raw_settings";
 import type { Context } from "src/latex_context/context";
 import { getContextPlugin } from "src/latex_context/context";
-import { getLatexSuiteConfig } from "src/settings/raw_settings";
 
 type SnippetInfo = {
     snippets: Snippet<SnippetType>[];
@@ -80,34 +81,35 @@ const runSnippetCursor = (
     if (snippetInfo.key && snippetInfo.key.length !== 1) {
         return { success: false, shouldAutoEnlargeBrackets: false };
     }
+    const envNames = Array.from(ctx.getEnvNames());
     const updatedLine = line + key;
     for (let i = 0; i < snippetInfo.snippets.length; i++) {
         const snippet = snippetInfo.snippets[i];
-
-        if (!snippet.options.snippetShouldRunInMode(ctx.mode)) {
+        const inIncludedScope = snippet.isWithinIncludedScope(envNames);
+        if (
+            !snippet.options.snippetShouldRunInMode(
+                ctx.mode,
+                inIncludedScope === IncludedEnvironmentResult.Included,
+            )
+        ) {
             continue;
         }
 
-        const result = snippet.process(
-            updatedLine,
+        if (inIncludedScope === IncludedEnvironmentResult.NotIncluded) {
+            continue;
+        }
+
+        const result = snippet.process({
+            effectiveLine: updatedLine,
             range,
             sel,
             effectiveLineAfter,
-        );
+            view,
+        });
         if (result === null) continue;
 
         // Check that this snippet is not excluded in a certain environment
-        let isExcluded = false;
-        // in practice, a snippet should have very few excluded environments, if any,
-        // so the cost of this check shouldn't be very high
-        for (const environment of snippet.excludedEnvironments) {
-            if (ctx.isWithinEnvironment(to, environment)) {
-                isExcluded = true;
-            }
-        }
-        // we could've used a labelled outer for loop to `continue` from within the inner for loop,
-        // but labels are extremely rarely used, so we do this construction instead
-        if (isExcluded) {
+        if (snippet.isWithinExcludedScope(envNames)) {
             continue;
         }
 
@@ -202,7 +204,7 @@ const trimWhitespace = (replacement: string, _ctx: Context) => {
         const lastThreeChars = replacement.slice(-3);
         const lastChar = lastThreeChars.slice(-1);
 
-        if (lastThreeChars.slice(0, 2) === " @" && !isNaN(parseInt(lastChar))) {
+        if (lastThreeChars.slice(0, 2) === " $" && !isNaN(parseInt(lastChar))) {
             spaceIndex = -3;
         }
     }

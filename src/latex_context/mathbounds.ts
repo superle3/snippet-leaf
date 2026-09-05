@@ -20,10 +20,17 @@ export interface Bounds {
 //     | "EquationEnvironment";
 
 // type MathBounds = FullBounds & { mode: (typeof STRICTLY_MATH_MODE)[number] };
+//
+export type EquationOverlay = {
+    bound: EquationInfo;
+    text: string;
+    overlay: { from: number; to: number };
+};
 
 class MathBoundsPlugin {
     mathBounds: EquationInfo[] = [];
     equations: Map<number, string> | null = null;
+    private equationsOverlays: EquationOverlay[] | null = null;
 
     constructor(view: EditorView) {
         this.updateMathBounds(view);
@@ -32,6 +39,7 @@ class MathBoundsPlugin {
     update(update: ViewUpdate) {
         if (update.docChanged || update.viewportChanged) {
             this.equations = null;
+            this.equationsOverlays = null;
             this.updateMathBounds(update.view);
         }
     }
@@ -195,6 +203,16 @@ class MathBoundsPlugin {
             ]),
         );
         return this.equations;
+    }
+
+    getEquationOverlays(state: EditorState) {
+        if (this.equationsOverlays) return this.equationsOverlays;
+        this.equationsOverlays = this.mathBounds.map((bound) => ({
+            bound,
+            overlay: { from: bound.inner_start, to: bound.inner_end },
+            text: state.sliceDoc(bound.inner_start, bound.inner_end),
+        }));
+        return this.equationsOverlays;
     }
 }
 let mathBoundsPlugin: ViewPlugin<MathBoundsPlugin>;

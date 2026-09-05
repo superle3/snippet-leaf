@@ -1,5 +1,12 @@
-import type { SnippetVariables } from "../parse";
-import { CaptureNode, TabstopNode, TextNode } from "./node";
+import type { SnippetVariables, SnippetVersion } from "../parse";
+import type { BaseNode } from "./node";
+import {
+    ArrayNode,
+    CaptureNode,
+    SnippetStringNode,
+    TabstopNode,
+    TextNode,
+} from "./node";
 
 // For now SnippetNode, VisualSnippetNode and ArrayNode remain internal api only,
 // as I am not sure how bug proof it would be/how intuitif.
@@ -22,6 +29,14 @@ function capture_node(captureName: string | number, defaultValue: string = "") {
     return new CaptureNode(captureName, defaultValue);
 }
 
+function snippet_node(snippet: string, version: SnippetVersion = 2) {
+    return new SnippetStringNode(snippet, version);
+}
+
+function array_node(nodes: BaseNode[]) {
+    return new ArrayNode(nodes);
+}
+
 export const api = (snippetVariables: SnippetVariables) => {
     return {
         snippetVariables,
@@ -29,4 +44,12 @@ export const api = (snippetVariables: SnippetVariables) => {
         text_node,
         capture_node,
     };
+};
+
+export const snippetApi = {
+    tabstop_node,
+    text_node,
+    capture_node,
+    snippet_node,
+    array_node,
 };

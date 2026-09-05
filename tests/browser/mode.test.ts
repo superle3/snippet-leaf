@@ -74,4 +74,10 @@ $$
         );
         expect(ctx.mode.array).toBe(true);
     });
+
+    it("should be in text environment when nothing but newlines", () => {
+        const { view, ctx } = window;
+        view.setDoc("\n\n\n", "\n".length);
+        expect(ctx.mode.inText()).toBe(true);
+    });
 });

@@ -115,7 +115,7 @@ export const handleKeydown = (
 
     if (settings.autofractionEnabled && ctx.mode.strictlyInMath()) {
         if (key === "/") {
-            success = runAutoFraction(view, ctx);
+            success = runAutoFraction(view);
 
             if (success) return true;
         }
@@ -124,6 +124,7 @@ export const handleKeydown = (
     if (settings.matrixShortcutsEnabled && ctx.mode.strictlyInMath()) {
         if (["Tab", "Enter"].includes(key)) {
             success = runMatrixShortcuts(view, key, shiftKey);
+            console.log(success);
 
             if (success) return true;
         }

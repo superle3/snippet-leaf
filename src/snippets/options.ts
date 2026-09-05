@@ -42,7 +42,13 @@ export class Options {
         return options;
     }
 
-    snippetShouldRunInMode(mode: Mode): boolean {
+    snippetShouldRunInMode(
+        mode: Mode,
+        ignoreSnippetLessEnv: boolean = false,
+    ): boolean {
+        if (mode.snippetlessEnv && !ignoreSnippetLessEnv) {
+            return false;
+        }
         return (
             (this.mode.inlineMath && mode.inlineMath) ||
             (this.mode.blockMath && mode.blockMath) ||

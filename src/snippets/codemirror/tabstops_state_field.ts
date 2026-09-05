@@ -3,8 +3,8 @@ import type { EditorSelection } from "@codemirror/state";
 import { StateEffect, StateField } from "@codemirror/state";
 import type { TabstopGroup } from "../tabstop";
 
-const addTabstopsEffect = StateEffect.define<TabstopGroup[]>();
-const removeAllTabstopsEffect = StateEffect.define();
+export const addTabstopsEffect = StateEffect.define<TabstopGroup[]>();
+export const removeAllTabstopsEffect = StateEffect.define();
 type TabstopsState = {
     index: number;
     tabstopGroups: TabstopGroup[];

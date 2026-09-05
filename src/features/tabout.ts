@@ -1,11 +1,15 @@
 import type { TransactionSpec } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
-import { getLatexSuiteConfig } from "src/settings/raw_settings";
-import { setCursor, getCharacterAtPos } from "src/utils/editor_utils";
-import type { Token } from "./tabout_tokenizer";
-import { tokenize } from "./tabout_tokenizer";
-import type { Context } from "src/latex_context/context";
 import { intersection } from "src/utils/prototype_utils";
+import {
+    setCursor,
+    getCharacterAtPos,
+    isBoundMultiline,
+} from "src/utils/editor_utils";
+import type { Token } from "src/utils/tokenizer";
+import { tokenize } from "src/utils/tokenizer";
+import type { Context } from "src/latex_context/context";
+import { getLatexSuiteConfig } from "src/settings/raw_settings";
 
 const LEFT_COMMANDS = new Set<string>([
     "\\left",
@@ -131,7 +135,8 @@ export const tabout = (view: EditorView, ctx: Context): boolean => {
     const latexString = doc.sliceString(inner_start, inner_end);
     const tokens = tokenize(latexString);
 
-    const closingSymbols = getLatexSuiteConfig(view).taboutClosingSymbols;
+    const settings = getLatexSuiteConfig(view);
+    const closingSymbols = settings.taboutClosingSymbols;
 
     const foundIndex = tokens.findIndex(
         (token) => token.end > cursorRelativePos,
@@ -171,10 +176,10 @@ export const tabout = (view: EditorView, ctx: Context): boolean => {
     const remainingText = doc.sliceString(cursorPos, inner_end);
     const isAtEnd = remainingText.trim().length === 0;
 
-    if (!isAtEnd) return false;
+    if (!isAtEnd && settings.taboutExitEquationOnlyOnEOL) return false;
 
-    // Check whether we're in inline math or a block eqn
-    if (ctx.mode.inlineMath) {
+    // Only create a new line if the equation is multiline.
+    if (!isBoundMultiline(view, bounds)) {
         setCursor(view, outer_end);
     } else {
         // First, locate the $$ symbol
