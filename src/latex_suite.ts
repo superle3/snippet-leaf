@@ -124,7 +124,6 @@ export const handleKeydown = (
     if (settings.matrixShortcutsEnabled && ctx.mode.strictlyInMath()) {
         if (["Tab", "Enter"].includes(key)) {
             success = runMatrixShortcuts(view, key, shiftKey);
-            console.log(success);
 
             if (success) return true;
         }
