@@ -36,7 +36,7 @@ const setUrl = debounce(
                 history.replaceState(null, "", `#${hash}`);
             });
     },
-    500,
+    1000,
     true,
 );
 const extensions: Extension[] = [

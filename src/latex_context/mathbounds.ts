@@ -50,7 +50,9 @@ class MathBoundsPlugin {
         view: EditorView,
     ): EquationInfo[] {
         const bounds: EquationInfo[] = [];
-        const startCursor = syntaxTree(view.state).cursor();
+        const tree = syntaxTree(view.state);
+        if (tree.length < from) return bounds;
+        const startCursor = tree.cursor();
         startCursor.moveTo(from, -1);
         let parentCursor: TreeCursor | undefined;
         for (const parent of Array.from(
@@ -65,8 +67,12 @@ class MathBoundsPlugin {
             }
         }
         const cursor = parentCursor !== undefined ? parentCursor : startCursor;
-        while (parentCursor === undefined && startCursor.to < from) {
-            cursor.next();
+        while (
+            parentCursor === undefined &&
+            startCursor.to < from &&
+            cursor.next()
+        ) {
+            /* empty */
         }
         let skipMove = false;
         let counter = 0;

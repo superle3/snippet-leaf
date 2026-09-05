@@ -351,7 +351,7 @@ function handleSubSup(
     const spec = [
         {
             start: nodeRef.from,
-            end: nextNode.to,
+            end: Math.min(nextNode.to, doc.to),
             text: textArray.join(""),
             class: "cm-number",
             elementType: type,
