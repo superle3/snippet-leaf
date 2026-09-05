@@ -1013,7 +1013,14 @@ class LatexSuiteSettingTab {
         ) {
             if (success === ValidityIndicator.INVALID) {
                 validityIndicator.setIcon("cross");
-                validityText.textContent = `Invalid syntax. Changes not saved ${error}`;
+                const errors = error.split("\n");
+                errors.unshift("Invalid Syntax. Changes not saved");
+                const children = errors.map((err) => {
+                    const div = document.createElement("div");
+                    div.textContent = err;
+                    return div;
+                });
+                validityText.replaceChildren(...children);
             } else if (success === ValidityIndicator.VALID) {
                 validityIndicator.setIcon("checkmark");
                 validityText.textContent = "Saved";
@@ -1034,39 +1041,31 @@ class LatexSuiteSettingTab {
             let success = ValidityIndicator.VALID;
             let error = "";
             const diagnostics = compiler(snippets);
-            if (diagnostics.length > 0) {
+            const parsedDiagnostics = diagnostics.flatMap((d) => {
+                function getDiagnosticMessageText(d: Diagnostic): string {
+                    let result: string;
+                    if (typeof d.messageText !== "string") {
+                        result = d.messageText.messageText;
+                    } else {
+                        result = d.messageText;
+                    }
+                    if (typeof d.start === "number") {
+                        const start_line = v.state.doc.lineAt(d.start);
+                        const start_line_number = start_line.number;
+                        const start_char = start_line.from - d.start;
+                        result += ` at Ln ${start_line_number}, Col ${start_char}`;
+                    }
+                    return result;
+                }
+                if (Array.isArray(d)) {
+                    return d.map(getDiagnosticMessageText);
+                }
+                return [getDiagnosticMessageText(d)];
+            });
+            if (parsedDiagnostics.length > 0) {
                 console.error("Snippet syntax error:", diagnostics);
                 success = ValidityIndicator.INVALID;
-                error =
-                    "<br>" +
-                    diagnostics
-                        .flatMap((d) => {
-                            function getDiagnosticMessageText(
-                                d: Diagnostic,
-                            ): string {
-                                let result: string;
-                                if (typeof d.messageText !== "string") {
-                                    result = d.messageText.messageText;
-                                } else {
-                                    result = d.messageText;
-                                }
-                                if (typeof d.start === "number") {
-                                    const start_line = v.state.doc.lineAt(
-                                        d.start,
-                                    );
-                                    const start_line_number = start_line.number;
-                                    const start_char =
-                                        start_line.from - d.start;
-                                    result += ` at Ln ${start_line_number}, Col ${start_char}`;
-                                }
-                                return result;
-                            }
-                            if (Array.isArray(d)) {
-                                return d.map(getDiagnosticMessageText);
-                            }
-                            return [getDiagnosticMessageText(d)];
-                        })
-                        .join("<br>");
+                error = "\n" + parsedDiagnostics.join("\n\n");
             }
             updateValidityIndicator(success, error);
             if (success !== ValidityIndicator.VALID) return;
