@@ -20,7 +20,7 @@ import {
     StringSnippet,
     VisualSnippet,
 } from "./snippets";
-import { Options } from "./options";
+import { Options } from "../editor_context/options";
 import { sortSnippets } from "./sort";
 import { EXCLUSIONS } from "./environment";
 import { api } from "./luasnip_api/index";

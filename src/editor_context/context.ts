@@ -5,7 +5,7 @@ import {
     getCloseBracket,
     stackResolveNodeIterate,
 } from "../utils/editor_utils";
-import { Mode } from "../snippets/options";
+import { Mode } from "./options";
 import type { Environment } from "../snippets/environment";
 import type { SyntaxNode, Tree, NodeIterator } from "@lezer/common";
 import { getMathBoundsPlugin, type Bounds } from "./mathbounds";

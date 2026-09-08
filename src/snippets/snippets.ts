@@ -1,5 +1,5 @@
 import type { SelectionRange } from "@codemirror/state";
-import type { Options } from "./options";
+import type { Options } from "../editor_context/options";
 import type {
     ResultInsert,
     Options as InsertOptions,
