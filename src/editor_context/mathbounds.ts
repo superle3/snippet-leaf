@@ -5,12 +5,6 @@ import type { EquationInfo } from "./context";
 import { mathContext } from "./context";
 import { syntaxTree } from "@codemirror/language";
 import { iterateParents } from "src/utils/tokenizer";
-export interface Bounds {
-    inner_start: number;
-    inner_end: number;
-    outer_start: number;
-    outer_end: number;
-}
 // type STRICTLY_MATH_MODE =
 //     | "ParenMath"
 //     | "InlineMath"

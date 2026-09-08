@@ -8,13 +8,13 @@ import {
 import { Mode } from "./options";
 import type { Environment } from "../snippets/environment";
 import type { SyntaxNode, Tree, NodeIterator } from "@lezer/common";
-import { getMathBoundsPlugin, type Bounds } from "./mathbounds";
+import { getMathBoundsPlugin } from "./mathbounds";
 import { syntaxTree } from "@codemirror/language";
 import {
     snippetLessArea,
     type MacroArea,
     allTextAreas,
-} from "src/editor_context/default_textareas";
+} from "src/editor_context/default_text_areas";
 
 export type StackOutput = (
     | {
@@ -630,4 +630,10 @@ export function isMacroArgumentCount(
         return null;
     }
     return stack;
+}
+export interface Bounds {
+    inner_start: number;
+    inner_end: number;
+    outer_start: number;
+    outer_end: number;
 }

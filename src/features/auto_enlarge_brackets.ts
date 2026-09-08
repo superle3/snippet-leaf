@@ -1,6 +1,7 @@
 import type { EditorView } from "@codemirror/view";
 import { queueSnippet } from "src/snippets/codemirror/snippet_queue_state_field";
 import { expandSnippets } from "src/snippets/snippet_management";
+import { getLatexSuiteConfig } from "src/snippets/codemirror/config";
 import { isContains } from "src/utils/type_utils";
 import { emptyInsertOptions, TextNode } from "src/snippets/luasnip_api/node";
 import {
@@ -10,9 +11,8 @@ import {
 import { EquationText } from "src/utils/tokenizer";
 import { walkPairedBrackets } from "src/utils/tokenizer";
 import type { SyntaxNode } from "@lezer/common";
-import * as latex from "src/parser/latex-terms";
 import { getMathBoundsPlugin } from "src/editor_context/mathbounds";
-import { getLatexSuiteConfig } from "src/settings/raw_settings";
+import { latex } from "src/parser/latex-terms";
 
 const sizeControls = [
     "\\big",

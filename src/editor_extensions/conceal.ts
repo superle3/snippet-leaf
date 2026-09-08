@@ -19,7 +19,7 @@ import type { ConcealCachedEquations } from "./conceal_fns";
 import { conceal } from "./conceal_fns";
 import { tempKeyPress } from "src/snippets/snippet_management";
 import { createElement, debounce } from "./obsidian_utils";
-import { getLatexSuiteConfig } from "src/settings/raw_settings";
+import { getLatexSuiteConfig } from "src/snippets/codemirror/config";
 
 export type Replacement = {
     start: number;

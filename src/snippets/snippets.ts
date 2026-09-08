@@ -1,4 +1,3 @@
-import type { SelectionRange } from "@codemirror/state";
 import type { Options } from "../editor_context/options";
 import type {
     ResultInsert,
@@ -17,10 +16,14 @@ import type { SnippetVersion } from "./parse";
 import type { EditorView } from "@codemirror/view";
 import {
     isMacroArgumentCount,
+    type CMBound,
     type StackOutput,
 } from "src/editor_context/context";
-import type { MacroArea } from "src/editor_context/default_textareas";
-import { VISUAL_SNIPPET_MAGIC_SELECTION_PLACEHOLDERv2 } from "./snippet_version";
+import {
+    VISUAL_SNIPPET_MAGIC_SELECTION_PLACEHOLDERv2,
+    VISUAL_SNIPPET_MAGIC_SELECTION_PLACEHOLDERv2_ORIGINAL,
+} from "./snippet_version";
+import type { MacroArea } from "src/editor_context/default_text_areas";
 
 /**
  * there are 3 distinct types of snippets:
@@ -65,7 +68,8 @@ function convertOutputToNode(
 }
 
 type SnippetReplacementUnstableApi = {
-    _view: EditorView;
+    view: EditorView;
+    options: InsertOptions;
 };
 
 // output of replacement functions should be the output fo ReplacementOutputSchema,
@@ -114,8 +118,14 @@ export enum IncludedEnvironmentResult {
 
 type ProccesArgs = {
     effectiveLine: string;
-    range: SelectionRange;
-    sel: string;
+    range: {
+        original: CMBound;
+        parsed: CMBound;
+    };
+    sel: {
+        original: string;
+        parsed: string;
+    };
     effectiveLineAfter: () => string;
     view: EditorView;
 };
@@ -182,16 +192,13 @@ export abstract class Snippet<T extends SnippetType = SnippetType> {
         )
             return false;
         for (const envName of stack) {
-            if (
-                envName.kind === "environment" &&
-                this.excludedEnvironments.includes(envName.name)
-            ) {
-                return true;
+            if (envName.kind === "environment") {
+                if (this.excludedEnvironments.includes(envName.name))
+                    return true;
+                // An environment does not end the enclosing macro's scope: \begin{align} inside \ce{}
+                // is still mhchem syntax, so keep walking outward to check excludedMacros.
+                continue;
             } else if (envName.kind === "math") {
-                return false;
-                // environments always override the scope whereas macros can sometimes take scope from outer macro
-                // like \textcolor is math or text depending if its inside a \text macro or not.
-            } else if (envName.kind === "environment") {
                 return false;
             } else if (isMacroArgumentCount(envName, this.excludedMacros)) {
                 return true;
@@ -203,9 +210,12 @@ export abstract class Snippet<T extends SnippetType = SnippetType> {
     isWithinIncludedScope(stack: StackOutput[]): IncludedEnvironmentResult {
         if (this.includedMacros.length === 0)
             return IncludedEnvironmentResult.None;
-        if (stack.length === 0) return IncludedEnvironmentResult.NotIncluded;
-        const firstName = stack[0];
-        if (firstName.kind === "math" || firstName.kind === "environment")
+        // Environments are skipped for the same reason as in isWithinExcludedScope, but only the
+        // innermost macro is considered: an included macro further out does not re-enable snippets.
+        const firstName = stack.find(
+            (envName) => envName.kind !== "environment",
+        );
+        if (firstName === undefined || firstName.kind === "math")
             return IncludedEnvironmentResult.NotIncluded;
         if (isMacroArgumentCount(firstName, this.includedMacros))
             return IncludedEnvironmentResult.Included;
@@ -260,7 +270,7 @@ export class VisualSnippet extends Snippet<"visual"> {
         sel,
         view,
     }: ProccesArgs): ProcessSnippetResult {
-        const hasSelection = !!sel;
+        const hasSelection = !!sel.original;
         // visual snippets only run when there is a selection
         if (!hasSelection) {
             return null;
@@ -271,18 +281,26 @@ export class VisualSnippet extends Snippet<"visual"> {
             return null;
         }
 
-        const triggerPos = range.from;
+        const triggerPos = range.original.from;
         let replacement: ResultInsert;
         const captures = {
             match: [],
-            groups: { [VISUAL_SNIPPET_MAGIC_SELECTION_PLACEHOLDERv2]: sel },
+            groups: {
+                [VISUAL_SNIPPET_MAGIC_SELECTION_PLACEHOLDERv2]: sel.parsed,
+                [VISUAL_SNIPPET_MAGIC_SELECTION_PLACEHOLDERv2_ORIGINAL]:
+                    sel.original,
+            },
         };
         const options: InsertOptions = { captures };
         if (this.replacement instanceof ArrayNode) {
             replacement = this.replacement.applyInsert(options);
         } else {
+            const replacementOptions = {
+                view,
+                options,
+            };
             const replacementTemp = convertOutputToNode(
-                this.replacement(sel, { _view: view }),
+                this.replacement(sel.parsed, replacementOptions),
                 this.version,
             );
 
@@ -292,6 +310,14 @@ export class VisualSnippet extends Snippet<"visual"> {
                 return null;
             }
             replacement = replacementTemp.applyInsert(options);
+        }
+        if (replacement.tabstops.length === 0) {
+            const startDifference = range.parsed.from - range.original.from;
+            replacement.insert =
+                sel.original.slice(0, startDifference) + replacement.insert;
+            replacement.tabstops = [
+                { from: 0, to: replacement.insert.length, index: [0] },
+            ];
         }
 
         return { triggerPos, replacement };
@@ -332,9 +358,9 @@ export class RegexSnippet extends Snippet<"regex"> {
         effectiveLine,
         sel,
         effectiveLineAfter,
-        view: _view,
+        view,
     }: ProccesArgs): ProcessSnippetResult {
-        const hasSelection = !!sel;
+        const hasSelection = !!sel.original;
         // non-visual snippets only run when there is no selection
         if (hasSelection) {
             return null;
@@ -362,8 +388,12 @@ export class RegexSnippet extends Snippet<"regex"> {
             // result.length - 1 = the number of capturing groups
             replacement = this.replacement.applyInsert(options);
         } else {
+            const replacementOptions = {
+                view,
+                options,
+            };
             const replacementTemp = convertOutputToNode(
-                this.replacement(result, { _view }),
+                this.replacement(result, replacementOptions),
                 this.version,
             );
 
@@ -413,9 +443,9 @@ export class StringSnippet extends Snippet<"string"> {
         effectiveLine,
         sel,
         effectiveLineAfter,
-        view: _view,
+        view,
     }: ProccesArgs): ProcessSnippetResult {
-        const hasSelection = !!sel;
+        const hasSelection = !!sel.original;
         // non-visual snippets only run when there is no selection
         if (hasSelection) {
             return null;
@@ -444,8 +474,12 @@ export class StringSnippet extends Snippet<"string"> {
         if (this.replacement instanceof ArrayNode) {
             replacement = this.replacement.applyInsert(options);
         } else {
+            const replacementOptions = {
+                view,
+                options,
+            };
             const replacementTemp = convertOutputToNode(
-                this.replacement(this.trigger, { _view }),
+                this.replacement(this.trigger, replacementOptions),
                 this.version,
             );
 

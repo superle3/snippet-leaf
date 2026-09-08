@@ -3,12 +3,10 @@ import { processLatexSuiteSettings } from "./settings";
 import type { LatexSuitePluginSettingsRaw } from "./default_settings";
 import type { LatexSuiteCMSettings } from "./default_settings";
 import type { LatexSuitePluginSettings } from "./default_settings";
-import type { EditorState } from "@codemirror/state";
 import { Compartment } from "@codemirror/state";
 import type { Compartment as CompartmentC } from "@codemirror/state";
 
 import { Facet } from "@codemirror/state";
-import type { EditorView } from "@codemirror/view";
 
 let latexSuiteConfig: LatexSuiteFacet;
 let latexSuiteConfigCompartment: CompartmentC;
@@ -42,12 +40,6 @@ export function reloadLatexSuiteFacetCompartment(
     );
 }
 
-export function getLatexSuiteConfig(
-    viewOrState: EditorView | EditorState,
-): LatexSuiteCMSettings {
-    // @ts-expect-error Property 'state' does not exist on type 'EditorState | EditorView'.
-    return (viewOrState.state ?? viewOrState).facet(latexSuiteConfig);
-}
 export type LatexSuitePluginSettingsExplanations = {
     [P in keyof LatexSuitePluginSettingsRaw]: {
         title: string;

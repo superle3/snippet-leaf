@@ -1,11 +1,9 @@
 import type { Extension } from "@codemirror/state";
 import { keymap, type EditorView, type KeyBinding } from "@codemirror/view";
-import {
-    getLatexSuiteConfig,
-    reloadLatexSuiteFacetCompartment,
-} from "./settings/raw_settings";
+import { reloadLatexSuiteFacetCompartment } from "./settings/raw_settings";
 import type { LatexSuitePluginSettings } from "./settings/default_settings";
 import { updateConcealEffect } from "./editor_extensions/conceal";
+import { getLatexSuiteConfig } from "./snippets/codemirror/config";
 
 const toggleConceal = (view: EditorView): boolean => {
     const currentSettings = getLatexSuiteConfig(view);

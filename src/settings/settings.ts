@@ -270,7 +270,7 @@ export const SnippetSchemaSync = v.pipe(
         version: v.optional(v.union([v.literal(1), v.literal(2)]), 2),
     }),
     v.transform(({ snippets, snippetVariables, version }) => {
-        const parsed_snippets = snippets.map((raw) => {
+        const parsed_snippets = snippets.flatMap((raw) => {
             return parseSnippet(raw, snippetVariables, version);
         });
         return { snippets: sortSnippets(parsed_snippets), snippetVariables };

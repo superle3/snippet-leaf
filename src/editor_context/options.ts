@@ -6,40 +6,66 @@ export class Options {
     visual: boolean;
     undoKey: boolean;
 
-    constructor() {
-        this.mode = new Mode();
-        this.automatic = false;
-        this.regex = false;
-        this.onWordBoundary = false;
-        this.visual = false;
-        this.undoKey = true;
+    constructor({
+        mode,
+        automatic,
+        regex,
+        onWordBoundary,
+        visual,
+        undoKey,
+    }: {
+        mode: Mode;
+        automatic: boolean;
+        regex: boolean;
+        onWordBoundary: boolean;
+        visual: boolean;
+        undoKey: boolean;
+    }) {
+        this.mode = mode;
+        this.automatic = automatic;
+        this.regex = regex;
+        this.onWordBoundary = onWordBoundary;
+        this.visual = visual;
+        this.undoKey = undoKey;
     }
 
     static fromSource(source: string): Options {
-        const options = new Options();
-        options.mode = Mode.fromSource(source);
+        const mode = Mode.fromSource(source);
+
+        let automatic = false;
+        let regex = false;
+        let onWordBoundary = false;
+        let visual = false;
+        let undoKey = true;
 
         for (const flag_char of source) {
             switch (flag_char) {
                 case "A":
-                    options.automatic = true;
+                    automatic = true;
                     break;
                 case "r":
-                    options.regex = true;
+                    regex = true;
                     break;
                 case "w":
-                    options.onWordBoundary = true;
+                    onWordBoundary = true;
                     break;
                 case "v":
-                    options.visual = true;
+                    visual = true;
                     break;
                 case "U":
-                    options.undoKey = false;
+                    undoKey = false;
                     break;
             }
         }
 
-        return options;
+        return new Options({
+            mode,
+            automatic,
+            regex,
+            onWordBoundary,
+            visual,
+            undoKey,
+        });
     }
 
     snippetShouldRunInMode(
@@ -54,6 +80,13 @@ export class Options {
             (this.mode.blockMath && mode.blockMath) ||
             (this.mode.inText() && mode.inText())
         );
+    }
+
+    copy() {
+        return new Options({
+            ...this,
+            mode: this.mode.copy(),
+        });
     }
 }
 
@@ -157,5 +190,19 @@ export class Mode {
         }
 
         return mode;
+    }
+
+    copy(): Mode {
+        const newMode = new Mode();
+        newMode.text = this.text;
+        newMode.dollarInlineMath = this.dollarInlineMath;
+        newMode.dollarBlockMath = this.dollarBlockMath;
+        newMode.parenInlineMath = this.parenInlineMath;
+        newMode.bracketBlockMath = this.bracketBlockMath;
+        newMode.textEnv = this.textEnv;
+        newMode.equation = this.equation;
+        newMode.array = this.array;
+        newMode.snippetlessEnv = this.snippetlessEnv;
+        return newMode;
     }
 }

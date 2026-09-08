@@ -1,16 +1,16 @@
 import type { EditorView } from "@codemirror/view";
 import { isBoundMultiline, setCursor } from "src/utils/editor_utils";
+import { getLatexSuiteConfig } from "src/snippets/codemirror/config";
+import type { Bounds } from "src/editor_context/context";
+import { getContextPlugin } from "src/editor_context/context";
 import { queueSnippet } from "src/snippets/codemirror/snippet_queue_state_field";
 import { expandSnippets } from "src/snippets/snippet_management";
 import { taboutByEnclosedBrackets } from "./tabout";
-import { getContextPlugin } from "src/editor_context/context";
-import { getLatexSuiteConfig } from "src/settings/raw_settings";
-import type { Bounds } from "src/editor_context/mathbounds";
 import {
     ArrayNode,
-    TextNode,
-    TabstopNode,
     emptyInsertOptions,
+    TabstopNode,
+    TextNode,
 } from "src/snippets/luasnip_api/node";
 
 const newlineMatrixShortcutCallback = (
@@ -110,10 +110,7 @@ const matrixShortcutsRunner =
             !matrixShortcutsMacroNames.includes(envName.name)
         ) {
             return false;
-        } else if (
-            envName.kind !== "command" &&
-            envName.kind !== "environment"
-        ) {
+        } else if (envName.kind === "math") {
             return false;
         }
         return shortcut(view, envName);
@@ -143,20 +140,3 @@ export const addCellMatrixShortcut = matrixShortcutsRunner(
 export const priorityTaboutMatrixShortcut = matrixShortcutsRunner(
     priorityTaboutShortcutCallback,
 );
-
-export function runMatrixShortcuts(
-    view: EditorView,
-    key: string,
-    shift: boolean,
-): boolean {
-    if (key === "Enter" && !shift) {
-        return newlineMatrixShortcut(view);
-    } else if (key === "Enter" && shift) {
-        return exitMatrixShortCut(view);
-    } else if (key === "Tab") {
-        return (
-            priorityTaboutMatrixShortcut(view) || addCellMatrixShortcut(view)
-        );
-    }
-    return false;
-}

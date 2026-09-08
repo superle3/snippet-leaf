@@ -35,7 +35,7 @@ import {
 import {
     MacroAreaPipeSchema,
     type MacroArea,
-} from "src/editor_context/default_textareas";
+} from "src/editor_context/default_text_areas";
 import {
     VISUAL_SNIPPET_MAGIC_SELECTION_PLACEHOLDERv1,
     VISUAL_SNIPPET_MAGIC_SELECTION_PLACEHOLDERv2,
@@ -148,7 +148,7 @@ export function parseSnippetsSync(
         // validate the shape of the raw snippets
         const rawValidatedSnippets = validateRawSnippets(rawSnippets);
 
-        parsedSnippets = rawValidatedSnippets.map((raw) => {
+        parsedSnippets = rawValidatedSnippets.flatMap((raw) => {
             try {
                 // Normalize the raw snippet and convert it into a Snippet
                 return parseSnippet(
@@ -229,7 +229,7 @@ export function parseSnippet(
     raw: RawSnippet,
     snippetVariables: SnippetVariables,
     defaultSnippetVersion: SnippetVersion = 2,
-): Snippet {
+): Snippet[] {
     const {
         replacement: replacementRaw,
         priority,
@@ -241,6 +241,13 @@ export function parseSnippet(
     const options = Options.fromSource(raw.options);
     const triggerKey = parseKeyName(raw.triggerKey);
     const version = raw.version ?? defaultSnippetVersion;
+
+    if (raw.trigger === undefined && raw.triggerKey.length === 0) {
+        throw new Error(
+            "Either trigger has to be defined or triggerKey must be non-zero length",
+        );
+    }
+    raw.trigger ??= "";
 
     // we have a regex snippet
     if (options.regex || raw.trigger instanceof RegExp) {
@@ -323,14 +330,24 @@ export function parseSnippet(
             priority,
             description,
             excludedMacros,
-            excludedEnvironments,
-            includedMacros,
             triggerKey,
             triggerAfter,
-            version,
+            excludedEnvironments,
+            includedMacros,
         };
+        const snippets: Snippet[] = [new RegexSnippet(normalised)];
+        if (triggerKey && options.automatic) {
+            const nonAutomaticOptions = options.copy();
+            nonAutomaticOptions.automatic = false;
+            const triggerKeyNormalized = {
+                ...normalised,
+                trigger: new RegExp(""),
+                options: nonAutomaticOptions,
+            };
+            snippets.push(new RegexSnippet(triggerKeyNormalized));
+        }
 
-        return new RegexSnippet(normalised);
+        return snippets;
     } else {
         // substitute snippet variables
         const trigger = insertSnippetVariables(raw.trigger, snippetVariables);
@@ -361,31 +378,58 @@ export function parseSnippet(
 
         if (
             typeof replacementRaw === "string" &&
-            replacementRaw.includes(visual_pattern)
+            replacementRaw.includes(visual_pattern) &&
+            trigger.length <= 1
         ) {
             options.visual = true;
         }
 
         if (options.visual) {
+            if (trigger.length > 1) {
+                throw new Error(
+                    "trigger should be a single character for visual snippets",
+                );
+            } else if (trigger.length === 1 && triggerKey.length > 0) {
+                throw new Error(
+                    "trigger and triggerKey can't both be defined for visual snippets",
+                );
+            } else if (trigger.length === 0 && triggerKey.length === 0) {
+                throw new Error(
+                    "Either trigger or triggerKey have to be defined for visual snippets",
+                );
+            }
             const replacement =
                 typeof raw.replacement === "string"
                     ? new ArrayNode([
                           new VisualSnippetNode(raw.replacement, version),
                       ])
                     : raw.replacement;
+            options.automatic = false;
             const normalised = {
                 trigger,
                 replacement,
                 options,
                 priority,
                 description,
-                excludedMacros,
                 excludedEnvironments,
+                excludedMacros,
                 includedMacros,
                 triggerKey,
                 triggerAfter,
             };
-            return new VisualSnippet(normalised);
+            const snippets = [];
+            if (trigger) {
+                snippets.push(
+                    new VisualSnippet({
+                        ...normalised,
+                        triggerKey: trigger,
+                        trigger: "",
+                    }),
+                );
+            } else {
+                snippets.push(new VisualSnippet(normalised));
+            }
+            return snippets;
         } else {
             const replacement =
                 typeof raw.replacement === "string"
@@ -399,14 +443,25 @@ export function parseSnippet(
                 options,
                 priority,
                 description,
-                excludedMacros,
                 excludedEnvironments,
+                excludedMacros,
                 includedMacros,
                 triggerKey,
                 triggerAfter,
-                version,
             };
-            return new StringSnippet(normalised);
+
+            const snippets = [new StringSnippet(normalised)];
+            if (triggerKey && options.automatic) {
+                const nonAutomaticOptions = options.copy();
+                nonAutomaticOptions.automatic = false;
+                const triggerKeyNormalized = {
+                    ...normalised,
+                    trigger: "",
+                    options: nonAutomaticOptions,
+                };
+                snippets.push(new StringSnippet(triggerKeyNormalized));
+            }
+            return snippets;
         }
     }
 }

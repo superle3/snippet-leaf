@@ -1,4 +1,5 @@
 import type { SnippetVariables, SnippetVersion } from "../parse";
+import { ALL_MACROS } from "./macros";
 import type { BaseNode } from "./node";
 import {
     ArrayNode,
@@ -43,6 +44,7 @@ export const api = (snippetVariables: SnippetVariables) => {
         tabstop_node,
         text_node,
         capture_node,
+        ALL_MACROS,
     };
 };
 
@@ -52,4 +54,5 @@ export const snippetApi = {
     capture_node,
     snippet_node,
     array_node,
+    ALL_MACROS,
 };

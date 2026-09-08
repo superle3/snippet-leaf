@@ -1,15 +1,16 @@
 import type { EditorView } from "@codemirror/view";
-import type { EditorState, SelectionRange } from "@codemirror/state";
+import type { EditorState } from "@codemirror/state";
+import { getLatexSuiteConfig } from "src/snippets/codemirror/config";
 import { queueSnippet } from "src/snippets/codemirror/snippet_queue_state_field";
 import { expandSnippets } from "src/snippets/snippet_management";
+import type { CMBound, Context } from "src/editor_context/context";
+import { getContextPlugin } from "src/editor_context/context";
 import { autoEnlargeBrackets } from "./auto_enlarge_brackets";
 import type { snippetDebugLevel } from "src/settings/settings";
 import type { Snippet, SnippetType } from "src/snippets/snippets";
 import { IncludedEnvironmentResult } from "src/snippets/snippets";
 import { showSnippetInfo } from "src/editor_extensions/obsidian_utils";
-import { getLatexSuiteConfig } from "src/settings/raw_settings";
-import type { Context } from "src/editor_context/context";
-import { getContextPlugin } from "src/editor_context/context";
+import type { ResultInsert } from "src/snippets/luasnip_api/node";
 
 type SnippetInfo = {
     snippets: Snippet<SnippetType>[];
@@ -34,7 +35,7 @@ export const runSnippets = (
                 view,
                 ctx,
                 snippetInfo,
-                range,
+                { from: range.from, to: range.to },
                 options.debug,
             );
 
@@ -65,23 +66,85 @@ const getSliceAroundCursor = (view: EditorView, to: number) => {
     return { line, effectiveLineAfter };
 };
 
+const getParsedSelection = (view: EditorView, original_range: CMBound) => {
+    const parsed_range = { from: original_range.from, to: original_range.to };
+    const original_sel = view.state.sliceDoc(
+        original_range.from,
+        original_range.to,
+    );
+    let parsedSel = original_sel;
+    const originalResult = {
+        range: { original: original_range, parsed: parsed_range },
+        sel: { original: original_sel, parsed: parsedSel },
+    };
+    // Remove indentations and callouts from selection as composite markers aren't really "part" of the text
+    // and make more sense to be removed from the selection.
+    if (original_range.from === original_range.to) {
+        return originalResult;
+    }
+
+    parsed_range.to = parsed_range.from + parsedSel.length;
+    const startLine = view.state.doc.lineAt(parsed_range.from);
+    const pattern = /^((?:> ?)*)(\s*)/;
+    const startCalloutMatch = startLine.text.match(pattern);
+    if (!startCalloutMatch) {
+        return originalResult;
+    }
+    const calloutCount = startCalloutMatch[1].split(">").length - 1;
+    const indentation = startCalloutMatch[2];
+    let exit = false;
+    parsedSel = original_sel.replaceAll(
+        new RegExp("\\n((?:> ?)*)(\\s*)", "g"),
+        (match, callouts: string, indent: string) => {
+            if (exit) return match;
+            if (
+                callouts.split(">").length - 1 !== calloutCount ||
+                indent.length < indentation.length
+            ) {
+                exit = true;
+                return match;
+            }
+            return "\n";
+        },
+    );
+    if (exit) {
+        return originalResult;
+    }
+
+    if (startLine.from === parsed_range.from) {
+        const match = parsedSel.match(/^(> ?)*\s*/);
+        if (match) {
+            parsed_range.from += match[0].length;
+            parsedSel = parsedSel.replace(pattern, "");
+        }
+    }
+    const range = { original: original_range, parsed: parsed_range };
+    const sel = { original: original_sel, parsed: parsedSel };
+    return { range, sel };
+};
+
 const runSnippetCursor = (
     view: EditorView,
     ctx: Context,
     snippetInfo: SnippetInfo,
-    range: SelectionRange,
+    original_range: CMBound,
     debug: snippetDebugLevel,
 ): { success: boolean; shouldAutoEnlargeBrackets: boolean } => {
     const settings = getLatexSuiteConfig(view);
-    const { from, to } = range;
-    const sel = view.state.sliceDoc(from, to);
-    const { line, effectiveLineAfter } = getSliceAroundCursor(view, to);
+    const { line, effectiveLineAfter } = getSliceAroundCursor(
+        view,
+        original_range.to,
+    );
+    const to = original_range.to;
+
+    const { range, sel } = getParsedSelection(view, original_range);
+
     const key = snippetInfo.key ?? "";
     // If the key pressed wasn't a text character, continue
     if (snippetInfo.key && snippetInfo.key.length !== 1) {
         return { success: false, shouldAutoEnlargeBrackets: false };
     }
-    const envNames = Array.from(ctx.getEnvNames());
+    const envNames = Array.from(ctx.getEnvNames(to));
     const updatedLine = line + key;
     for (let i = 0; i < snippetInfo.snippets.length; i++) {
         const snippet = snippetInfo.snippets[i];
@@ -131,11 +194,11 @@ const runSnippetCursor = (
                 continue;
         }
 
-        const replacement = result.replacement;
+        let replacement = result.replacement;
 
         // When in inline math, remove any spaces at the end of the replacement
         if (ctx.mode.inlineMath && settings.removeSnippetWhitespace) {
-            replacement.insert = trimWhitespace(replacement.insert, ctx);
+            replacement = trimWhitespace(replacement, ctx);
         }
 
         // Expand the snippet
@@ -195,26 +258,12 @@ const isOnWordBoundary = (
     );
 };
 
-const trimWhitespace = (replacement: string, _ctx: Context) => {
-    let spaceIndex = 0;
-
-    if (replacement.endsWith(" ")) {
-        spaceIndex = -1;
-    } else {
-        const lastThreeChars = replacement.slice(-3);
-        const lastChar = lastThreeChars.slice(-1);
-
-        if (lastThreeChars.slice(0, 2) === " @" && !isNaN(parseInt(lastChar))) {
-            spaceIndex = -3;
-        }
-    }
-
-    if (spaceIndex != 0) {
-        if (spaceIndex === -1) {
-            replacement = replacement.trimEnd();
-        } else if (spaceIndex === -3) {
-            replacement = replacement.slice(0, -3) + replacement.slice(-2);
-        }
+const trimWhitespace = (replacement: ResultInsert, _ctx: Context) => {
+    const tabstops = replacement.tabstops;
+    replacement.insert = replacement.insert.trimEnd();
+    for (const tabstop of tabstops) {
+        tabstop.to = Math.min(tabstop.to, replacement.insert.length);
+        tabstop.from = Math.min(tabstop.from, replacement.insert.length);
     }
 
     return replacement;

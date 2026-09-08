@@ -8,13 +8,18 @@ import { getContextPlugin } from "./editor_context/context";
 import { replaceRange } from "./utils/editor_utils";
 import { setSelectionToNextTabstop } from "./snippets/snippet_management";
 import { removeAllTabstops } from "./snippets/codemirror/tabstops_state_field";
-import { getLatexSuiteConfig } from "./settings/raw_settings";
+import { getLatexSuiteConfig } from "./snippets/codemirror/config";
 
 // import { handleMathTooltip } from "./editor_extensions/math_tooltip";
 import { isComposing } from "./utils/editor_utils";
 import { clearSnippetQueue } from "./snippets/codemirror/snippet_queue_state_field";
 import { handleUndoRedo } from "./snippets/codemirror/history";
-import { runMatrixShortcuts } from "./features/matrix_shortcuts";
+import {
+    newlineMatrixShortcut,
+    exitMatrixShortCut,
+    priorityTaboutMatrixShortcut,
+    addCellMatrixShortcut,
+} from "./features/matrix_shortcuts";
 
 export const handleUpdate = (update: ViewUpdate) => {
     // const settings = getLatexSuiteConfig(update.state, latexSuiteConfig);
@@ -144,3 +149,20 @@ export const handleKeydown = (
 
     return false;
 };
+
+export function runMatrixShortcuts(
+    view: EditorView,
+    key: string,
+    shift: boolean,
+): boolean {
+    if (key === "Enter" && !shift) {
+        return newlineMatrixShortcut(view);
+    } else if (key === "Enter" && shift) {
+        return exitMatrixShortCut(view);
+    } else if (key === "Tab") {
+        return (
+            priorityTaboutMatrixShortcut(view) || addCellMatrixShortcut(view)
+        );
+    }
+    return false;
+}

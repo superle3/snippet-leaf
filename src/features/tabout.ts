@@ -1,6 +1,8 @@
 import type { TransactionSpec } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
 import { intersection } from "src/utils/prototype_utils";
+import { getLatexSuiteConfig } from "src/snippets/codemirror/config";
+import type { Context } from "src/editor_context/context";
 import {
     setCursor,
     getCharacterAtPos,
@@ -8,8 +10,6 @@ import {
 } from "src/utils/editor_utils";
 import type { Token } from "src/utils/tokenizer";
 import { tokenize } from "src/utils/tokenizer";
-import type { Context } from "src/editor_context/context";
-import { getLatexSuiteConfig } from "src/settings/raw_settings";
 
 const LEFT_COMMANDS = new Set<string>([
     "\\left",
