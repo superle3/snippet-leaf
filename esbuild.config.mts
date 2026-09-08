@@ -325,21 +325,20 @@ if (web) {
     await esbuild.build(browserConfig);
 }
 
-const ReleaseSchema = v.object({
-    assets: v.array(
-        v.object({
-            browser_download_url: v.string(),
-            name: v.string(),
-        }),
-    ),
-});
-
 function stripUserScript(source: string) {
     return source
         .replace(/^\/\/ ==UserScript==.*\/\/ ==\/UserScript==/s, "")
         .trim();
 }
 async function userScriptBuild(version: string) {
+    const ReleaseSchema = v.object({
+        assets: v.array(
+            v.object({
+                browser_download_url: v.string(),
+                name: v.string(),
+            }),
+        ),
+    });
     console.log("Building Greasemonkey userscript...");
     const temp_user_script_settings_bundle =
         userscriptSettingsBundleConfigs(version);
