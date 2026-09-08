@@ -12,8 +12,8 @@ import {
     colorPairedBracketsPluginLowestPrec,
     highlightCursorBracketsPlugin,
 } from "./editor_extensions/highlight_brackets";
-import { createContextPlugin } from "./latex_context/context";
-import { createMathBoundsPlugin } from "./latex_context/mathbounds";
+import { createContextPlugin } from "./editor_context/context";
+import { createMathBoundsPlugin } from "./editor_context/mathbounds";
 import { getKeymaps } from "./keymaps";
 import { Prec, type Extension } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";

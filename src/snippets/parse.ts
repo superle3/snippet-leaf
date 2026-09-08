@@ -35,7 +35,7 @@ import {
 import {
     MacroAreaPipeSchema,
     type MacroArea,
-} from "src/utils/default_textareas";
+} from "src/editor_context/default_textareas";
 import {
     VISUAL_SNIPPET_MAGIC_SELECTION_PLACEHOLDERv1,
     VISUAL_SNIPPET_MAGIC_SELECTION_PLACEHOLDERv2,

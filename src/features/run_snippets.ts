@@ -8,8 +8,8 @@ import type { Snippet, SnippetType } from "src/snippets/snippets";
 import { IncludedEnvironmentResult } from "src/snippets/snippets";
 import { showSnippetInfo } from "src/editor_extensions/obsidian_utils";
 import { getLatexSuiteConfig } from "src/settings/raw_settings";
-import type { Context } from "src/latex_context/context";
-import { getContextPlugin } from "src/latex_context/context";
+import type { Context } from "src/editor_context/context";
+import { getContextPlugin } from "src/editor_context/context";
 
 type SnippetInfo = {
     snippets: Snippet<SnippetType>[];

@@ -1,9 +1,9 @@
 import { EditorView } from "@codemirror/view";
 import type { NodeIterator, SyntaxNode, Tree, TreeCursor } from "@lezer/common";
 import type { EditorState } from "@codemirror/state";
-import type { Bounds } from "src/latex_context/mathbounds";
-import type { MacroStackOutput } from "src/latex_context/context";
-import type { MacroArea } from "./default_textareas";
+import type { Bounds } from "src/editor_context/mathbounds";
+import type { MacroStackOutput } from "src/editor_context/context";
+import type { MacroArea } from "../editor_context/default_textareas";
 
 export function replaceRange(
     view: EditorView,

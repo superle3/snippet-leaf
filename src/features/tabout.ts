@@ -8,7 +8,7 @@ import {
 } from "src/utils/editor_utils";
 import type { Token } from "src/utils/tokenizer";
 import { tokenize } from "src/utils/tokenizer";
-import type { Context } from "src/latex_context/context";
+import type { Context } from "src/editor_context/context";
 import { getLatexSuiteConfig } from "src/settings/raw_settings";
 
 const LEFT_COMMANDS = new Set<string>([

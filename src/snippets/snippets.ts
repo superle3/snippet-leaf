@@ -18,8 +18,8 @@ import type { EditorView } from "@codemirror/view";
 import {
     isMacroArgumentCount,
     type StackOutput,
-} from "src/latex_context/context";
-import type { MacroArea } from "src/utils/default_textareas";
+} from "src/editor_context/context";
+import type { MacroArea } from "src/editor_context/default_textareas";
 import { VISUAL_SNIPPET_MAGIC_SELECTION_PLACEHOLDERv2 } from "./snippet_version";
 
 /**

@@ -3,9 +3,9 @@ import { isBoundMultiline, setCursor } from "src/utils/editor_utils";
 import { queueSnippet } from "src/snippets/codemirror/snippet_queue_state_field";
 import { expandSnippets } from "src/snippets/snippet_management";
 import { taboutByEnclosedBrackets } from "./tabout";
-import { getContextPlugin } from "src/latex_context/context";
+import { getContextPlugin } from "src/editor_context/context";
 import { getLatexSuiteConfig } from "src/settings/raw_settings";
-import type { Bounds } from "src/latex_context/mathbounds";
+import type { Bounds } from "src/editor_context/mathbounds";
 import {
     ArrayNode,
     TextNode,

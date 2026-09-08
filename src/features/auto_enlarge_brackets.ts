@@ -10,8 +10,8 @@ import {
 import { EquationText } from "src/utils/tokenizer";
 import { walkPairedBrackets } from "src/utils/tokenizer";
 import type { SyntaxNode } from "@lezer/common";
-import * as latex from "src/parser/latex-parser.terms";
-import { getMathBoundsPlugin } from "src/latex_context/mathbounds";
+import * as latex from "src/parser/latex-terms";
+import { getMathBoundsPlugin } from "src/editor_context/mathbounds";
 import { getLatexSuiteConfig } from "src/settings/raw_settings";
 
 const sizeControls = [

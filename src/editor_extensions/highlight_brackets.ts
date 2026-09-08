@@ -10,10 +10,10 @@ import {
 } from "src/utils/tokenizer";
 import { walkPairedBrackets } from "src/utils/tokenizer";
 import type { SyntaxNode, TreeCursor } from "@lezer/common";
-import * as latex from "src/parser/latex-parser.terms";
-import type { CMBound } from "src/latex_context/context";
-import { getContextPlugin } from "src/latex_context/context";
-import { getMathBoundsPlugin } from "src/latex_context/mathbounds";
+import * as latex from "src/parser/latex-terms";
+import type { CMBound } from "src/editor_context/context";
+import { getContextPlugin } from "src/editor_context/context";
+import { getMathBoundsPlugin } from "src/editor_context/mathbounds";
 
 const Ncolors = 3;
 

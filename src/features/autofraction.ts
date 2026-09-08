@@ -10,8 +10,8 @@ import {
     TabstopNode,
     TextNode,
 } from "src/snippets/luasnip_api/node";
-import type { Context } from "src/latex_context/context";
-import { getContextPlugin } from "src/latex_context/context";
+import type { Context } from "src/editor_context/context";
+import { getContextPlugin } from "src/editor_context/context";
 import { getLatexSuiteConfig } from "src/settings/raw_settings";
 
 export const runAutoFraction = (view: EditorView): boolean => {

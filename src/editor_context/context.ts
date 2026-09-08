@@ -14,7 +14,7 @@ import {
     snippetLessArea,
     type MacroArea,
     allTextAreas,
-} from "src/utils/default_textareas";
+} from "src/editor_context/default_textareas";
 
 export type StackOutput = (
     | {

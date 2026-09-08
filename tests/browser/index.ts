@@ -8,7 +8,7 @@ import {
 } from "codemirror_extension/codemirror_extensions";
 import { conceal } from "src/editor_extensions/conceal_fns";
 import { reloadLatexSuiteFacetCompartment } from "src/settings/raw_settings";
-import { contextPlugin } from "src/latex_context/context";
+import { contextPlugin } from "src/editor_context/context";
 import { debounce } from "src/editor_extensions/obsidian_utils";
 
 declare global {
