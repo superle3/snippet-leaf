@@ -15,12 +15,15 @@
         "web:full": "concurrently \"npm run web:ext\" \"npm run web:watch\"",
         "web:ext": "cd ./browser_extension && web-ext run",
         "lint": "eslint --ext .ts,.js src browser_extension codemirror_extension --fix",
+        "tsc": "tsc -noEmit -skipLibCheck",
         "format": "prettier --write .",
         "format:commit": "pretty-quick --staged",
         "build:rollup": "rollup -c",
         "build:greasemonkey": "tsx esbuild.config.mts userscript",
         "version": "tsx version-bump.mts && npm run format && git add .",
-        "web:update_manifest": "tsx scripts/update_manifest.ts"
+        "web:update_manifest": "tsx scripts/update_manifest.ts",
+        "test": "vitest --run",
+        "test:watch": "vitest"
     },
     "keywords": [
         "latex",
@@ -54,8 +57,13 @@
         "@types/firefox-webext-browser": "^120.0.4",
         "@types/node": "^24.12.2",
         "@types/web": "^0.0.263",
-        "@typescript-eslint/eslint-plugin": "^8.38.0",
-        "@typescript-eslint/parser": "^8.38.0",
+        "@typescript-eslint/eslint-plugin": "^8.69.0",
+        "@typescript-eslint/parser": "^8.69.0",
+        "@vitest/browser-playwright": "^4.1.11",
+        "@vitest/browser-webdriverio": "^4.1.11",
+        "@wdio/cli": "^9.31.5",
+        "codemirror": "^6.0.2",
+        "codemirror-lang-latex": "^0.6.1",
         "concurrently": "^9.2.0",
         "dotenv-cli": "^11.0.0",
         "esbuild": "^0.28.0",
@@ -69,11 +77,15 @@
         "prettier": "^3.6.2",
         "pretty-quick": "^4.2.2",
         "rollup": "^4.46.1",
-        "rollup-plugin-dts": "^6.2.1",
+        "rollup-plugin-dts": "^6.5.1",
         "tslib": "2.3.1",
         "tsx": "^4.21.0",
+        "typescript": "^6.0.3",
         "typescript-eslint": "^8.39.1",
-        "web-ext": "^9.1.0"
+        "vite-tsconfig-paths": "^6.1.1",
+        "vitest": "^4.1.11",
+        "web-ext": "^9.1.0",
+        "webdriverio": "^9.31.5"
     },
     "type": "module",
     "types": "codemirror_extension/dist/index.d.ts",
@@ -81,5 +93,8 @@
     "pre-commit": [
         "web:build",
         "format:commit"
-    ]
+    ],
+    "overrides": {
+        "yauzl": "^3.4.0"
+    }
 }

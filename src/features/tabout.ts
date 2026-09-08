@@ -1,79 +1,268 @@
+import type { TransactionSpec } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
+import { intersection } from "src/utils/prototype_utils";
+import { getLatexSuiteConfig } from "src/snippets/codemirror/config";
+import type { Context } from "src/editor_context/context";
 import {
-    replaceRange,
     setCursor,
     getCharacterAtPos,
-} from "../utils/editor_utils";
-import { getContextPlugin } from "src/latex_context/context";
+    isBoundMultiline,
+} from "src/utils/editor_utils";
+import type { Token } from "src/utils/tokenizer";
+import { tokenize } from "src/utils/tokenizer";
 
-export const tabout = (view: EditorView): boolean => {
-    const ctx = getContextPlugin(view);
-    if (!ctx.mode.inMath()) {
-        return false;
-    }
-    const result = ctx.getInnerBounds();
-    if (!result) {
-        return false;
-    }
-    const end = result.inner_end;
+const LEFT_COMMANDS = new Set<string>([
+    "\\left",
+    "\\bigl",
+    "\\Bigl",
+    "\\biggl",
+    "\\Biggl",
+]);
+const RIGHT_COMMANDS = new Set<string>([
+    "\\right",
+    "\\bigr",
+    "\\Bigr",
+    "\\biggr",
+    "\\Biggr",
+]);
+const DELIMITERS = new Set<string>([
+    "(",
+    ")",
+    "[",
+    "]",
+    "\\lbrack",
+    "\\rbrack",
+    "\\{",
+    "\\}",
+    "\\lbrace",
+    "\\rbrace",
+    "<",
+    ">",
+    "\\langle",
+    "\\rangle",
+    "\\lt",
+    "\\gt",
+    "|",
+    "\\vert",
+    "\\lvert",
+    "\\rvert",
+    "\\|",
+    "\\Vert",
+    "\\lVert",
+    "\\rVert",
+    "\\lfloor",
+    "\\rfloor",
+    "\\lceil",
+    "\\rceil",
+    "\\ulcorner",
+    "\\urcorner",
+    "/",
+    "\\\\",
+    "\\backslash",
+    "\\uparrow",
+    "\\downarrow",
+    "\\Uparrow",
+    "\\Downarrow",
+    ".",
+]);
+const DELIMITERS_MAP = {
+    "(": ")",
+    "[": "]",
+    "{": "}",
+    "\\lbrack": "\\rbrack",
+    "\\lbrace": "\\rbrace",
+    "\\langle": "\\rangle",
+    "\\lvert": "\\rvert",
+    "\\lVert": "\\rVert",
+    "\\lfloor": "\\rfloor",
+    "\\lceil": "\\rceil",
+    "\\ulcorner": "\\urcorner",
+    "<": ">",
+} as const;
 
-    const pos = view.state.selection.main.to;
+const isLeftCommandToken = (token: Token): boolean =>
+    LEFT_COMMANDS.has(token.text);
+const isRightCommandToken = (token: Token): boolean =>
+    RIGHT_COMMANDS.has(token.text);
+const isDelimiterToken = (token: Token): boolean => DELIMITERS.has(token.text);
+const isClosingSymbolToken = (
+    token: Token,
+    closingSymbols: Set<string>,
+): boolean => closingSymbols.has(token.text);
+
+const isClosingDelimiterToken = (
+    tokens: Token[],
+    index: number,
+    closingSymbols: Set<string>,
+): boolean => {
+    const current = tokens[index];
+
+    if (index > 0) {
+        const prev = tokens[index - 1];
+
+        if (isRightCommandToken(prev) && isDelimiterToken(current)) return true;
+        if (isLeftCommandToken(prev) && isDelimiterToken(current)) return false;
+    }
+
+    return isClosingSymbolToken(current, closingSymbols);
+};
+
+const isUnmatchedRightCommand = (tokens: Token[], index: number): boolean => {
+    const current = tokens[index];
+    if (!isRightCommandToken(current)) return false;
+
+    if (index + 1 >= tokens.length) {
+        return true;
+    }
+
+    const next = tokens[index + 1];
+    return !isDelimiterToken(next);
+};
+
+export const tabout = (view: EditorView, ctx: Context): boolean => {
+    if (!ctx.mode.inMath()) return false;
+
+    const bounds = ctx.getBounds();
+    if (!bounds) return false;
+    const { inner_start, inner_end, outer_end, outer_start } = bounds;
+    if (outer_end <= ctx.pos) return false;
+
     const doc = view.state.doc;
-    const text = doc.toString();
-    // Move to the next closing bracket: }, ), ], >, |, or \\rangle
-    const rangle = "\\rangle";
 
-    for (let i = pos; i < end; i++) {
-        if (["}", ")", "]", ">", "|"].includes(text.charAt(i))) {
-            setCursor(view, i + 1);
+    const cursorPos = view.state.selection.main.to;
+    const cursorRelativePos = cursorPos - inner_start;
+
+    const latexString = doc.sliceString(inner_start, inner_end);
+    const tokens = tokenize(latexString);
+
+    const settings = getLatexSuiteConfig(view);
+    const closingSymbols = settings.taboutClosingSymbols;
+
+    const foundIndex = tokens.findIndex(
+        (token) => token.end > cursorRelativePos,
+    );
+    // If no token exists after the cursor, set start index to length to skip the loop entirely.
+    const startIndex = foundIndex === -1 ? tokens.length : foundIndex;
+    for (let i = startIndex; i < tokens.length; i++) {
+        // Case 1: Normal Navigation
+        if (isClosingDelimiterToken(tokens, i, closingSymbols)) {
+            setCursor(view, inner_start + tokens[i].end);
 
             return true;
-        } else if (text.slice(i, i + rangle.length) === rangle) {
-            setCursor(view, i + rangle.length);
+        }
+
+        // Case 2: Error Recovery
+        // While the action (setCursor) is the same as above, the intent here is different:
+        // we navigate the user directly to the location of the error (immediately after the unfinished "\right")
+        // so they can simply type the missing delimiter right there.
+        if (isUnmatchedRightCommand(tokens, i)) {
+            console.warn(
+                "[tabout] Found right command without following delimiter:",
+                tokens[i].text,
+                "at index",
+                inner_start + tokens[i].start,
+            );
+
+            setCursor(view, inner_start + tokens[i].end);
 
             return true;
         }
     }
 
-    // TODO: Handle array environments better. Now tabout doesn't work inside arrays when matrix shortcuts are off.
-    if (ctx.mode.array) {
-        return false;
-    }
     // If cursor at end of line/equation, move to next line/outside $$ symbols
 
     // Check whether we're at end of equation
     // Accounting for whitespace, using trim
-    const textBtwnCursorAndEnd = doc.sliceString(pos, end);
-    const atEnd = textBtwnCursorAndEnd.trim().length === 0;
-    const { inner_start: startOfEquation, outer_end: endOfEquation } =
-        ctx.getBounds();
-    if (!atEnd) return false;
+    const remainingText = doc.sliceString(cursorPos, inner_end);
+    const isAtEnd = remainingText.trim().length === 0;
 
-    // Check whether we're in inline math or a block eqn
-    if (ctx.mode.inlineMath) {
-        setCursor(view, endOfEquation);
+    if (!isAtEnd && settings.taboutExitEquationOnlyOnEOL) return false;
+
+    // Only create a new line if the equation is multiline.
+    if (!isBoundMultiline(view, bounds)) {
+        setCursor(view, outer_end);
     } else {
         // First, locate the $$ symbol
-        const dollarLine = doc.lineAt(endOfEquation);
+        const endLine = doc.lineAt(outer_end);
+        const transactions: TransactionSpec[] = [];
 
         // If there's no line after the equation, create one
-
-        if (
-            dollarLine.number === doc.lines &&
-            startOfEquation < dollarLine.from
-        ) {
-            replaceRange(view, dollarLine.to, dollarLine.to, "\n");
+        const startIndent =
+            doc.lineAt(outer_start).text.match(/^\s*/)?.[0] || "";
+        if (endLine.number === doc.lines) {
+            transactions.push({
+                changes: {
+                    from: endLine.to,
+                    to: endLine.to,
+                    insert: "\n" + startIndent,
+                },
+                selection: { anchor: endLine.to + 1 + startIndent.length },
+            });
+        } else {
+            const lineAfter = doc.lineAt(endLine.to + 1);
+            if (lineAfter.text.trim() === "") {
+                transactions.push({
+                    changes: {
+                        from: lineAfter.from,
+                        to: lineAfter.to,
+                        insert: startIndent,
+                    },
+                    selection: { anchor: endLine.to + 1 + startIndent.length },
+                });
+            } else {
+                transactions.push({ selection: { anchor: endLine.to + 1 } });
+            }
         }
 
-        // Finally, move outside the $$ symbol
-        setCursor(view, endOfEquation);
-
         // Trim whitespace at beginning / end of equation
-        const line = doc.lineAt(pos);
-        replaceRange(view, line.from, line.to, line.text.trim());
+        const currentLine = doc.lineAt(cursorPos);
+        if (currentLine.text.trimEnd() !== currentLine.text) {
+            transactions.push({
+                changes: {
+                    from: currentLine.from,
+                    to: currentLine.to,
+                    insert: currentLine.text.trimEnd(),
+                },
+            });
+        }
+        view.dispatch(...transactions);
     }
 
     return true;
+};
+
+export const taboutByEnclosedBrackets = (
+    view: EditorView,
+    latexString: string,
+): number | null => {
+    const tokens = tokenize(latexString);
+
+    const closingSymbols = getLatexSuiteConfig(view).taboutClosingSymbols;
+
+    const delimiter_stack: string[] = [];
+    const closing_delimiters = intersection(
+        new Set<string>(Object.values(DELIMITERS_MAP)),
+        closingSymbols,
+    );
+    const opening_delimiters = new Set(
+        Object.keys(DELIMITERS_MAP).filter((key) =>
+            closing_delimiters.has(
+                DELIMITERS_MAP[key as keyof typeof DELIMITERS_MAP],
+            ),
+        ),
+    );
+    for (let i = 0; i < tokens.length; i++) {
+        const token = tokens[i];
+        if (closing_delimiters.has(token.text)) {
+            if (delimiter_stack.length === 0) {
+                return token.end;
+            }
+            delimiter_stack.pop();
+        } else if (opening_delimiters.has(token.text)) {
+            delimiter_stack.push(token.text);
+        }
+    }
+    return null;
 };
 
 export const shouldTaboutByCloseBracket = (
@@ -81,15 +270,11 @@ export const shouldTaboutByCloseBracket = (
     keyPressed: string,
 ) => {
     const sel = view.state.selection.main;
-    if (!sel.empty) return;
-    const pos = sel.from;
+    if (!sel.empty) return false;
 
-    const c = getCharacterAtPos(view, pos);
+    const pos = sel.from;
+    const char = getCharacterAtPos(view, pos);
     const brackets = [")", "]", "}"];
 
-    if (c === keyPressed && brackets.includes(c)) {
-        return true;
-    } else {
-        return false;
-    }
+    return char === keyPressed && brackets.includes(char);
 };

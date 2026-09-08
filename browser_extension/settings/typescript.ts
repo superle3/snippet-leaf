@@ -226,8 +226,7 @@ const createCompilerService = (options: ts.CompilerOptions) => {
         getDefaultLibFileName: (opts) => ts.getDefaultLibFileName(opts),
         fileExists: (fileName) =>
             files[fileName] !== undefined || libFiles.has(fileName),
-        readFile: (fileName) =>
-            (files[fileName] ?? libFiles.get(fileName)) as string | undefined,
+        readFile: (fileName) => files[fileName].text ?? libFiles.get(fileName),
     };
 
     const languageService = ts.createLanguageService(
@@ -241,9 +240,12 @@ const createCompilerService = (options: ts.CompilerOptions) => {
             files[fileName] = { text, version };
         },
         getDiagnostics(fileName: string) {
-            return languageService
-                .getSyntacticDiagnostics(fileName)
-                .concat(languageService.getSemanticDiagnostics(fileName));
+            const diagnostics =
+                languageService.getSemanticDiagnostics(fileName);
+            return [
+                ...languageService.getSyntacticDiagnostics(fileName),
+                diagnostics,
+            ];
         },
     };
 };
@@ -278,8 +280,10 @@ export function compiler(source_file: string) {
     // Get diagnostics
     const diagnostics = service.getDiagnostics("/type_def.ts");
     const user_diagnostics = service.getDiagnostics("/user_snippets.ts");
-    user_diagnostics.filter(
-        (d: ts.Diagnostic) => d.category === ts.DiagnosticCategory.Error,
-    );
+    user_diagnostics
+        .flatMap((d) => (Array.isArray(d) ? d : [d]))
+        .filter(
+            (d: ts.Diagnostic) => d.category === ts.DiagnosticCategory.Error,
+        );
     return [...diagnostics, ...user_diagnostics];
 }

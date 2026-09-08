@@ -1,53 +1,17 @@
-import type { LatexSuiteFacet } from "./settings";
-import { processLatexSuiteSettings } from "./settings";
-import type { LatexSuitePluginSettingsRaw } from "./default_settings";
-import type { LatexSuiteCMSettings } from "./default_settings";
-import type { LatexSuitePluginSettings } from "./default_settings";
-import type { EditorState } from "@codemirror/state";
-import { Compartment } from "@codemirror/state";
-import type { Compartment as CompartmentC } from "@codemirror/state";
+import type {
+    latexSuiteBasicSettingsSchema,
+    latexSuiteKeymapSettingsSchema,
+    LatexSuiteParsedSettingsSchema,
+    LatexSuiteRawOrParsedSettingsSchema,
+    LatexSuiteRawSettingsSchema,
+    SettingsSchema,
+    SnippetSchemaAsync,
+} from "./settings";
 
-import { Facet } from "@codemirror/state";
-import type { EditorView } from "@codemirror/view";
+import type { RawSnippet, SnippetVariables } from "src/snippets/parse";
+import type { Snippet } from "src/snippets/snippets";
+import type * as v from "valibot";
 
-let latexSuiteConfig: LatexSuiteFacet;
-let latexSuiteConfigCompartment: CompartmentC;
-
-export function setLatexSuiteConfig(CMSettings: LatexSuitePluginSettings) {
-    latexSuiteConfig = Facet.define<
-        Partial<LatexSuitePluginSettings>,
-        LatexSuiteCMSettings
-    >({
-        combine: (
-            input: readonly Partial<LatexSuitePluginSettings>[],
-        ): LatexSuiteCMSettings => {
-            const settings =
-                input.length > 0
-                    ? processLatexSuiteSettings(
-                          Object.assign({}, CMSettings, ...input),
-                      )
-                    : processLatexSuiteSettings(CMSettings);
-            return settings;
-        },
-    });
-    latexSuiteConfigCompartment = new Compartment();
-    return latexSuiteConfigCompartment.of(latexSuiteConfig.of({}));
-}
-
-export function reloadLatexSuiteFacetCompartment(
-    settings: Partial<LatexSuitePluginSettings>,
-) {
-    return latexSuiteConfigCompartment.reconfigure(
-        latexSuiteConfig.of(settings),
-    );
-}
-
-export function getLatexSuiteConfig(
-    viewOrState: EditorView | EditorState,
-): LatexSuiteCMSettings {
-    // @ts-expect-error Property 'state' does not exist on type 'EditorState | EditorView'.
-    return (viewOrState.state ?? viewOrState).facet(latexSuiteConfig);
-}
 export type LatexSuitePluginSettingsExplanations = {
     [P in keyof LatexSuitePluginSettingsRaw]: {
         title: string;
@@ -56,3 +20,25 @@ export type LatexSuitePluginSettingsExplanations = {
         defaultValue: LatexSuitePluginSettingsRaw[P];
     };
 };
+export type LatexSuiteKeymapSettings = v.InferInput<
+    typeof latexSuiteKeymapSettingsSchema
+>;
+export type LatexSuitePluginSettings = {
+    snippets: Array<RawSnippet | Snippet>;
+    snippetVariables: SnippetVariables;
+} & LatexSuiteBasicSettings &
+    v.InferInput<typeof LatexSuiteRawOrParsedSettingsSchema> &
+    LatexSuiteKeymapSettings;
+export type LatexSuiteBasicSettings = v.InferOutput<
+    typeof latexSuiteBasicSettingsSchema
+>;
+export type LatexSuiteRawSettings = v.InferInput<
+    typeof LatexSuiteRawSettingsSchema
+>;
+export type LatexSuiteParsedSettings = v.InferInput<
+    typeof LatexSuiteParsedSettingsSchema
+>;
+export type LatexSuiteCMSettings = v.InferOutput<typeof SettingsSchema>;
+export type LatexSuitePluginSettingsRaw = v.InferInput<typeof SettingsSchema> &
+    v.InferInput<typeof SnippetSchemaAsync> &
+    v.InferInput<typeof LatexSuiteRawSettingsSchema>;

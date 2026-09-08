@@ -1,17 +1,9 @@
 import { DEFAULT_SNIPPETS } from "src/utils/default_snippets";
 import { DEFAULT_SNIPPET_VARIABLES } from "src/utils/default_snippet_variables";
-import type { RawSnippet, SnippetVariables } from "src/snippets/parse";
 import type {
-    latexSuiteBasicSettingsSchema,
-    latexSuiteKeymapSettingsSchema,
-    LatexSuiteParsedSettingsSchema,
-    LatexSuiteRawOrParsedSettingsSchema,
-    LatexSuiteRawSettingsSchema,
-    SettingsSchema,
-    SnippetSchemaAsync,
-} from "./settings";
-import type * as v from "valibot";
-import type { Snippet } from "src/snippets/snippets";
+    LatexSuitePluginSettings,
+    LatexSuiteRawSettings,
+} from "./raw_settings";
 
 export const DEFAULT_SETTINGS = {
     snippets: DEFAULT_SNIPPETS,
@@ -19,7 +11,6 @@ export const DEFAULT_SETTINGS = {
 
     // Basic settings
     snippetsEnabled: true,
-    snippetsTrigger: "Tab",
     defaultSnippetVersion: 2,
     suppressSnippetTriggerOnIME: true,
     removeSnippetWhitespace: false,
@@ -34,10 +25,16 @@ export const DEFAULT_SETTINGS = {
     autofractionBreakingChars: "+-=\t",
     matrixShortcutsEnabled: true,
     taboutEnabled: true,
+    taboutExitEquationOnlyOnEOL: true,
+    taboutClosingSymbols:
+        "), ], \\rbrack, \\}, \\rbrace, \\rangle, \\rvert, \\rVert, \\rfloor, \\rceil, \\urcorner, }",
     autoEnlargeBrackets: true,
+    autoEnlargeBracketsSpace: true,
     wordDelimiters: "., +-\\n\t:;!?\\/{}[]()=~$",
+    snippetDebug: "off",
+    snippetRecursion: 0,
 
-    // keys
+    // editor command keys
     concealToggleKey: "",
     toggleAllFeaturesKey: "",
 
@@ -45,30 +42,16 @@ export const DEFAULT_SETTINGS = {
     autofractionExcludedEnvs: '[\n\t["^{", "}"],\n\t["\\\\pu{", "}"]\n]',
     matrixShortcutsEnvNames:
         "pmatrix, cases, align, gather, bmatrix, Bmatrix, vmatrix, Vmatrix, array, matrix",
+    matrixShortcutsMacroNames: "eqnarray",
     autoEnlargeBracketsTriggers: "sum, int, frac, prod, bigcup, bigcap",
+
+    // keys
+    snippetsTrigger: "Tab",
+    snippetNextTabstopTrigger: "Tab",
+    snippetPreviousTabstopTrigger: "Shift-Tab",
+    autofractionTrigger: "/",
+    matrixShortcutsCellTrigger: "Tab",
+    matrixShortcutsNewlineTrigger: "Enter",
+    matrixShortcutsExitTrigger: "Shift-Enter",
+    taboutTrigger: "Tab",
 } as const satisfies LatexSuitePluginSettings & LatexSuiteRawSettings;
-
-export type LatexSuiteKeymapSettings = v.InferInput<
-    typeof latexSuiteKeymapSettingsSchema
->;
-
-export type LatexSuitePluginSettings = {
-    snippets: Array<RawSnippet | Snippet>;
-    snippetVariables: SnippetVariables;
-} & LatexSuiteBasicSettings &
-    v.InferInput<typeof LatexSuiteRawOrParsedSettingsSchema> &
-    LatexSuiteKeymapSettings;
-export type LatexSuiteBasicSettings = v.InferOutput<
-    typeof latexSuiteBasicSettingsSchema
->;
-export type LatexSuiteRawSettings = v.InferInput<
-    typeof LatexSuiteRawSettingsSchema
->;
-export type LatexSuiteParsedSettings = v.InferInput<
-    typeof LatexSuiteParsedSettingsSchema
->;
-
-export type LatexSuiteCMSettings = v.InferOutput<typeof SettingsSchema>;
-export type LatexSuitePluginSettingsRaw = v.InferInput<typeof SettingsSchema> &
-    v.InferInput<typeof SnippetSchemaAsync> &
-    v.InferInput<typeof LatexSuiteRawSettingsSchema>;

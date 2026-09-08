@@ -5,19 +5,29 @@
         "inlineSourceMap": true,
         "inlineSources": true,
         "module": "ESNext",
-        "target": "ES2017",
+        "target": "ES2018",
         "allowJs": true,
         "noImplicitAny": true,
         "moduleResolution": "bundler",
         "importHelpers": true,
         "declaration": true,
+        "verbatimModuleSyntax": true,
+        "ignoreDeprecations": "6.0",
 
-        "lib": ["DOM", "es2022"]
+        "lib": ["DOM", "es2022"],
+        "paths": {
+            "src/*": ["src/*"],
+            "codemirror_extension/*": ["codemirror_extension/*"],
+            "browser_extension/*": ["browser_extension/*"],
+            "tests/*": ["tests/*"],
+            "greasemonkey/*": ["greasemonkey/*"]
+        }
     },
     "include": [
         "src/**/*.ts",
         "codemirror_extension/**/*.ts",
         "browser_extension/**/*.ts",
-        "greasemonkey/**/*.ts"
+        "greasemonkey/**/*.ts",
+        "tests/**/*.ts"
     ]
 }

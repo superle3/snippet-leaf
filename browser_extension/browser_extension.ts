@@ -10,6 +10,7 @@ import type {
     RangeSetBuilder as RangeSetBuilderC,
     ChangeSet as ChangeSetC,
     Compartment as CompartmentC,
+    Annotation as AnnotationC,
 } from "@codemirror/state";
 import type {
     undo as undoC,
@@ -35,17 +36,16 @@ import type {
 import * as v from "valibot";
 
 import {
-    RangeSet,
-    RangeSetBuilder,
-    RangeValue,
+    RangeSet as RangeSetO,
+    RangeSetBuilder as RangeSetBuilderO,
+    RangeValue as RangeValueO,
 } from "./codemirror_range_objects";
-import type {
-    LatexSuiteCMSettings,
-    LatexSuitePluginSettings,
-} from "src/settings/default_settings";
+import type { LatexSuiteCMSettings } from "src/settings/raw_settings";
+import type { LatexSuitePluginSettings } from "src/settings/raw_settings";
 import { SettingsSchema } from "src/settings/settings";
 import type { LatexSuiteFacet } from "src/settings/settings";
 import { set_codemirror_objects } from "./set_codemirror_objects";
+import { set_api } from "./set_api";
 
 type CodeMirrorExt = {
     Decoration: typeof DecorationC;
@@ -112,16 +112,23 @@ async function browser_main() {
         const Compartment: typeof CompartmentC = view.state.config.compartments
             .keys()
             .next().value.constructor;
-        set_codemirror_objects({
+        const RangeSet = RangeSetO as unknown as typeof RangeSetC;
+        const RangeSetBuilder =
+            RangeSetBuilderO as unknown as typeof RangeSetBuilderC;
+        const RangeValue = RangeValueO as typeof RangeValueC;
+        const Annotation = CodeMirror.isolateHistory.of("full")
+            .constructor as typeof AnnotationC;
+        const obj = {
             ...CodeMirror,
             Facet,
-            // @ts-expect-error
             RangeSet,
-            // @ts-expect-error
             RangeSetBuilder,
             RangeValue,
             Compartment,
-        });
+            Annotation,
+        };
+        set_codemirror_objects(obj);
+        set_api(obj);
         const main_extension = await import("../src/extension").then(
             (mod) => mod.main,
         );

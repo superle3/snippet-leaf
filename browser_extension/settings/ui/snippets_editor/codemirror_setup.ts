@@ -35,7 +35,7 @@ import {
     createSystem,
     createVirtualTypeScriptEnvironment,
 } from "@typescript/vfs";
-import * as ts from "typescript";
+import ts from "typescript";
 import {
     tsLinter,
     tsAutocomplete,
@@ -66,6 +66,7 @@ export const basicSetup = (snippets: string): Extension[] => {
     const env = createVirtualTypeScriptEnvironment(
         system,
         ["/user_snippets.ts", "/snippet_leaf.ts"],
+        //@ts-ignore
         ts,
         compilerOpts,
     );
@@ -74,7 +75,7 @@ export const basicSetup = (snippets: string): Extension[] => {
 
     // Sadly there is no ready-made typescript+jsdoc hover
     // So we create our own where typescript gets highlighted and the jsdoc doesn't
-    const tsJSDocHover = hoverTooltip((view, pos) => {
+    const tsJSDocHover = hoverTooltip((_view, pos) => {
         try {
             const quickInfo = env.languageService.getQuickInfoAtPosition(
                 path,

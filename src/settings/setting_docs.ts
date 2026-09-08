@@ -3,6 +3,7 @@ import { DEFAULT_SETTINGS } from "./default_settings";
 import type { LatexSuitePluginSettingsExplanations } from "./raw_settings";
 import { DEFAULT_SNIPPET_VARIABLES_str } from "src/utils/default_snippet_variables";
 
+// @ts-ignore
 export const SETTINGS_EXPLANATIONS: LatexSuitePluginSettingsExplanations = {
     snippetsEnabled: {
         title: "Enabled",

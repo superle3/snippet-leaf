@@ -16,7 +16,7 @@ const convert_captured_groups_v1_to_v2 = (
     replacement: string,
 ): string => {
     const captured_groups =
-        new RegExp(`|${snippet.source}`).exec("").length - 1;
+        new RegExp(`|${snippet.source}`).exec("")!.length - 1;
     if (captured_groups === 0) {
         return replacement;
     }

@@ -1,32 +1,28 @@
-import { handleUpdate, onKeydown } from "./latex_suite";
-import type { LatexSuiteCMSettings } from "./settings/default_settings";
-import type { LatexSuitePluginSettings } from "./settings/default_settings";
-import { create_snippet_extensions } from "./snippets/codemirror/extensions";
+import { getKeymaps, handleUpdate, onKeydown } from "./latex_suite";
+import type { LatexSuiteCMSettings } from "./settings/raw_settings";
+import type { LatexSuitePluginSettings } from "./settings/raw_settings";
 import { processLatexSuiteSettings } from "./settings/settings";
-import { setLatexSuiteConfig } from "./settings/raw_settings";
-import { stateEffect_variables } from "./snippets/codemirror/history";
-import { create_tabstopsStateField } from "./snippets/codemirror/tabstops_state_field";
-import { mkConcealPlugin } from "./conceal_plugin/conceal";
+import { mkConcealPlugin } from "./editor_extensions/conceal";
 
-import type { RawSnippet, SnippetVariables } from "./snippets/parse";
+import type { SnippetVariables, RawSnippet } from "./snippets/parse";
 import type { TabstopGroup } from "./snippets/tabstop";
 import type { ProcessSnippetResult, SnippetData } from "./snippets/snippets";
 import {
     colorPairedBracketsPluginLowestPrec,
     highlightCursorBracketsPlugin,
-} from "./highlight_brackets_plugin/highlight_brackets";
-import { createContextPlugin } from "./latex_context/context";
-import { createMathBoundsPlugin } from "./latex_context/mathbounds";
-import { getKeymaps } from "./keymaps";
+} from "./editor_extensions/highlight_brackets";
+import { createContextPlugin } from "./editor_context/context";
+import { createMathBoundsPlugin } from "./editor_context/mathbounds";
+import { getKeymaps as getEditorCommandKeymaps } from "./keymaps";
 import { Prec, type Extension } from "@codemirror/state";
-import { EditorView } from "@codemirror/view";
+import { EditorView, keymap } from "@codemirror/view";
+import { snippetExtensions } from "./snippets/codemirror/extensions";
+import { getLatexSuiteConfigExtension } from "./snippets/codemirror/config";
 
 export function main(settings: LatexSuitePluginSettings) {
     const CMSettings: LatexSuiteCMSettings =
         processLatexSuiteSettings(settings);
-    stateEffect_variables();
-    create_tabstopsStateField();
-    const latexSuiteConfig = setLatexSuiteConfig(CMSettings);
+    const latexSuiteConfig = getLatexSuiteConfigExtension(CMSettings);
     const extensions: Extension[] = [];
 
     const snippet_leaf_extension: Extension[] = [
@@ -38,11 +34,12 @@ export function main(settings: LatexSuitePluginSettings) {
             }),
         ),
         EditorView.updateListener.of(handleUpdate),
-        create_snippet_extensions(),
-        getKeymaps(settings),
+        getEditorCommandKeymaps(settings),
+        Prec.highest(keymap.of(getKeymaps(CMSettings))),
         latexSuiteConfig,
         createContextPlugin(),
         createMathBoundsPlugin(),
+        snippetExtensions,
     ];
     extensions.push(...snippet_leaf_extension);
     const conceal_plugin = mkConcealPlugin(settings.concealRevealTimeout);
@@ -50,8 +47,8 @@ export function main(settings: LatexSuitePluginSettings) {
     extensions.push(conceal_plugin);
 
     const highlighting_brackets = [
-        colorPairedBracketsPluginLowestPrec(),
-        highlightCursorBracketsPlugin(),
+        colorPairedBracketsPluginLowestPrec,
+        highlightCursorBracketsPlugin,
     ];
     extensions.push(...highlighting_brackets);
     const dark_theme_extension = EditorView.baseTheme({

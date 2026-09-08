@@ -8,10 +8,8 @@ import {
     type SnippetVariables,
 } from "src/snippets/parse";
 import type { Facet } from "@codemirror/state";
-import type {
-    LatexSuiteCMSettings,
-    LatexSuitePluginSettings,
-} from "./default_settings";
+import type { LatexSuiteCMSettings } from "./raw_settings";
+import type { LatexSuitePluginSettings } from "./raw_settings";
 import * as v from "valibot";
 import { sortSnippets } from "src/snippets/sort";
 import json5 from "json5";
@@ -22,10 +20,12 @@ export function processLatexSuiteSettings(
         snippetVariables: Record<string, string>;
     },
 ): LatexSuiteCMSettings {
-    function strToArray(str: string | string[]) {
+    function strToArray(str: string | string[] | Set<string>) {
         return Array.isArray(str)
             ? str.map((s) => s.replace(/\s/g, ""))
-            : str.replace(/\s/g, "").split(",");
+            : str instanceof Set
+              ? Array.from(str)
+              : str.replace(/\s/g, "").split(",");
     }
 
     function getAutofractionExcludedEnvs(
@@ -70,6 +70,7 @@ export function processLatexSuiteSettings(
                 (snippet) => !(ARE_SETTINGS_PARSED in snippet),
             ) as RawSnippet[],
             snippetVariables,
+            settings.defaultSnippetVersion,
         ),
     ];
     return {
@@ -82,8 +83,14 @@ export function processLatexSuiteSettings(
             settings.autofractionExcludedEnvs,
         ),
         matrixShortcutsEnvNames: strToArray(settings.matrixShortcutsEnvNames),
+        matrixShortcutsMacroNames: strToArray(
+            settings.matrixShortcutsMacroNames,
+        ),
         autoEnlargeBracketsTriggers: strToArray(
             settings.autoEnlargeBracketsTriggers,
+        ),
+        taboutClosingSymbols: new Set(
+            strToArray(settings.taboutClosingSymbols),
         ),
     };
 }
@@ -128,8 +135,11 @@ export const StrToArraySchema = v.union([
 export const LatexSuiteParsedSettingsSchema = v.object({
     autofractionExcludedEnvs: v.array(EnvironmentSchema),
     matrixShortcutsEnvNames: v.array(v.string()),
+    matrixShortcutsMacroNames: v.array(v.string()),
     autoEnlargeBracketsTriggers: v.array(v.string()),
+    taboutClosingSymbols: v.set(v.string()),
 });
+
 export const LatexSuiteRawSettingsSchema = v.object({
     autofractionExcludedEnvs: v.pipe(
         v.string(),
@@ -145,15 +155,26 @@ export const LatexSuiteRawSettingsSchema = v.object({
         ),
     ),
     matrixShortcutsEnvNames: StrToArraySchema,
+    matrixShortcutsMacroNames: StrToArraySchema,
     autoEnlargeBracketsTriggers: StrToArraySchema,
+    taboutClosingSymbols: v.pipe(
+        StrToArraySchema,
+        v.transform((arr) => new Set(arr)),
+    ),
 });
 export const LatexSuiteRawOrParsedSettingsSchema = v.union([
     LatexSuiteRawSettingsSchema,
     LatexSuiteParsedSettingsSchema,
 ]);
+
+const SnippetDebugLevelSchema = v.union([
+    v.literal("off"),
+    v.literal("info"),
+    v.literal("verbose"),
+]);
+export type snippetDebugLevel = v.InferOutput<typeof SnippetDebugLevelSchema>;
 export const latexSuiteBasicSettingsSchema = v.object({
     snippetsEnabled: v.boolean(),
-    snippetsTrigger: v.union([v.literal("Tab"), v.literal(" ")]),
     defaultSnippetVersion: v.union([v.literal(1), v.literal(2)]),
     suppressSnippetTriggerOnIME: v.boolean(),
     removeSnippetWhitespace: v.boolean(),
@@ -168,19 +189,31 @@ export const latexSuiteBasicSettingsSchema = v.object({
     autofractionBreakingChars: v.string(),
     matrixShortcutsEnabled: v.boolean(),
     taboutEnabled: v.boolean(),
+    taboutExitEquationOnlyOnEOL: v.boolean(),
     autoEnlargeBrackets: v.boolean(),
+    autoEnlargeBracketsSpace: v.boolean(),
     wordDelimiters: v.string(),
+    snippetDebug: SnippetDebugLevelSchema,
+    snippetRecursion: v.number(),
 });
 
 export const latexSuiteKeymapSettingsSchema = v.object({
     concealToggleKey: v.string(),
     toggleAllFeaturesKey: v.string(),
+    snippetsTrigger: v.string(),
+    snippetNextTabstopTrigger: v.string(),
+    snippetPreviousTabstopTrigger: v.string(),
+    taboutTrigger: v.string(),
+    matrixShortcutsNewlineTrigger: v.string(),
+    matrixShortcutsCellTrigger: v.string(),
+    matrixShortcutsExitTrigger: v.string(),
+    autofractionTrigger: v.string(),
 });
 
-export type NestedRawSnippetArray = Array<RawSnippet | NestedRawSnippetArray>;
-export const NestedRawSnippetArraySchema: v.GenericSchema<NestedRawSnippetArray> =
+export type NestedArray<T> = Array<T | NestedArray<T>>;
+export const NestedRawSnippetArraySchema: v.GenericSchema<NestedArray<object>> =
     v.lazy(() =>
-        v.array(v.union([RawSnippetSchema, NestedRawSnippetArraySchema])),
+        v.array(v.union([v.looseObject({}), NestedRawSnippetArraySchema])),
     );
 export async function importString(
     source: string,
@@ -189,7 +222,7 @@ export async function importString(
     const blob = new Blob([source], { type: "text/javascript" });
     const file = new File([blob], identifier, { type: "text/javascript" });
     const url = URL.createObjectURL(file);
-    const module = await import(url);
+    const module = await import(/* @vite-ignore */ url);
     return module;
 }
 export async function importSnippets(source: string): Promise<unknown> {
@@ -243,7 +276,7 @@ export const SnippetSchemaSync = v.pipe(
         version: v.optional(v.union([v.literal(1), v.literal(2)]), 2),
     }),
     v.transform(({ snippets, snippetVariables, version }) => {
-        const parsed_snippets = snippets.map((raw) => {
+        const parsed_snippets = snippets.flatMap((raw) => {
             return parseSnippet(raw, snippetVariables, version);
         });
         return { snippets: sortSnippets(parsed_snippets), snippetVariables };

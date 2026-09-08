@@ -21,7 +21,7 @@ const userscript = process.argv[2] === "userscript";
 type InlinePluginOptions = {
     filter: RegExp;
     namespace: string;
-    transform?: (contents: string, args: any) => string | Promise<string>;
+    transform?: (contents: string, args: unknown) => string | Promise<string>;
 };
 
 const getFilePath = async (
@@ -47,7 +47,7 @@ const getFilePath = async (
     }
     return filePath;
 };
-const inlin_plugin = (options?: InlinePluginOptions): Plugin => {
+export const inlin_plugin = (options?: InlinePluginOptions): Plugin => {
     const { filter, namespace, transform } = Object.assign(
         {
             /**
@@ -81,7 +81,7 @@ const inlin_plugin = (options?: InlinePluginOptions): Plugin => {
              */
             transform: async (
                 contents: string,
-                args: { path: string; [key: string]: any },
+                _args: { path: string; [key: string]: unknown },
             ) => contents,
         },
         options,
@@ -90,9 +90,9 @@ const inlin_plugin = (options?: InlinePluginOptions): Plugin => {
     return {
         name: "esbuild-inline-plugin",
         setup(build) {
-            let alias = Object.entries(build.initialOptions.alias ?? {});
+            const alias = Object.entries(build.initialOptions.alias ?? {});
             build.onResolve({ filter }, async (args) => {
-                let inputPath = alias.reduce((path, [key, val]) => {
+                const inputPath = alias.reduce((path, [key, val]) => {
                     return path.replace(key, val);
                 }, args.path);
                 const filePath = await getFilePath(
@@ -154,7 +154,7 @@ const setCodeMirrorPath = path.resolve(
     "browser_extension/set_codemirror_objects.ts",
 );
 
-const codemirrorReroutePlugin: Plugin = {
+export const codemirrorReroutePlugin = (): Plugin => ({
     name: "codemirror-reroute",
     setup(build) {
         build.onResolve({ filter: /^@codemirror\// }, async (args) => {
@@ -203,7 +203,7 @@ const codemirrorReroutePlugin: Plugin = {
         //     },
         // );
     },
-};
+});
 
 const sharedConfig: BuildOptions = {
     banner: {
@@ -214,7 +214,7 @@ const sharedConfig: BuildOptions = {
     target: ["ES2017"],
     sourcemap: production ? false : "inline",
     minify: production,
-    plugins: [inlin_plugin(), codemirrorReroutePlugin, json5Plugin()],
+    plugins: [inlin_plugin(), json5Plugin()],
     logLevel: "info",
 };
 
@@ -228,6 +228,7 @@ const browserConfig: BuildOptions = {
     format: "iife",
     outdir: "browser_extension/dist",
     external: ["path", "fs"],
+    plugins: [...sharedConfig.plugins!, codemirrorReroutePlugin()],
     metafile: true,
     mainFields: ["module", "browser", "main"],
     sourcemap: production ? false : "inline",
@@ -270,7 +271,7 @@ const userscriptSettingsBanner = (version: string) => `// ==UserScript==
 
 const userscriptConfig = (version: string, require_version: string) =>
     ({
-        ...sharedConfig,
+        ...browserConfig,
         entryPoints: [
             {
                 in: "browser_extension/browser_extension.ts",
@@ -287,7 +288,6 @@ const userscriptConfig = (version: string, require_version: string) =>
         mainFields: ["module", "browser", "main"],
         target: ["ES2024"],
         treeShaking: true,
-        minify: true,
         sourcemap: false,
     }) satisfies BuildOptions;
 const userscriptSettingsBundleConfigs = (version: string) =>
@@ -316,12 +316,10 @@ if (web) {
     const codemirrorCtx = await esbuild.context(codemirrorConfig);
     codemirrorCtx.watch().catch(() => process.exit(1));
 } else if (userscript) {
-    userScriptBuild(version);
+    await userScriptBuild(version);
     // console.log("Building Greasemonkey userscript...");
     // await esbuild.build(userscriptSettingsBundleConfigs(version));
     // console.log("Fetching latest settings")
-
-    await esbuild.build(userscriptConfig);
 } else if (production) {
     console.log("Building for production...");
     await esbuild.build(browserConfig);

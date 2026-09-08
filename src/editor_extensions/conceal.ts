@@ -1,25 +1,25 @@
 // https://discuss.codemirror.net/t/concealing-syntax/3135
 
-import type { ConcealCachedEquations } from "./conceal_fns";
-import { conceal } from "./conceal_fns";
-import { getLatexSuiteConfig } from "src/settings/raw_settings";
-import { debounce } from "src/utils/debounce";
+import type { ViewUpdate, DecorationSet } from "@codemirror/view";
 import {
     Decoration,
-    EditorView,
-    ViewPlugin,
     WidgetType,
-    type ViewUpdate,
+    ViewPlugin,
+    EditorView,
 } from "@codemirror/view";
-import type { DecorationSet } from "@codemirror/view";
-import type { Range, StateEffectType } from "@codemirror/state";
+import type { Range, Transaction } from "@codemirror/state";
 import {
+    EditorSelection,
     RangeSet,
     RangeSetBuilder,
     RangeValue,
     StateEffect,
 } from "@codemirror/state";
-// import { debounce, livePreviewState } from "obsidian";
+import type { ConcealCachedEquations } from "./conceal_fns";
+import { conceal } from "./conceal_fns";
+import { tempKeyPress } from "src/snippets/snippet_management";
+import { createElement, debounce } from "./obsidian_utils";
+import { getLatexSuiteConfig } from "src/snippets/codemirror/config";
 
 export type Replacement = {
     start: number;
@@ -31,6 +31,14 @@ export type Replacement = {
 
 export type ConcealSpec = Replacement[];
 
+/**
+ * Make a ConcealSpec from the given list of Replacements.
+ * This function essentially does nothing but improves readability.
+ */
+export function mkConcealSpec(...replacements: Replacement[]) {
+    return replacements;
+}
+
 export type Concealment = {
     spec: ConcealSpec;
     cursorPosType: "within" | "apart" | "edge";
@@ -41,64 +49,60 @@ export type Concealment = {
 // 'delay' means reveal after a time delay.
 type ConcealAction = "conceal" | "reveal" | "delay";
 
-function ConcealWidget() {
-    return class ConcealWidget2 extends WidgetType {
-        private readonly className: string;
-        private readonly elementType: string;
+class ConcealWidget extends WidgetType {
+    private readonly className: string;
+    private readonly elementType: string;
 
-        constructor(
-            readonly symbol: string,
-            className?: string,
-            elementType?: string,
-        ) {
-            super();
+    constructor(
+        readonly symbol: string,
+        className?: string,
+        elementType?: string,
+    ) {
+        super();
 
-            this.className = className ? className : "";
-            this.elementType = elementType ? elementType : "span";
-        }
+        this.className = className ? className : "";
+        this.elementType = elementType ? elementType : "span";
+    }
 
-        eq(other: ConcealWidget2) {
-            return (
-                other.symbol == this.symbol &&
-                other.className === this.className &&
-                other.elementType === this.elementType
-            );
-        }
+    eq(other: ConcealWidget) {
+        return (
+            other.symbol == this.symbol &&
+            other.className === this.className &&
+            other.elementType === this.elementType
+        );
+    }
 
-        toDOM() {
-            const span = document.createElement(this.elementType);
-            span.className = "cm-math " + this.className;
-            span.textContent = this.symbol;
-            return span;
-        }
+    toDOM() {
+        const span = createElement(this.elementType);
+        span.className = "cm-math " + this.className;
+        span.textContent = this.symbol;
+        return span;
+    }
 
-        ignoreEvent() {
-            return false;
-        }
-    };
+    ignoreEvent() {
+        return false;
+    }
 }
 
-function TextWidget() {
-    return class TextWidget2 extends WidgetType {
-        constructor(readonly symbol: string) {
-            super();
-        }
+class TextWidget extends WidgetType {
+    constructor(readonly symbol: string) {
+        super();
+    }
 
-        eq(other: TextWidget2) {
-            return other.symbol == this.symbol;
-        }
+    eq(other: TextWidget) {
+        return other.symbol == this.symbol;
+    }
 
-        toDOM() {
-            const span = document.createElement("span");
-            span.className = "cm-math";
-            span.textContent = this.symbol;
-            return span;
-        }
+    toDOM() {
+        const span = createElement("span");
+        span.className = "cm-math";
+        span.textContent = this.symbol;
+        return span;
+    }
 
-        ignoreEvent() {
-            return false;
-        }
-    };
+    ignoreEvent() {
+        return false;
+    }
 }
 
 /**
@@ -209,46 +213,42 @@ function determineAction(
 // Build a decoration set from the given concealments
 function buildDecoSet(concealments: Concealment[]) {
     const decos: Range<Decoration>[] = [];
-    try {
-        for (const conc of concealments) {
-            if (!conc.enable) continue;
 
-            for (const replace of conc.spec) {
-                if (replace.start === replace.end) {
-                    // Add an additional "/" symbol, as part of concealing \\frac{}{} -> ()/()
-                    decos.push(
-                        Decoration.widget({
-                            widget: new (TextWidget())(replace.text),
-                            block: false,
-                        }).range(replace.start, replace.end),
-                    );
-                } else {
-                    // Improve selecting empty replacements such as "\frac" -> ""
-                    // NOTE: This might not be necessary
-                    const inclusiveStart = replace.text === "";
-                    const inclusiveEnd = false;
+    for (const conc of concealments) {
+        if (!conc.enable) continue;
 
-                    decos.push(
-                        Decoration.replace({
-                            widget: new (ConcealWidget())(
-                                replace.text,
-                                replace.class,
-                                replace.elementType,
-                            ),
-                            inclusiveStart,
-                            inclusiveEnd,
-                            block: false,
-                        }).range(replace.start, replace.end),
-                    );
-                }
+        for (const replace of conc.spec) {
+            if (replace.start === replace.end) {
+                // Add an additional "/" symbol, as part of concealing \\frac{}{} -> ()/()
+                decos.push(
+                    Decoration.widget({
+                        widget: new TextWidget(replace.text),
+                        block: false,
+                    }).range(replace.start, replace.end),
+                );
+            } else {
+                // Improve selecting empty replacements such as "\frac" -> ""
+                // NOTE: This might not be necessary
+                const inclusiveStart = replace.text === "";
+                const inclusiveEnd = false;
+
+                decos.push(
+                    Decoration.replace({
+                        widget: new ConcealWidget(
+                            replace.text,
+                            replace.class,
+                            replace.elementType,
+                        ),
+                        inclusiveStart,
+                        inclusiveEnd,
+                        block: false,
+                    }).range(replace.start, replace.end),
+                );
             }
         }
-
-        return Decoration.set(decos, true);
-    } catch (e) {
-        console.log("Error building decoration set:", e);
-        return Decoration.none;
     }
+
+    return Decoration.set(decos, true);
 }
 
 // Build atomic ranges from the given concealments.
@@ -278,10 +278,9 @@ function buildAtomicRanges(concealments: Concealment[]) {
     }
     return builder.finish();
 }
-
-export let updateConcealEffect: StateEffectType<null>;
+export const updateConcealEffect = StateEffect.define<null>();
 function isUpdateConcealEffect(update: ViewUpdate): boolean {
-    return update?.transactions.some((tr) =>
+    return update?.transactions?.some((tr) =>
         tr.effects.some((e) =>
             // @ts-ignore
             e.is(updateConcealEffect),
@@ -289,8 +288,16 @@ function isUpdateConcealEffect(update: ViewUpdate): boolean {
     );
 }
 
+const updateSelection = debounce((view: EditorView) => {
+    const ranges = view.state.selection.ranges.map((r) => {
+        return EditorSelection.range(r.from, r.to, r.assoc);
+    });
+    view.dispatch({
+        selection: EditorSelection.create(ranges),
+    });
+}, 50);
+
 export const mkConcealPlugin = (revealTimeout: number) => {
-    updateConcealEffect = StateEffect.define<null>();
     const viewPlugin = ViewPlugin.fromClass(
         class {
             // Stateful ViewPlugin: you should avoid one in general, but here
@@ -300,15 +307,15 @@ export const mkConcealPlugin = (revealTimeout: number) => {
             decorations: DecorationSet;
             atomicRanges: RangeSet<RangeValue>;
             delayEnabled: boolean;
-            concealSpecs: ConcealSpec[];
             cached_equations: ConcealCachedEquations;
+            concealSpecs: ConcealSpec[];
             delayedReveal;
-            private mousedown: boolean = false;
+            mousedown: boolean = false;
 
             constructor(view: EditorView) {
                 this.concealments = [];
                 this.decorations = Decoration.none;
-                this.atomicRanges = RangeSet.empty;
+                this.atomicRanges = RangeSet.empty as RangeSet<RangeValue>;
                 this.delayEnabled = revealTimeout > 0;
                 view.dom.addEventListener("mousedown", () => {
                     this.mousedown = true;
@@ -324,10 +331,12 @@ export const mkConcealPlugin = (revealTimeout: number) => {
                     true,
                 );
                 // HACK: trigger an initial concealment calculation
+                const transactions: readonly Transaction[] = [];
                 this.update({
                     view,
                     state: view.state,
                     docChanged: true,
+                    transactions,
                 } as ViewUpdate);
             }
 
@@ -360,13 +369,16 @@ export const mkConcealPlugin = (revealTimeout: number) => {
                     )
                 )
                     return;
-                if (!settings.concealEnabled) {
-                    this.delayedReveal.cancel();
-                    this.decorations = Decoration.none;
-                    this.atomicRanges = RangeSet.empty;
+                if (
+                    update.transactions.some((tr) =>
+                        tr.annotation(tempKeyPress),
+                    )
+                ) {
+                    this.decorations = this.decorations.map(update.changes);
+                    this.atomicRanges = this.atomicRanges.map(update.changes);
                     return;
                 }
-                this.delayedReveal.timeout = settings.concealRevealTimeout;
+
                 // Cancel the delayed revealment whenever we update the concealments
                 this.delayedReveal.cancel();
                 // If document/viewport is not changed, the conceal specs stay the same
@@ -401,11 +413,12 @@ export const mkConcealPlugin = (revealTimeout: number) => {
                 update: ViewUpdate,
                 linewise: boolean,
             ) {
-                const mousedown = this.mousedown;
+                const previousMouseDown = this.mousedown;
                 // Collect concealments from the new conceal specs
                 const concealments: Concealment[] = [];
                 // concealments that should be revealed after a delay (i.e. 'delay' action)
                 const delayedConcealments: Concealment[] = [];
+                let revealed = false;
 
                 for (const spec of concealSpecs) {
                     const cursorPosType = determineCursorPosType(
@@ -420,9 +433,10 @@ export const mkConcealPlugin = (revealTimeout: number) => {
                     const concealAction = determineAction(
                         oldConcealment?.cursorPosType,
                         cursorPosType,
-                        mousedown,
+                        this.mousedown,
                         this.delayEnabled,
                     );
+                    revealed = revealed || concealAction === "reveal";
 
                     const concealment: Concealment = {
                         spec,
@@ -435,6 +449,15 @@ export const mkConcealPlugin = (revealTimeout: number) => {
                     }
 
                     concealments.push(concealment);
+                }
+                // if it changes from mousedown to mouseup in livepreview, shuffle the selection to update the selection visually
+                if (
+                    revealed &&
+                    previousMouseDown &&
+                    !this.mousedown &&
+                    update.view.state.selection.ranges.some((r) => !r.empty)
+                ) {
+                    updateSelection(update.view);
                 }
 
                 if (delayedConcealments.length > 0) {
@@ -455,6 +478,7 @@ export const mkConcealPlugin = (revealTimeout: number) => {
                 ),
         },
     );
+
     const theme = EditorView.theme({
         "span.cm-math.cm-concealed-bold": {
             fontWeight: "bold",

@@ -1,4 +1,3 @@
-// @ts-ignore
 import default_snippets_str from "inline:src/default_snippets.js";
 import default_snippets from "../default_snippets";
 import type { RawSnippet } from "src/extension";
