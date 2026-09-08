@@ -1,17 +1,22 @@
 import type { Extension } from "@codemirror/state";
 import { keymap, type EditorView, type KeyBinding } from "@codemirror/view";
-import { reloadLatexSuiteFacetCompartment } from "./settings/raw_settings";
-import type { LatexSuitePluginSettings } from "./settings/default_settings";
 import { updateConcealEffect } from "./editor_extensions/conceal";
-import { getLatexSuiteConfig } from "./snippets/codemirror/config";
+import {
+    getLatexSuiteConfig,
+    reloadLatexSuiteFacetCompartment,
+} from "./snippets/codemirror/config";
+import type { LatexSuitePluginSettings } from "codemirror_extension/codemirror_extensions";
 
 const toggleConceal = (view: EditorView): boolean => {
     const currentSettings = getLatexSuiteConfig(view);
     view.dispatch({
         effects: [
-            reloadLatexSuiteFacetCompartment({
-                concealEnabled: !currentSettings.concealEnabled,
-            }),
+            reloadLatexSuiteFacetCompartment(
+                {
+                    concealEnabled: !currentSettings.concealEnabled,
+                },
+                view,
+            ),
             updateConcealEffect.of(null),
         ],
     });
@@ -34,6 +39,7 @@ const toggleAllFeatures = (view: EditorView): boolean => {
                 acc[feature] = on;
                 return acc;
             }, {} as Partial<LatexSuitePluginSettings>),
+            view,
         ),
     });
     return true;

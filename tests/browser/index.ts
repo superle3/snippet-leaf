@@ -1,13 +1,14 @@
-import { StateField, Text, type Extension } from "@codemirror/state";
+import type { Text } from "@codemirror/state";
+import { Compartment, StateField, type Extension } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 import { latex } from "codemirror-lang-latex";
 import { basicSetup } from "codemirror";
 import {
+    DEFAULT_SETTINGS,
     latex_suite,
     type LatexSuitePluginSettings,
 } from "codemirror_extension/codemirror_extensions";
 import { conceal } from "src/editor_extensions/conceal_fns";
-import { reloadLatexSuiteFacetCompartment } from "src/settings/raw_settings";
 import { contextPlugin } from "src/editor_context/context";
 import { debounce } from "src/editor_extensions/obsidian_utils";
 
@@ -39,10 +40,11 @@ const setUrl = debounce(
     1000,
     true,
 );
+const latex_suite_compartment = new Compartment();
 const extensions: Extension[] = [
     latex(),
     basicSetup,
-    latex_suite(),
+    latex_suite_compartment.of(latex_suite()),
     StateField.define({
         create(state) {
             setUrl(state.doc);
@@ -87,7 +89,9 @@ const view = new EditorView({
 });
 
 function setSettings(settings: Partial<LatexSuitePluginSettings>) {
-    reloadLatexSuiteFacetCompartment(settings);
+    latex_suite_compartment.reconfigure(
+        latex_suite(Object.assign({}, DEFAULT_SETTINGS, settings)),
+    );
 }
 
 declare module "@codemirror/view" {

@@ -28,7 +28,7 @@ import {
 import { syntaxTree } from "@codemirror/language";
 
 import { main } from "../src/extension";
-import type { LatexSuitePluginSettings } from "src/settings/default_settings";
+import type { LatexSuitePluginSettings } from "src/settings/raw_settings";
 import { DEFAULT_SETTINGS } from "src/settings/default_settings";
 import { getSettingsSnippets } from "src/settings/settings_parser";
 import { getSettingsSnippetVariables } from "src/settings/settings_parser";
@@ -99,7 +99,7 @@ export type {
     LatexSuitePluginSettingsRaw,
     LatexSuiteCMSettings,
     LatexSuitePluginSettings,
-} from "../src/settings/default_settings";
+} from "../src/settings/raw_settings";
 export type { LatexSuitePluginSettingsExplanations } from "../src/settings/raw_settings";
 export type { Snippet } from "../src/snippets/snippets.ts";
 export type { LatexSuiteFacet } from "src/settings/settings";

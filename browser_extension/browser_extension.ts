@@ -40,10 +40,8 @@ import {
     RangeSetBuilder as RangeSetBuilderO,
     RangeValue as RangeValueO,
 } from "./codemirror_range_objects";
-import type {
-    LatexSuiteCMSettings,
-    LatexSuitePluginSettings,
-} from "src/settings/default_settings";
+import type { LatexSuiteCMSettings } from "src/settings/raw_settings";
+import type { LatexSuitePluginSettings } from "src/settings/raw_settings";
 import { SettingsSchema } from "src/settings/settings";
 import type { LatexSuiteFacet } from "src/settings/settings";
 import { set_codemirror_objects } from "./set_codemirror_objects";

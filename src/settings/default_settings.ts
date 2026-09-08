@@ -1,17 +1,9 @@
 import { DEFAULT_SNIPPETS } from "src/utils/default_snippets";
 import { DEFAULT_SNIPPET_VARIABLES } from "src/utils/default_snippet_variables";
-import type { RawSnippet, SnippetVariables } from "src/snippets/parse";
 import type {
-    latexSuiteBasicSettingsSchema,
-    latexSuiteKeymapSettingsSchema,
-    LatexSuiteParsedSettingsSchema,
-    LatexSuiteRawOrParsedSettingsSchema,
-    LatexSuiteRawSettingsSchema,
-    SettingsSchema,
-    SnippetSchemaAsync,
-} from "./settings";
-import type * as v from "valibot";
-import type { Snippet } from "src/snippets/snippets";
+    LatexSuitePluginSettings,
+    LatexSuiteRawSettings,
+} from "./raw_settings";
 
 export const DEFAULT_SETTINGS = {
     snippets: DEFAULT_SNIPPETS,
@@ -53,28 +45,3 @@ export const DEFAULT_SETTINGS = {
     matrixShortcutsMacroNames: "eqnarray",
     autoEnlargeBracketsTriggers: "sum, int, frac, prod, bigcup, bigcap",
 } as const satisfies LatexSuitePluginSettings & LatexSuiteRawSettings;
-
-export type LatexSuiteKeymapSettings = v.InferInput<
-    typeof latexSuiteKeymapSettingsSchema
->;
-
-export type LatexSuitePluginSettings = {
-    snippets: Array<RawSnippet | Snippet>;
-    snippetVariables: SnippetVariables;
-} & LatexSuiteBasicSettings &
-    v.InferInput<typeof LatexSuiteRawOrParsedSettingsSchema> &
-    LatexSuiteKeymapSettings;
-export type LatexSuiteBasicSettings = v.InferOutput<
-    typeof latexSuiteBasicSettingsSchema
->;
-export type LatexSuiteRawSettings = v.InferInput<
-    typeof LatexSuiteRawSettingsSchema
->;
-export type LatexSuiteParsedSettings = v.InferInput<
-    typeof LatexSuiteParsedSettingsSchema
->;
-
-export type LatexSuiteCMSettings = v.InferOutput<typeof SettingsSchema>;
-export type LatexSuitePluginSettingsRaw = v.InferInput<typeof SettingsSchema> &
-    v.InferInput<typeof SnippetSchemaAsync> &
-    v.InferInput<typeof LatexSuiteRawSettingsSchema>;

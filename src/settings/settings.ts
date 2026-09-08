@@ -8,10 +8,8 @@ import {
     type SnippetVariables,
 } from "src/snippets/parse";
 import type { Facet } from "@codemirror/state";
-import type {
-    LatexSuiteCMSettings,
-    LatexSuitePluginSettings,
-} from "./default_settings";
+import type { LatexSuiteCMSettings } from "./raw_settings";
+import type { LatexSuitePluginSettings } from "./raw_settings";
 import * as v from "valibot";
 import { sortSnippets } from "src/snippets/sort";
 import json5 from "json5";

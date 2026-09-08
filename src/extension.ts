@@ -1,8 +1,7 @@
 import { handleUpdate, onKeydown } from "./latex_suite";
-import type { LatexSuiteCMSettings } from "./settings/default_settings";
-import type { LatexSuitePluginSettings } from "./settings/default_settings";
+import type { LatexSuiteCMSettings } from "./settings/raw_settings";
+import type { LatexSuitePluginSettings } from "./settings/raw_settings";
 import { processLatexSuiteSettings } from "./settings/settings";
-import { setLatexSuiteConfig } from "./settings/raw_settings";
 import { mkConcealPlugin } from "./editor_extensions/conceal";
 
 import type { SnippetVariables, RawSnippet } from "./snippets/parse";
@@ -18,11 +17,12 @@ import { getKeymaps } from "./keymaps";
 import { Prec, type Extension } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 import { snippetExtensions } from "./snippets/codemirror/extensions";
+import { getLatexSuiteConfigExtension } from "./snippets/codemirror/config";
 
 export function main(settings: LatexSuitePluginSettings) {
     const CMSettings: LatexSuiteCMSettings =
         processLatexSuiteSettings(settings);
-    const latexSuiteConfig = setLatexSuiteConfig(CMSettings);
+    const latexSuiteConfig = getLatexSuiteConfigExtension(CMSettings);
     const extensions: Extension[] = [];
 
     const snippet_leaf_extension: Extension[] = [

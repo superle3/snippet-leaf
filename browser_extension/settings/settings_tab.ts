@@ -1,4 +1,4 @@
-import type { LatexSuitePluginSettingsRaw } from "src/settings/default_settings";
+import type { LatexSuitePluginSettingsRaw } from "src/settings/raw_settings";
 import { DEFAULT_SETTINGS_RAW } from "src/settings/default_raw_settings";
 import { EditorView, type ViewUpdate } from "@codemirror/view";
 import { basicSetup } from "./ui/snippets_editor/codemirror_setup";
