@@ -1,4 +1,4 @@
-import { handleUpdate, onKeydown } from "./latex_suite";
+import { getKeymaps, handleUpdate, onKeydown } from "./latex_suite";
 import type { LatexSuiteCMSettings } from "./settings/raw_settings";
 import type { LatexSuitePluginSettings } from "./settings/raw_settings";
 import { processLatexSuiteSettings } from "./settings/settings";
@@ -13,9 +13,9 @@ import {
 } from "./editor_extensions/highlight_brackets";
 import { createContextPlugin } from "./editor_context/context";
 import { createMathBoundsPlugin } from "./editor_context/mathbounds";
-import { getKeymaps } from "./keymaps";
+import { getKeymaps as getEditorCommandKeymaps } from "./keymaps";
 import { Prec, type Extension } from "@codemirror/state";
-import { EditorView } from "@codemirror/view";
+import { EditorView, keymap } from "@codemirror/view";
 import { snippetExtensions } from "./snippets/codemirror/extensions";
 import { getLatexSuiteConfigExtension } from "./snippets/codemirror/config";
 
@@ -34,7 +34,8 @@ export function main(settings: LatexSuitePluginSettings) {
             }),
         ),
         EditorView.updateListener.of(handleUpdate),
-        getKeymaps(settings),
+        getEditorCommandKeymaps(settings),
+        Prec.highest(keymap.of(getKeymaps(CMSettings))),
         latexSuiteConfig,
         createContextPlugin(),
         createMathBoundsPlugin(),

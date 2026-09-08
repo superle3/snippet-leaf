@@ -175,7 +175,6 @@ const SnippetDebugLevelSchema = v.union([
 export type snippetDebugLevel = v.InferOutput<typeof SnippetDebugLevelSchema>;
 export const latexSuiteBasicSettingsSchema = v.object({
     snippetsEnabled: v.boolean(),
-    snippetsTrigger: v.union([v.literal("Tab"), v.literal(" ")]),
     defaultSnippetVersion: v.union([v.literal(1), v.literal(2)]),
     suppressSnippetTriggerOnIME: v.boolean(),
     removeSnippetWhitespace: v.boolean(),
@@ -195,11 +194,20 @@ export const latexSuiteBasicSettingsSchema = v.object({
     autoEnlargeBracketsSpace: v.boolean(),
     wordDelimiters: v.string(),
     snippetDebug: SnippetDebugLevelSchema,
+    snippetRecursion: v.number(),
 });
 
 export const latexSuiteKeymapSettingsSchema = v.object({
     concealToggleKey: v.string(),
     toggleAllFeaturesKey: v.string(),
+    snippetsTrigger: v.string(),
+    snippetNextTabstopTrigger: v.string(),
+    snippetPreviousTabstopTrigger: v.string(),
+    taboutTrigger: v.string(),
+    matrixShortcutsNewlineTrigger: v.string(),
+    matrixShortcutsCellTrigger: v.string(),
+    matrixShortcutsExitTrigger: v.string(),
+    autofractionTrigger: v.string(),
 });
 
 export type NestedArray<T> = Array<T | NestedArray<T>>;

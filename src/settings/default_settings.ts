@@ -11,7 +11,6 @@ export const DEFAULT_SETTINGS = {
 
     // Basic settings
     snippetsEnabled: true,
-    snippetsTrigger: "Tab",
     defaultSnippetVersion: 2,
     suppressSnippetTriggerOnIME: true,
     removeSnippetWhitespace: false,
@@ -33,8 +32,9 @@ export const DEFAULT_SETTINGS = {
     autoEnlargeBracketsSpace: true,
     wordDelimiters: "., +-\\n\t:;!?\\/{}[]()=~$",
     snippetDebug: "off",
+    snippetRecursion: 0,
 
-    // keys
+    // editor command keys
     concealToggleKey: "",
     toggleAllFeaturesKey: "",
 
@@ -44,4 +44,14 @@ export const DEFAULT_SETTINGS = {
         "pmatrix, cases, align, gather, bmatrix, Bmatrix, vmatrix, Vmatrix, array, matrix",
     matrixShortcutsMacroNames: "eqnarray",
     autoEnlargeBracketsTriggers: "sum, int, frac, prod, bigcup, bigcap",
+
+    // keys
+    snippetsTrigger: "Tab",
+    snippetNextTabstopTrigger: "Tab",
+    snippetPreviousTabstopTrigger: "Shift-Tab",
+    autofractionTrigger: "/",
+    matrixShortcutsCellTrigger: "Tab",
+    matrixShortcutsNewlineTrigger: "Enter",
+    matrixShortcutsExitTrigger: "Shift-Enter",
+    taboutTrigger: "Tab",
 } as const satisfies LatexSuitePluginSettings & LatexSuiteRawSettings;

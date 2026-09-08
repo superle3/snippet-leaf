@@ -280,7 +280,7 @@ class LatexSuiteSettingTab {
     }
 
     addHeading(containerEl: HTMLElement, name: string, _icon = "math") {
-        new Setting(containerEl).setName(name).setHeading();
+        return new Setting(containerEl).setName(name).setHeading();
     }
 
     display() {
@@ -295,6 +295,7 @@ class LatexSuiteSettingTab {
             this.displayAutoEnlargeBracketsSettings();
             this.displayKeymapSettings();
             this.displayAdvancedSnippetSettings();
+            this.displayExperimentalSettings();
             this.displayImportExportSettings();
         }
     }
@@ -733,7 +734,7 @@ class LatexSuiteSettingTab {
             .addTextArea((text) =>
                 text
                     .setPlaceholder(
-                        this.plugin.settings.autofractionExcludedEnvs,
+                        DEFAULT_SETTINGS_RAW.autofractionExcludedEnvs,
                     )
                     .setValue(this.plugin.settings.autofractionExcludedEnvs)
                     .onChange(async (value) => {
@@ -803,6 +804,24 @@ class LatexSuiteSettingTab {
                         await this.plugin.saveSettings();
                     }),
             );
+
+        new Setting(containerEl)
+            .setName("Macros")
+            .setDesc(
+                "A list of macro names to run the matrix shortcuts in, separated by commas.",
+            )
+            .addText((text) =>
+                text
+                    .setPlaceholder(
+                        DEFAULT_SETTINGS_RAW.matrixShortcutsMacroNames,
+                    )
+                    .setValue(this.plugin.settings.matrixShortcutsMacroNames)
+                    .onChange(async (value) => {
+                        this.plugin.settings.matrixShortcutsMacroNames = value;
+
+                        await this.plugin.saveSettings();
+                    }),
+            );
     }
 
     displayTaboutSettings() {
@@ -817,6 +836,36 @@ class LatexSuiteSettingTab {
                     .setValue(this.plugin.settings.taboutEnabled)
                     .onChange(async (value) => {
                         this.plugin.settings.taboutEnabled = value;
+                        await this.plugin.saveSettings();
+                    }),
+            );
+        new Setting(containerEl)
+            .setName("Closing brackets")
+            .setDesc(
+                "A list of closing brackets for tabout, separated by commas.",
+            )
+            .addText((text) =>
+                text
+                    .setPlaceholder(DEFAULT_SETTINGS_RAW.taboutClosingSymbols)
+                    .setValue(this.plugin.settings.taboutClosingSymbols)
+                    .onChange(async (value) => {
+                        this.plugin.settings.taboutClosingSymbols = value;
+
+                        await this.plugin.saveSettings();
+                    }),
+            );
+
+        new Setting(containerEl)
+            .setName("Exit equation only on EOL")
+            .setDesc(
+                "Whether to exit the equation only when the cursor is at the end of the line.",
+            )
+            .addToggle((toggle) =>
+                toggle
+                    .setValue(this.plugin.settings.taboutExitEquationOnlyOnEOL)
+                    .onChange(async (value) => {
+                        this.plugin.settings.taboutExitEquationOnlyOnEOL =
+                            value;
                         await this.plugin.saveSettings();
                     }),
             );
@@ -858,6 +907,20 @@ class LatexSuiteSettingTab {
                         await this.plugin.saveSettings();
                     }),
             );
+
+        new Setting(containerEl)
+            .setName("Space")
+            .setDesc(
+                "Whether to add a space after \\left( and before \\right) or not",
+            )
+            .addToggle((toggle) =>
+                toggle
+                    .setValue(this.plugin.settings.autoEnlargeBracketsSpace)
+                    .onChange(async (value) => {
+                        this.plugin.settings.autoEnlargeBracketsSpace = value;
+                        await this.plugin.saveSettings();
+                    }),
+            );
     }
 
     displayKeymapSettings() {
@@ -892,6 +955,37 @@ class LatexSuiteSettingTab {
                         await this.plugin.saveSettings();
                     }),
             );
+        const name_map = {
+            snippet: "Expand manual snippets",
+            "next-tabstop": "Next tabstop",
+            "prev-tabstop": "Previous tabstop",
+            tabout: "Tabout",
+            "matrix-newline": 'Matrix: insert newline and "\\\\"',
+            "matrix-cell": 'Matrix: insert " & "',
+            "matrix-exit": "Matrix: move to the next line",
+            "auto-fraction": "Expand fraction",
+        };
+        const settings = [
+            ["snippet", "snippetsTrigger"],
+            ["next-tabstop", "snippetNextTabstopTrigger"],
+            ["prev-tabstop", "snippetPreviousTabstopTrigger"],
+            ["auto-fraction", "autofractionTrigger"],
+            ["matrix-newline", "matrixShortcutsNewlineTrigger"],
+            ["matrix-cell", "matrixShortcutsCellTrigger"],
+            ["matrix-exit", "matrixShortcutsExitTrigger"],
+            ["tabout", "taboutTrigger"],
+        ] as const;
+        for (const [name, key] of settings) {
+            new Setting(containerEl).setName(name_map[name]).addText((text) =>
+                text
+                    .setPlaceholder(DEFAULT_SETTINGS_RAW[key])
+                    .setValue(this.plugin.settings[key])
+                    .onChange(async (value) => {
+                        this.plugin.settings[key] = value;
+                        await this.plugin.saveSettings();
+                    }),
+            );
+        }
     }
 
     displayAdvancedSnippetSettings() {
@@ -982,8 +1076,76 @@ class LatexSuiteSettingTab {
                         await this.plugin.saveSettings();
                     }),
             );
+
+        new Setting(containerEl)
+            .setName("Snippet debug mode")
+            .setDesc(
+                'Set the level of debug information to log about snippet expansion. Set to "info" or "verbose" to help identify issues with snippet syntax or why a snippet is not expanding. Verbose mode will log most information to the developer console on debug level.',
+            )
+            .addDropdown((dropdown) =>
+                dropdown
+                    .addOption("off", "Off")
+                    .addOption("info", "Info")
+                    .addOption("verbose", "Verbose")
+                    .setValue(this.plugin.settings.snippetDebug)
+                    .onChange(async (value) => {
+                        this.plugin.settings.snippetDebug = value as
+                            | "off"
+                            | "info"
+                            | "verbose";
+                        await this.plugin.saveSettings();
+                    }),
+            );
         //The toggle both hides the settings and makes the plugin not load the vim commands on startup.
         // the vim toggle is loaded before the rest since expanding down looks better.
+    }
+
+    private displayExperimentalSettings() {
+        const containerEl = this.containerEl;
+        this.addHeading(
+            containerEl,
+            "Experimental features",
+            "experiment",
+        ).setDesc(
+            "Features that are still in testing and may need user feedback. Backwards compatibility may break for these features/ these settings can be overriden.",
+        );
+        const fragment = new DocumentFragment();
+        const span = document.createElement("span");
+        span.textContent =
+            "How many times to run snippets in a row. Set to 0 disable recursion. ";
+        fragment.appendChild(span);
+        const link = document.createElement("a");
+        link.href =
+            "https://github.com/artisticat1/obsidian-latex-suite/pull/536";
+        link.textContent = "Related pr/feedback.";
+        link.target = "_blank";
+        fragment.appendChild(link);
+        new Setting(containerEl)
+            .setName("Snippet recursion")
+            .setDesc(fragment)
+            .addText((text) =>
+                text
+                    .setPlaceholder(
+                        String(DEFAULT_SETTINGS_RAW.snippetRecursion),
+                    )
+                    .setValue(String(this.plugin.settings.snippetRecursion))
+                    .onChange(async (value) => {
+                        try {
+                            const snippetRecursion = parseInt(value, 10);
+                            if (snippetRecursion < 0) {
+                                console.error(
+                                    "Snippet recursion must be a non-negative integer.",
+                                );
+                                return;
+                            }
+                            this.plugin.settings.snippetRecursion =
+                                snippetRecursion;
+                        } catch {
+                            return;
+                        }
+                        await this.plugin.saveSettings();
+                    }),
+            );
     }
 
     createSnippetsEditor(snippetsSetting: Setting) {
