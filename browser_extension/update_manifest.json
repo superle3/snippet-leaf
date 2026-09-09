@@ -29,6 +29,10 @@
                 {
                     "version": "0.0.13",
                     "update_link": "https://github.com/superle3/snippet-leaf/releases/download/v0.0.13/snippetleaf-0.0.13.xpi"
+                },
+                {
+                    "version": "0.1.0",
+                    "update_link": "https://github.com/superle3/snippet-leaf/releases/download/v0.1.0/snippetleaf-0.1.0.xpi"
                 }
             ]
         }
