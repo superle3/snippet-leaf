@@ -1,6 +1,6 @@
 import { EditorView } from "@codemirror/view";
 import type { EditorState } from "@codemirror/state";
-import { Compartment, Facet } from "@codemirror/state";
+import { Compartment, Facet, Prec, StateEffect } from "@codemirror/state";
 import { processLatexSuiteSettings } from "src/settings/settings";
 import type {
     LatexSuiteCMSettings,
@@ -28,18 +28,28 @@ export function getLatexSuiteConfig(viewOrState: EditorView | EditorState) {
     return state.facet(latexSuiteConfig);
 }
 
-const settingsCompartment = new Compartment();
 export function getLatexSuiteConfigExtension(
     pluginSettings: LatexSuiteCMSettings,
 ) {
-    return settingsCompartment.of(latexSuiteConfig.of(pluginSettings));
+    return latexSuiteConfig.of(pluginSettings);
 }
 
+const settingsCompartment = new Compartment();
 export function reloadLatexSuiteFacetCompartment(
     settings: Partial<LatexSuitePluginSettings>,
     view: EditorView,
 ) {
     const old_settings = getLatexSuiteConfig(view);
     const newSettings = Object.assign({}, old_settings, settings);
-    return settingsCompartment.reconfigure(latexSuiteConfig.of(newSettings));
+    const oldExtension = settingsCompartment.get(view.state);
+    const settingsExtension = Prec.high(
+        getLatexSuiteConfigExtension(newSettings),
+    );
+    if (oldExtension) {
+        return settingsCompartment.reconfigure(settingsExtension);
+    } else {
+        return StateEffect.appendConfig.of([
+            settingsCompartment.of(settingsExtension),
+        ]);
+    }
 }

@@ -359,6 +359,11 @@ export const mkConcealPlugin = (revealTimeout: number) => {
 
             update(update: ViewUpdate) {
                 const settings = getLatexSuiteConfig(update.view);
+                if (!settings.concealEnabled) {
+                    this.decorations = Decoration.none;
+                    this.atomicRanges = RangeSet.empty;
+                    return;
+                }
                 const updateConceal = isUpdateConcealEffect(update);
                 if (
                     !(
