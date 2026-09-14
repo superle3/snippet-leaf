@@ -61,6 +61,7 @@ export const basicSetup = (snippets: string): Extension[] => {
         target: ts.ScriptTarget.ES2015,
         module: ts.ModuleKind.ES2015,
         strict: false,
+        moduleResolution: ts.ModuleResolutionKind.Bundler,
     };
 
     const env = createVirtualTypeScriptEnvironment(

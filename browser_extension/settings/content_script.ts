@@ -144,6 +144,7 @@ const compiler = (source: string) => {
             target: ts.ScriptTarget.ESNext,
             lib: ["ESNext"],
             skipLibCheck: true,
+            moduleResolution: ts.ModuleResolutionKind.Bundler,
         },
         transformers: {
             after: [transformer],
