@@ -1,5 +1,34 @@
 # Changelog
 
+## 0.1.1 (2026-09-14)
+
+### Bug fixes
+
+- Wrong compiler options for typescript cause the settings editor not to load
+- Settings weren't reloaded due to nested codemirror compartments.
+
+## 0.1.0 (2026-09-09)
+
+- pull upstream changes from 1.9.8 - 1.13.0
+
+### Settings added
+
+```ts
+type addedSettings = {
+    taboutExitEquationOnlyOnEOL: true;
+    taboutClosingSymbols: "), ], \\rbrack, \\}, \\rbrace, \\rangle, \\rvert, \\rVert, \\rfloor, \\rceil, \\urcorner, }";
+    matrixShortcutsMacroNames: "eqnarray";
+    snippetsTrigger: "Tab";
+    snippetNextTabstopTrigger: "Tab";
+    snippetPreviousTabstopTrigger: "Shift-Tab";
+    autofractionTrigger: "/";
+    matrixShortcutsCellTrigger: "Tab";
+    matrixShortcutsNewlineTrigger: "Enter";
+    matrixShortcutsExitTrigger: "Shift-Enter";
+    taboutTrigger: "Tab";
+};
+```
+
 ## 0.0.13 (2026-05-25)
 
 ### Features
