@@ -1,5 +1,8 @@
 import type { SnippetVersion } from "../parse";
-import { VISUAL_SNIPPET_MAGIC_SELECTION_PLACEHOLDERv2 } from "../snippet_version";
+import {
+    VISUAL_SNIPPET_MAGIC_SELECTION_PLACEHOLDERv1,
+    VISUAL_SNIPPET_MAGIC_SELECTION_PLACEHOLDERv2,
+} from "../snippet_version";
 import type { TabstopSpec } from "../tabstop";
 
 type Captures = { match: string[]; groups: Record<string, string> };
@@ -292,12 +295,17 @@ export class VisualSnippetNode extends BaseNode {
     }
 
     expandVisual(captures: Captures): string {
-        const pattern = VISUAL_SNIPPET_MAGIC_SELECTION_PLACEHOLDERv2;
-        if (!captures.groups[pattern]) {
+        const selection =
+            captures.groups[VISUAL_SNIPPET_MAGIC_SELECTION_PLACEHOLDERv2];
+        if (selection === undefined) {
             throw new Error(
-                `VisualSnippetNode requires the presence of a capture group named ${pattern} to indicate the position of the visual selection`,
+                `VisualSnippetNode requires the presence of a capture group named ${VISUAL_SNIPPET_MAGIC_SELECTION_PLACEHOLDERv2} to indicate the position of the visual selection`,
             );
         }
+        const pattern =
+            this.version === 1
+                ? VISUAL_SNIPPET_MAGIC_SELECTION_PLACEHOLDERv1
+                : VISUAL_SNIPPET_MAGIC_SELECTION_PLACEHOLDERv2;
         return this.snippet.replaceAll(pattern, captures.groups[pattern]);
     }
 }
