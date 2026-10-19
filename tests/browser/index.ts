@@ -96,6 +96,13 @@ function setSettings(settings: Partial<LatexSuitePluginSettings>) {
     });
 }
 
+function createNormalView(doc: string) {
+    return new EditorView({
+        extensions,
+        doc,
+    });
+}
+
 declare module "@codemirror/view" {
     interface EditorView {
         setDoc(doc: string, pos?: number): void;
@@ -110,7 +117,12 @@ view.setDoc = function (doc: string, pos?: number) {
 
 view.focus();
 window.view = view;
-window.conceal = conceal;
+window.test = {
+    conceal: (view) =>
+        conceal(view, {}, getLatexSuiteConfig(view.state).concealMaps),
+    createNormalView: createNormalView,
+};
+
 window.setSettings = setSettings;
 window.getLatexSuiteSettings = (state: EditorState) =>
     getLatexSuiteConfig(state);
@@ -125,7 +137,10 @@ window.dispatchEvent(
 declare global {
     interface Window {
         view: EditorView;
-        conceal: typeof conceal;
+        test: {
+            conceal: (view: EditorView) => ReturnType<typeof conceal>;
+            createNormalView: (doc: string) => EditorView;
+        };
         setSettings: typeof setSettings;
         getLatexSuiteSettings: (state: EditorState) => LatexSuiteCMSettings;
         contextPlugin: typeof contextPlugin;
