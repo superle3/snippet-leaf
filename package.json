@@ -20,7 +20,8 @@
         "format:commit": "pretty-quick --staged",
         "build:rollup": "rollup -c",
         "build:greasemonkey": "tsx esbuild.config.mts userscript",
-        "version": "tsx version-bump.mts && npm run format && git add .",
+        "version": "npm test && jiti version-bump.mts && npm run format && git add .",
+        "postversion": "jiti scripts/post_version.ts",
         "web:update_manifest": "tsx scripts/update_manifest.ts",
         "test": "vitest --run",
         "test:watch": "vitest"
