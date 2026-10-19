@@ -33,19 +33,17 @@ import type {
     Vim as VimC,
     getCM as getCMC,
 } from "@replit/codemirror-vim";
-import * as v from "valibot";
 
 import {
     RangeSet as RangeSetO,
     RangeSetBuilder as RangeSetBuilderO,
     RangeValue as RangeValueO,
 } from "./codemirror_range_objects";
-import type { LatexSuiteCMSettings } from "src/settings/raw_settings";
+import type { LatexSuiteIntermediateSettings } from "src/settings/raw_settings";
 import type { LatexSuitePluginSettings } from "src/settings/raw_settings";
-import { SettingsSchema } from "src/settings/settings";
 import type { LatexSuiteFacet } from "src/settings/settings";
 import { set_codemirror_objects } from "./set_codemirror_objects";
-import { set_api } from "./set_api";
+import type { Result } from "../src/extension";
 
 type CodeMirrorExt = {
     Decoration: typeof DecorationC;
@@ -103,7 +101,7 @@ async function browser_main() {
                 if (!view) reject("No view found");
                 const conf_interval = setInterval(() => {
                     //@ts-expect-error - internal type.
-                    if (view.state?.config.base.length > 0) resolve(view);
+                    if (view.state?.config?.base.length > 0) resolve(view);
                     clearInterval(conf_interval);
                 }, 100);
             },
@@ -128,38 +126,62 @@ async function browser_main() {
             Annotation,
         };
         set_codemirror_objects(obj);
-        set_api(obj);
-        const main_extension = await import("../src/extension").then(
-            (mod) => mod.main,
-        );
+        const {
+            main: main_extension,
+            set_api,
+            parse_settings,
+        } = await import("../src/extension");
+        set_api(obj, {
+            addMathlessMacros: () => {},
+            addRawConcealMaps: () => {},
+            addUpdateHandler: () => {},
+        });
 
         const latexSuiteConfigCompartment = new Compartment();
         extensions.push(latexSuiteConfigCompartment.of([]));
-        settingsCallback(view, latexSuiteConfigCompartment, main_extension);
+        settingsCallback(
+            view,
+            latexSuiteConfigCompartment,
+            main_extension,
+            parse_settings,
+        );
     });
 }
 
 const loadSettings = () => {
     let view: EditorViewC | null = null;
     let latexSuiteConfigCompartment: CompartmentC | null = null;
-    let cachedSettings: LatexSuiteCMSettings | null = null;
+    let cachedSettings: LatexSuiteIntermediateSettings | null = null;
     let main_extension_ref:
         | ((settings: LatexSuitePluginSettings) => ExtensionC)
+        | null = null;
+    let parse_settings_ref:
+        | ((
+              settings: unknown,
+          ) => Promise<Result<LatexSuiteIntermediateSettings, unknown>>)
         | null = null;
     const settingsCallback = (
         viewTemp: EditorViewC,
         latexSuiteConfigCompartmentTemp: CompartmentC,
         main_extension: (settings: LatexSuitePluginSettings) => ExtensionC,
+        parse_settings: (
+            settings: unknown,
+        ) => Promise<Result<LatexSuiteIntermediateSettings, unknown>>,
     ) => {
         view = viewTemp;
         latexSuiteConfigCompartment = latexSuiteConfigCompartmentTemp;
         main_extension_ref = main_extension;
+        parse_settings_ref = parse_settings;
         if (!cachedSettings) {
             window.dispatchEvent(new CustomEvent("snippet_leaf_config_listen"));
         } else {
             view.dispatch({
                 effects: latexSuiteConfigCompartment.reconfigure(
-                    main_extension(cachedSettings),
+                    main_extension({
+                        ...cachedSettings,
+                        snippets: cachedSettings.snippets,
+                        concealMaps: cachedSettings.concealMaps,
+                    }),
                 ),
             });
         }
@@ -168,44 +190,60 @@ const loadSettings = () => {
     settingsCallback.latexSuiteConfigCompartment = null as null | CompartmentC;
     settingsCallback.latexSuiteConfig = null as null | LatexSuiteFacet;
     window.addEventListener("snippet_leaf_config_send", (e) => {
-        if (!view || !latexSuiteConfigCompartment || !main_extension_ref)
+        if (
+            !view ||
+            !latexSuiteConfigCompartment ||
+            !main_extension_ref ||
+            !parse_settings_ref
+        )
             return;
         const main_extension = main_extension_ref;
         const viewTemp = view;
         const latexSuiteConfigCompartmentTemp = latexSuiteConfigCompartment;
+        const parse_settings = parse_settings_ref;
         const evt = e as CustomEvent<string>;
         const config: unknown =
             typeof evt.detail === "string"
                 ? JSON.parse(evt.detail)
                 : evt.detail;
-        v.safeParseAsync(SettingsSchema, config).then((parsed_settings) => {
-            if (!parsed_settings.success) {
+        parse_settings(config).then((parsed_settings) => {
+            if (!parsed_settings.ok) {
+                showNotice(
+                    "Error parsing snippet leaf settings, see console for more info",
+                );
                 return;
             }
-            cachedSettings = parsed_settings.output;
+            showNotice("Snippetleaf settings updated");
+            cachedSettings = parsed_settings.value;
             viewTemp.dispatch({
                 effects: latexSuiteConfigCompartmentTemp.reconfigure(
-                    main_extension(parsed_settings.output),
+                    main_extension(parsed_settings.value),
                 ),
             });
-            const messageBox = document.createElement("div");
-            messageBox.style.position = "fixed";
-            messageBox.style.top = "2rem";
-            messageBox.style.right = "1rem";
-            messageBox.style.backgroundColor = "rgba(0, 0, 0, 0.7)";
-            messageBox.style.color = "white";
-            messageBox.style.padding = "10px";
-            messageBox.style.borderRadius = "5px";
-            messageBox.style.zIndex = "1000";
-            messageBox.textContent = "Snippetleaf settings updated!";
-            window.document.body.appendChild(messageBox);
-
-            setTimeout(() => {
-                document.body.removeChild(messageBox);
-            }, 3000);
         });
     });
     return settingsCallback;
 };
+function showNotice(message: string | DocumentFragment) {
+    const messageBox = document.createElement("div");
+    messageBox.style.position = "fixed";
+    messageBox.style.top = "2rem";
+    messageBox.style.right = "1rem";
+    messageBox.style.backgroundColor = "rgba(0, 0, 0, 0.7)";
+    messageBox.style.color = "white";
+    messageBox.style.padding = "10px";
+    messageBox.style.borderRadius = "5px";
+    messageBox.style.zIndex = "1000";
+    if (typeof message === "string") {
+        messageBox.textContent = message;
+    } else {
+        messageBox.appendChild(message);
+    }
+    window.document.body.appendChild(messageBox);
+
+    setTimeout(() => {
+        document.body.removeChild(messageBox);
+    }, 3000);
+}
 
 browser_main();

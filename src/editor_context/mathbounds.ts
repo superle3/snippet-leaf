@@ -170,11 +170,11 @@ class MathBoundsPlugin {
     private addMathBound = (bound: EquationInfo) => {
         if (this.mathBounds.length === 0) {
             this.mathBounds.push(bound);
-        } else if (bound.outer_end <= this.mathBounds[0].outer_start) {
+        } else if (bound.outer_end <= this.mathBounds[0]!.outer_start) {
             this.mathBounds.unshift(bound);
         } else if (
             bound.outer_start >=
-            this.mathBounds[this.mathBounds.length - 1].outer_end
+            this.mathBounds[this.mathBounds.length - 1]!.outer_end
         ) {
             this.mathBounds.push(bound);
         } else {
@@ -183,7 +183,7 @@ class MathBoundsPlugin {
                 right = this.mathBounds.length - 1;
             while (left <= right) {
                 const mid = (left + right) >> 1;
-                if (bound.outer_start < this.mathBounds[mid].outer_start) {
+                if (bound.outer_start < this.mathBounds[mid]!.outer_start) {
                     right = mid - 1;
                 } else {
                     left = mid + 1;
@@ -215,11 +215,7 @@ class MathBoundsPlugin {
         return this.equationsOverlays;
     }
 }
-let mathBoundsPlugin: ViewPlugin<MathBoundsPlugin>;
-export const createMathBoundsPlugin = () => {
-    mathBoundsPlugin = ViewPlugin.fromClass(MathBoundsPlugin);
-    return mathBoundsPlugin;
-};
+export const mathBoundsPlugin = ViewPlugin.fromClass(MathBoundsPlugin);
 
 export const getMathBoundsPlugin = (view: EditorView) => {
     const plugin = view.plugin(mathBoundsPlugin);

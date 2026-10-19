@@ -1,12 +1,12 @@
 import type { EditorView } from "@codemirror/view";
 import { ViewPlugin } from "@codemirror/view";
 import { SnippetChangeSpec } from "./snippet_change_spec";
+import type { EditorState } from "@codemirror/state";
 import {
     applyReplacements,
     type Replacement,
     type ResultInsert,
 } from "../luasnip_api/node";
-import type { EditorState } from "@codemirror/state";
 export const snippetQueuePlugin = ViewPlugin.fromClass(
     class {
         snippetQueue: SnippetChangeSpec[] = [];
@@ -15,21 +15,14 @@ export const snippetQueuePlugin = ViewPlugin.fromClass(
             this.snippetQueue = [];
         }
 
-        QueueSnippets(values: SnippetChangeSpec[]) {
-            this.snippetQueue = this.snippetQueue.concat(values);
+        executeSnippetQueue() {
+            const queue = this.snippetQueue;
+            this.snippetQueue = [];
+            return queue;
         }
 
-        get snippetQueueValue(): SnippetChangeSpec[] {
-            return this.snippetQueue.map(
-                (s) =>
-                    new SnippetChangeSpec(
-                        s.from,
-                        s.to,
-                        s.insert,
-                        s.keyPressed,
-                        s.after,
-                    ),
-            );
+        QueueSnippets(values: SnippetChangeSpec[]) {
+            this.snippetQueue = this.snippetQueue.concat(values);
         }
     },
 );
@@ -74,7 +67,7 @@ const keepIndentAndCallout = (
     const replacementInsert: Replacement[] = [];
     let offset = 0;
     for (const match of matches) {
-        const p1 = match[1];
+        const p1 = match[1]!;
         // not preserving misalignment when indent level is increased
         const newIndent =
             "\n" + leadingIndents + " ".repeat(4).repeat(p1.length);

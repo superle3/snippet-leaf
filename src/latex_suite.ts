@@ -1,94 +1,167 @@
-import type { EditorView, KeyBinding, ViewUpdate } from "@codemirror/view";
-
+import type { EditorView, ViewUpdate } from "@codemirror/view";
+import { ViewPlugin, type KeyBinding, keymap } from "@codemirror/view";
 import { runSnippets } from "./features/run_snippets";
 import { runAutoFraction } from "./features/autofraction";
-import { tabout, shouldTaboutByCloseBracket } from "./features/tabout";
+import {
+    tabout,
+    shouldTaboutByCloseBracket,
+    reversetabout,
+} from "./features/tabout";
+import {
+    addCellMatrixShortcut,
+    exitMatrixShortCut,
+    newlineMatrixShortcut,
+    priorityTaboutMatrixShortcut,
+} from "./features/matrix_shortcuts";
 
 import { getContextPlugin } from "./editor_context/context";
-import { replaceRange } from "./utils/editor_utils";
 import { setSelectionToNextTabstop } from "./snippets/snippet_management";
-import { removeAllTabstops } from "./snippets/codemirror/tabstops_state_field";
 import { getLatexSuiteConfig } from "./snippets/codemirror/config";
-
-// import { handleMathTooltip } from "./editor_extensions/math_tooltip";
-import { isComposing } from "./utils/editor_utils";
 import { clearSnippetQueue } from "./snippets/codemirror/snippet_queue_state_field";
 import { handleUndoRedo } from "./snippets/codemirror/history";
+
+import { isComposing, forceEndComposition } from "./utils/editor_utils";
+import { autoDelete$ } from "./editor_extensions/autoDelete$";
 import {
-    newlineMatrixShortcut,
-    exitMatrixShortCut,
-    priorityTaboutMatrixShortcut,
-    addCellMatrixShortcut,
-} from "./features/matrix_shortcuts";
-import type { LatexSuiteCMSettings } from "codemirror_extension/codemirror_extensions";
+    getFilePathFromState,
+    notice,
+} from "./editor_extensions/obsidian_utils";
+import { serializeSnippetLike, type Snippet } from "./snippets/snippets";
+import type {
+    GroupedSnippets,
+    LatexSuiteCMSettings,
+} from "./settings/raw_settings";
+import { StateField, type EditorState } from "@codemirror/state";
 
 export const handleUpdate = (update: ViewUpdate) => {
-    // const settings = getLatexSuiteConfig(update.state, latexSuiteConfig);
-
-    // The math tooltip handler is driven by view updates because it utilizes
-    // information about visual line, which is not available in EditorState
-    // if (settings.mathPreviewEnabled) {
-    //     handleMathTooltip(update);
-    // }
-
-    handleUndoRedo(update);
+    if (handleUndoRedo(update)) {
+        return;
+    }
 };
 
-export const onKeydown = (
-    event: KeyboardEvent,
-    view: EditorView,
-): boolean | void => {
-    const success = handleKeydown(
-        event.key,
-        event.shiftKey,
-        event.ctrlKey || event.metaKey,
-        isComposing(view, event),
-        view,
-    );
+export const keyboardEventPlugin = ViewPlugin.fromClass(
+    class {
+        lastKeyboardEvent: KeyboardEvent | null = null;
 
-    if (success) event.preventDefault();
+        onKeydown(event: KeyboardEvent, view: EditorView) {
+            if (
+                event.key == "Unidentified" ||
+                event.key == "Process" ||
+                event.key == "Dead"
+            ) {
+                this.lastKeyboardEvent = event;
+                return;
+            }
+            // don't process dead keys as they are composing but they don't act like it.
+            if (this.lastKeyboardEvent?.key === "Dead") {
+                this.lastKeyboardEvent = new KeyboardEvent("keydown", {
+                    ...this.lastKeyboardEvent,
+                    key: "Process",
+                });
+                return;
+            } else if (
+                !["Shift", "Control", "Alt", "Meta"].includes(event.key)
+            ) {
+                this.lastKeyboardEvent = null;
+            }
+
+            const success = handleKeydown(
+                event.key,
+                event.ctrlKey || event.metaKey,
+                isComposing(view, event),
+                view,
+            );
+
+            if (success) event.preventDefault();
+        }
+    },
+    {
+        eventHandlers: {
+            keydown(event, view) {
+                view.plugin(keyboardEventPlugin)!.onKeydown(event, view);
+            },
+            compositionend(event, view) {
+                const settings = getLatexSuiteConfig(view);
+                if (!settings.snippetIMEVersion) return;
+                if (handleKeydown("", false, false, view)) {
+                    event.preventDefault();
+                    return true;
+                }
+            },
+        },
+    },
+);
+
+export const onInput = (
+    view: EditorView,
+    _from: number,
+    _to: number,
+    text: string,
+): boolean => {
+    const lastKeyboardEvent =
+        view.plugin(keyboardEventPlugin)?.lastKeyboardEvent;
+    if (text === "\0\0") return true;
+    if (text.length == 1 && lastKeyboardEvent) {
+        if (text === "\t") text = "Tab";
+        const success = handleKeydown(
+            text,
+            lastKeyboardEvent.ctrlKey || lastKeyboardEvent.metaKey,
+            isComposing(view, lastKeyboardEvent),
+            view,
+        );
+        if (success) {
+            forceEndComposition(view);
+            return true;
+        }
+    }
+    return false;
 };
 
 export const handleKeydown = (
     key: string,
-    _shiftKey: boolean,
     ctrlKey: boolean,
     isIME: boolean,
     view: EditorView,
 ) => {
+    if (key.length > 1) {
+        return false;
+    }
+
     const settings = getLatexSuiteConfig(view);
 
-    if (settings.snippetsEnabled) {
+    if (
+        !settings.snippetsEnabled ||
         // Prevent IME from triggering keydown events.
-        if (settings.suppressSnippetTriggerOnIME && isIME) return;
-
+        (settings.suppressSnippetTriggerOnIME && isIME) ||
         // Allows Ctrl + z for undo, instead of triggering a snippet ending with z
-        if (!ctrlKey) {
-            try {
-                const success = runSnippets(
-                    view,
-                    { key, snippets: settings.snippets },
-                    {
-                        recursive: settings.snippetRecursion,
-                        debug: settings.snippetDebug,
-                    },
-                );
-                if (success) return true;
-            } catch (e) {
-                clearSnippetQueue(view);
-                console.error(e);
-            }
-        }
+        ctrlKey
+    ) {
+        return false;
     }
-    return;
+    const snippets = view.state.field(snippetStateField).snippets.automatic;
+    try {
+        const options = {
+            recursive: settings.snippetRecursion,
+            debug: settings.snippetDebug,
+        };
+        if (runSnippets(view, { snippets, key }, options)) return true;
+    } catch (e) {
+        clearSnippetQueue(view);
+        console.error(e);
+    }
+    return false;
 };
 
 /**
  * Get the keymaps specific for Latex Suite. These keymaps only run in scope `latex-suite`.
  * @param settings The settings with the keybindings to use
+ * @param snippets The snippets to use for generating keymaps
  * @returns The keymaps for the LaTeX suite based on the provided settings
  */
-export function getKeymaps(settings: LatexSuiteCMSettings): KeyBinding[] {
+export function getKeymaps(
+    settings: LatexSuiteCMSettings,
+    snippets: Snippet[] = settings.snippets.all,
+): KeyBinding[] {
     // Order matters for keybindings,
     // as they are checked in order from the beginning of the array to the end
     const keybindings: KeyBinding[] = [];
@@ -100,35 +173,16 @@ export function getKeymaps(settings: LatexSuiteCMSettings): KeyBinding[] {
     if (settings.autoDelete$) {
         keybindings.push({
             key: "Backspace",
-            run: function autoDelete$(view: EditorView) {
-                const ctx = getContextPlugin(view);
-                if (!ctx.mode.inMath()) return false;
-
-                const characters = view.state.sliceDoc(
-                    ctx.pos - 2,
-                    ctx.pos + 2,
-                );
-
-                if (characters.slice(1, 3) === "$$") {
-                    replaceRange(view, ctx.pos - 1, ctx.pos + 1, "");
-                    // Note: not sure if removeAllTabstops is necessary
-                    removeAllTabstops(view);
-                    return true;
-                } else if (characters === "\\(\\)" || characters === "\\[\\]") {
-                    replaceRange(view, ctx.pos - 2, ctx.pos + 2, "");
-                    return true;
-                }
-                return false;
-            },
+            run: autoDelete$,
         });
     }
 
     const snippet_triggers = new Set(
-        settings.snippets.map((s) => s.triggerKey).filter((s) => s !== ""),
+        snippets.map((s) => s.triggerKey).filter((s) => s !== ""),
     );
     snippet_triggers.add(settings.snippetsTrigger);
     const runMaker = (key: string) => {
-        const snippets = settings.snippets.filter(
+        const filtered_snippets = snippets.filter(
             (s) =>
                 s.triggerKey === key ||
                 (!s.triggerKey &&
@@ -145,7 +199,11 @@ export function getKeymaps(settings: LatexSuiteCMSettings): KeyBinding[] {
                     recursive: settings.snippetRecursion,
                     debug: settings.snippetDebug,
                 };
-                return runSnippets(view, { snippets }, options);
+                return runSnippets(
+                    view,
+                    { snippets: filtered_snippets },
+                    options,
+                );
             } catch (e) {
                 clearSnippetQueue(view);
                 console.error(e);
@@ -222,24 +280,81 @@ export function getKeymaps(settings: LatexSuiteCMSettings): KeyBinding[] {
     const taboutShortcuts = [
         {
             key: settings.taboutTrigger,
-            run: function exitEquation(view: EditorView) {
-                if (!view.state.selection.main.empty) return false;
-                const ctx = getContextPlugin(view);
-                return tabout(view, ctx);
-            },
+            run: tabout,
         },
         ...[")", "}", "]"].map((key) => ({
             key,
             run: function nextClosingBracket(view: EditorView) {
                 if (!shouldTaboutByCloseBracket(view, key)) return false;
-                const ctx = getContextPlugin(view);
-                return tabout(view, ctx);
+                return tabout(view);
             },
         })),
+        {
+            key: settings.reverseTaboutTrigger,
+            run: reversetabout,
+        },
     ];
     if (settings.taboutEnabled) {
         keybindings.push(...taboutShortcuts);
     }
 
-    return keybindings;
+    return keybindings.map((keybinding) => ({
+        ...keybinding,
+    }));
 }
+
+function filterSnippetsByFile(
+    snippets: Snippet[],
+    path: string | null,
+    state: EditorState,
+): GroupedSnippets {
+    const filtered_snippets =
+        path !== null
+            ? snippets.filter((snippet) => {
+                  try {
+                      return snippet.options.includedPaths({ path, state });
+                  } catch (e) {
+                      const error_message = `Included paths crashed, skipping snippet: \n${serializeSnippetLike(snippet)}\n\n`;
+                      state.field(notice)(
+                          `${error_message}\n\n with error ${e as string}`,
+                          5000,
+                      );
+                      console.error(error_message);
+                      console.error(e);
+                      return false;
+                  }
+              })
+            : snippets;
+
+    return {
+        automatic: filtered_snippets.filter((s) => s.options.automatic),
+        all: filtered_snippets,
+    };
+}
+
+type SnippetState = {
+    snippets: GroupedSnippets;
+    path: string | null;
+    keymaps: KeyBinding[];
+};
+
+function createSnippetState(state: EditorState): SnippetState {
+    const settings = getLatexSuiteConfig(state);
+    const snippets = settings.snippets;
+    const path = getFilePathFromState(state);
+    const filtered_snippets = filterSnippetsByFile(snippets.all, path, state);
+    const keymaps = getKeymaps(settings, filtered_snippets.all);
+    return { snippets: filtered_snippets, path, keymaps };
+}
+
+export const snippetStateField = StateField.define<SnippetState>({
+    create: createSnippetState,
+    update: (value, tr) => {
+        const path = getFilePathFromState(tr.state);
+        if (!tr.reconfigured && path === value.path) {
+            return value;
+        }
+        return createSnippetState(tr.state);
+    },
+    provide: (f) => keymap.compute([f], (state) => state.field(f).keymaps),
+});

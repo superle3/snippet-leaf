@@ -1,3 +1,4 @@
+import type { MathlessMacroArgs } from "src/editor_context/default_text_areas";
 import type { SnippetVariables, SnippetVersion } from "../parse";
 import { ALL_MACROS } from "./macros";
 import type { BaseNode } from "./node";
@@ -8,6 +9,7 @@ import {
     TabstopNode,
     TextNode,
 } from "./node";
+import type { UpdateHandler } from "src/api";
 
 // For now SnippetNode, VisualSnippetNode and ArrayNode remain internal api only,
 // as I am not sure how bug proof it would be/how intuitif.
@@ -37,14 +39,23 @@ function snippet_node(snippet: string, version: SnippetVersion = 2) {
 function array_node(nodes: BaseNode[]) {
     return new ArrayNode(nodes);
 }
+export type PluginSnippetApi = {
+    addRawConcealMaps: (maps: Record<string, unknown>) => void;
+    addMathlessMacros: (macros: MathlessMacroArgs) => void;
+    addUpdateHandler: (handler: UpdateHandler) => void;
+};
 
-export const api = (snippetVariables: SnippetVariables) => {
+export const api = (
+    snippetVariables: SnippetVariables,
+    pluginApi: PluginSnippetApi,
+) => {
     return {
         snippetVariables,
         tabstop_node,
         text_node,
         capture_node,
         ALL_MACROS,
+        ...pluginApi,
     };
 };
 

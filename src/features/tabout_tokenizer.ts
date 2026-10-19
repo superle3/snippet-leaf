@@ -9,7 +9,7 @@ export const tokenize = (latexString: string): Token[] => {
     let index = 0;
 
     while (index < latexString.length) {
-        const char = latexString[index];
+        const char = latexString[index]!;
 
         if (/\s/.test(char)) {
             index++;
@@ -67,13 +67,13 @@ const readEscapeToken = (
     const length = latexString.length;
     let current = start + 1;
 
-    const nextChar = latexString[current];
+    const nextChar = latexString[current]!;
 
     // Case: Command token (e.g., \sin, \frac)
     if (/[A-Za-z]/.test(nextChar)) {
         do {
             current++;
-        } while (current < length && /[A-Za-z]/.test(latexString[current]));
+        } while (current < length && /[A-Za-z]/.test(latexString[current]!));
     }
     // Case: Symbol token (e.g., \%, \_, \{)
     else {

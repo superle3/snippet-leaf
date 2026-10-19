@@ -1,63 +1,117 @@
-import { ARE_SETTINGS_PARSED, type Snippet } from "../snippets/snippets";
+import { ARE_SETTINGS_PARSED } from "../snippets/snippets";
 import type { Environment } from "../snippets/environment";
 import {
-    parseSnippet,
     parseSnippetsSync,
-    RawSnippetSchema,
-    type RawSnippet,
+    type InputRawSnippet,
     type SnippetVariables,
 } from "src/snippets/parse";
 import type { Facet } from "@codemirror/state";
-import type { LatexSuiteCMSettings } from "./raw_settings";
+import type { LatexSuiteCMSettings, MathlessMacros } from "./raw_settings";
 import type { LatexSuitePluginSettings } from "./raw_settings";
 import * as v from "valibot";
-import { sortSnippets } from "src/snippets/sort";
-import json5 from "json5";
+import { createMacroMap } from "src/editor_extensions/conceal_fns";
+import {
+    type RawConcealMapping,
+    EMPTY_MAPPING,
+    MappingSchema,
+    ParsedMappingSchema,
+    fullMappingSchema,
+} from "src/editor_extensions/conceal_maps";
+import {
+    EMPTY_MATHLESS_ARGS,
+    mathlessArgsSchema,
+    restrictedMacroArgs,
+    textMacroArgs,
+} from "src/editor_context/default_text_areas";
+import type { SnippetDebugLevelSchema } from "./setting_schemas";
+import { LatexSuiteRawSettingsSchema } from "./setting_schemas";
+
+function validateTextMacros(textMacros: string) {
+    return v.safeParse(
+        v.pipe(
+            v.string(),
+            v.parseJson(),
+            v.check(
+                (obj) => !Array.isArray(obj),
+                "Expected an object with 'text' and 'restricted' properties, but got an array.",
+            ),
+            mathlessArgsSchema,
+        ),
+        textMacros,
+    );
+}
+
+function strToArray(str: string | string[] | Set<string>) {
+    return Array.isArray(str)
+        ? str.map((s) => s.replace(/\s/g, ""))
+        : str instanceof Set
+          ? Array.from(str)
+          : str.replace(/\s/g, "").split(",");
+}
+function getAutofractionExcludedEnvs(
+    envsStr: string | Environment[],
+): Environment[] {
+    if (Array.isArray(envsStr)) {
+        for (const env of envsStr) {
+            if (
+                typeof env !== "object" ||
+                !("openSymbol" in env) ||
+                !("closeSymbol" in env)
+            ) {
+                throw new Error(
+                    "Invalid environment format in autofractionExcludedEnvs. Expected an array of objects with openSymbol and closeSymbol properties.",
+                );
+            }
+        }
+        return envsStr as Environment[];
+    }
+    let envs = [];
+
+    try {
+        const envsJSON = JSON.parse(envsStr);
+        envs = envsJSON.map(function (env: string[]) {
+            return { openSymbol: env[0], closeSymbol: env[1] };
+        });
+    } catch (e) {
+        console.log(e);
+    }
+
+    return envs;
+}
+
+function _getConcealMaps(
+    concealMapsStr: LatexSuitePluginSettings["concealMaps"],
+): RawConcealMapping {
+    const schema =
+        typeof concealMapsStr === "string"
+            ? v.pipe(v.string(), v.parseJson(), MappingSchema)
+            : MappingSchema;
+    try {
+        return v.parse(schema, concealMapsStr);
+    } catch (e) {
+        console.error(e);
+        return EMPTY_MAPPING;
+    }
+}
+
+function getMacroAreasFromString(str: string) {
+    const result = validateTextMacros(str);
+    if (!result.success) {
+        console.error(
+            "Failed to parse textMacros/snippetlessMacros",
+            result.issues,
+        );
+    }
+    const data = result.success ? result.output : EMPTY_MATHLESS_ARGS;
+    return {
+        text: [...data.text, ...textMacroArgs],
+        restricted: [...data.restricted, ...restrictedMacroArgs],
+    };
+}
 
 export function processLatexSuiteSettings(
-    settings: LatexSuitePluginSettings & {
-        snippets: Array<RawSnippet | Snippet>;
-        snippetVariables: Record<string, string>;
-    },
+    settings: LatexSuitePluginSettings,
 ): LatexSuiteCMSettings {
-    function strToArray(str: string | string[] | Set<string>) {
-        return Array.isArray(str)
-            ? str.map((s) => s.replace(/\s/g, ""))
-            : str instanceof Set
-              ? Array.from(str)
-              : str.replace(/\s/g, "").split(",");
-    }
-
-    function getAutofractionExcludedEnvs(
-        envsStr: string | Environment[],
-    ): Environment[] {
-        if (Array.isArray(envsStr)) {
-            for (const env of envsStr) {
-                if (
-                    typeof env !== "object" ||
-                    !("openSymbol" in env) ||
-                    !("closeSymbol" in env)
-                ) {
-                    throw new Error(
-                        "Invalid environment format in autofractionExcludedEnvs. Expected an array of objects with openSymbol and closeSymbol properties.",
-                    );
-                }
-            }
-            return envsStr as Environment[];
-        }
-        let envs = [];
-
-        try {
-            const envsJSON = JSON.parse(envsStr);
-            envs = envsJSON.map(function (env: string[]) {
-                return { openSymbol: env[0], closeSymbol: env[1] };
-            });
-        } catch (e) {
-            console.log(e);
-        }
-
-        return envs;
-    }
     const snippetVariables = validateSnippetVariables(
         settings.snippetVariables,
     );
@@ -68,16 +122,43 @@ export function processLatexSuiteSettings(
         ...parseSnippetsSync(
             settings.snippets.filter(
                 (snippet) => !(ARE_SETTINGS_PARSED in snippet),
-            ) as RawSnippet[],
+            ) as InputRawSnippet[],
             snippetVariables,
             settings.defaultSnippetVersion,
         ),
     ];
+
+    const groupedSnippets = {
+        automatic: snippets.filter((s) => s.options.automatic),
+        all: snippets,
+    };
+
+    const concealMaps = fullMappingSchema([
+        _getConcealMaps(settings.concealMaps),
+    ]);
+    const mappingInfo = {
+        maps: concealMaps,
+        macroMap: createMacroMap(concealMaps),
+    };
+
+    const textMacros = getMacroAreasFromString(settings.textMacros);
+    const mathlessMacros: MathlessMacros = {
+        text: textMacros.text,
+        restricted: textMacros.restricted,
+        all: [
+            ...textMacros.text.map((m) => ({ ...m, kind: "text" }) as const),
+            ...textMacros.restricted.map(
+                (m) => ({ ...m, kind: "restricted" }) as const,
+            ),
+        ],
+    };
+
     return {
         ...settings,
 
         // Override raw settings with parsed settings
-        snippets,
+        snippets: groupedSnippets,
+        concealMaps: mappingInfo,
         snippetVariables,
         autofractionExcludedEnvs: getAutofractionExcludedEnvs(
             settings.autofractionExcludedEnvs,
@@ -92,8 +173,10 @@ export function processLatexSuiteSettings(
         taboutClosingSymbols: new Set(
             strToArray(settings.taboutClosingSymbols),
         ),
+        mathlessMacros: mathlessMacros,
     };
 }
+
 export type LatexSuiteFacet = Facet<
     Partial<LatexSuitePluginSettings>,
     LatexSuiteCMSettings
@@ -126,185 +209,20 @@ export const EnvironmentSchema = v.object({
     openSymbol: v.string(),
     closeSymbol: v.string(),
 });
-export const StrToArraySchema = v.union([
-    v.pipe(
-        v.string(),
-        v.transform((str) => str.replace(/\s/g, "").split(",")),
-    ),
-]);
 export const LatexSuiteParsedSettingsSchema = v.object({
     autofractionExcludedEnvs: v.array(EnvironmentSchema),
     matrixShortcutsEnvNames: v.array(v.string()),
     matrixShortcutsMacroNames: v.array(v.string()),
     autoEnlargeBracketsTriggers: v.array(v.string()),
     taboutClosingSymbols: v.set(v.string()),
+    concealMaps: ParsedMappingSchema,
+    textMacros: v.string(),
 });
 
-export const LatexSuiteRawSettingsSchema = v.object({
-    autofractionExcludedEnvs: v.pipe(
-        v.string(),
-        v.parseJson(),
-        v.array(
-            v.pipe(
-                v.tuple([v.string(), v.string()]),
-                v.transform(([openSymbol, closeSymbol]) => ({
-                    openSymbol,
-                    closeSymbol,
-                })),
-            ),
-        ),
-    ),
-    matrixShortcutsEnvNames: StrToArraySchema,
-    matrixShortcutsMacroNames: StrToArraySchema,
-    autoEnlargeBracketsTriggers: StrToArraySchema,
-    taboutClosingSymbols: v.pipe(
-        StrToArraySchema,
-        v.transform((arr) => new Set(arr)),
-    ),
-});
 export const LatexSuiteRawOrParsedSettingsSchema = v.union([
     LatexSuiteRawSettingsSchema,
     LatexSuiteParsedSettingsSchema,
 ]);
 
-const SnippetDebugLevelSchema = v.union([
-    v.literal("off"),
-    v.literal("info"),
-    v.literal("verbose"),
-]);
 export type snippetDebugLevel = v.InferOutput<typeof SnippetDebugLevelSchema>;
-export const latexSuiteBasicSettingsSchema = v.object({
-    snippetsEnabled: v.boolean(),
-    defaultSnippetVersion: v.union([v.literal(1), v.literal(2)]),
-    suppressSnippetTriggerOnIME: v.boolean(),
-    removeSnippetWhitespace: v.boolean(),
-    autoDelete$: v.boolean(),
-    concealEnabled: v.boolean(),
-    concealRevealTimeout: v.number(),
-    concealLinewise: v.boolean(),
-    colorPairedBracketsEnabled: v.boolean(),
-    highlightCursorBracketsEnabled: v.boolean(),
-    autofractionEnabled: v.boolean(),
-    autofractionSymbol: v.string(),
-    autofractionBreakingChars: v.string(),
-    matrixShortcutsEnabled: v.boolean(),
-    taboutEnabled: v.boolean(),
-    taboutExitEquationOnlyOnEOL: v.boolean(),
-    autoEnlargeBrackets: v.boolean(),
-    autoEnlargeBracketsSpace: v.boolean(),
-    wordDelimiters: v.string(),
-    snippetDebug: SnippetDebugLevelSchema,
-    snippetRecursion: v.number(),
-});
-
-export const latexSuiteKeymapSettingsSchema = v.object({
-    concealToggleKey: v.string(),
-    toggleAllFeaturesKey: v.string(),
-    snippetsTrigger: v.string(),
-    snippetNextTabstopTrigger: v.string(),
-    snippetPreviousTabstopTrigger: v.string(),
-    taboutTrigger: v.string(),
-    matrixShortcutsNewlineTrigger: v.string(),
-    matrixShortcutsCellTrigger: v.string(),
-    matrixShortcutsExitTrigger: v.string(),
-    autofractionTrigger: v.string(),
-});
-
 export type NestedArray<T> = Array<T | NestedArray<T>>;
-export const NestedRawSnippetArraySchema: v.GenericSchema<NestedArray<object>> =
-    v.lazy(() =>
-        v.array(v.union([v.looseObject({}), NestedRawSnippetArraySchema])),
-    );
-export async function importString(
-    source: string,
-    identifier: string = "snippets.js",
-) {
-    const blob = new Blob([source], { type: "text/javascript" });
-    const file = new File([blob], identifier, { type: "text/javascript" });
-    const url = URL.createObjectURL(file);
-    const module = await import(/* @vite-ignore */ url);
-    return module;
-}
-export async function importSnippets(source: string): Promise<unknown> {
-    const module_default = await importString(source, "snippets.js");
-    if (module_default.default) return module_default.default;
-    const module = await importString(
-        "export default " + source,
-        "snippets_with_export.js",
-    );
-    return module.default;
-}
-export const UnParsedSnippetSnippetVariablesSchema = v.pipe(
-    v.string(),
-    v.transform((str): unknown => json5.parse(str)),
-);
-export const SnippetVariablesSchema = v.pipe(
-    v.union([
-        v.pipe(
-            UnParsedSnippetSnippetVariablesSchema,
-            v.record(v.string(), v.string()),
-        ),
-        v.record(v.string(), v.string()),
-    ]),
-    v.transform((rawSnippetVariables: Record<string, string>) => {
-        const snippetVariables: SnippetVariables = {};
-        for (const [variable, value] of Object.entries(rawSnippetVariables)) {
-            if (variable.startsWith("${")) {
-                if (!variable.endsWith("}")) {
-                    throw `Invalid snippet variable name '${variable}': Starts with '\${' but does not end with '}'. You need to have both or neither.`;
-                }
-                snippetVariables[variable as `$\{${string}}`] = value;
-            } else {
-                if (variable.endsWith("}")) {
-                    throw `Invalid snippet variable name '${variable}': Ends with '}' but does not start with '\${'. You need to have both or neither.`;
-                }
-                snippetVariables[("${" + variable + "}") as `$\{${string}}`] =
-                    value;
-            }
-        }
-        return snippetVariables;
-    }),
-);
-export const SnippetSchemaSync = v.pipe(
-    v.object({
-        snippets: v.pipe(
-            NestedRawSnippetArraySchema,
-            v.transform((arr) => arr.flat(<20>Infinity)),
-            v.array(RawSnippetSchema),
-        ),
-        snippetVariables: SnippetVariablesSchema,
-        version: v.optional(v.union([v.literal(1), v.literal(2)]), 2),
-    }),
-    v.transform(({ snippets, snippetVariables, version }) => {
-        const parsed_snippets = snippets.flatMap((raw) => {
-            return parseSnippet(raw, snippetVariables, version);
-        });
-        return { snippets: sortSnippets(parsed_snippets), snippetVariables };
-    }),
-);
-export const SnippetSchemaAsync = v.pipeAsync(
-    v.objectAsync({
-        snippets: v.pipeAsync(
-            v.string(),
-            v.transform(importSnippets),
-            v.awaitAsync(),
-        ),
-        snippetVariables: v.pipe(
-            v.string(),
-            UnParsedSnippetSnippetVariablesSchema,
-            SnippetVariablesSchema,
-        ),
-        version: v.optional(v.union([v.literal(1), v.literal(2)]), 2),
-    }),
-    v.transform((obj) => v.parse(SnippetSchemaSync, obj)),
-);
-export const SnippetSchema = v.unionAsync([
-    SnippetSchemaAsync,
-    SnippetSchemaSync,
-]);
-export const SettingsSchema = v.intersectAsync([
-    latexSuiteBasicSettingsSchema,
-    latexSuiteKeymapSettingsSchema,
-    LatexSuiteRawSettingsSchema,
-    SnippetSchema,
-]);

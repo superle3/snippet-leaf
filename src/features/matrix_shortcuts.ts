@@ -1,8 +1,7 @@
 import type { EditorView } from "@codemirror/view";
 import { isBoundMultiline, setCursor } from "src/utils/editor_utils";
 import { getLatexSuiteConfig } from "src/snippets/codemirror/config";
-import type { Bounds } from "src/editor_context/context";
-import { getContextPlugin } from "src/editor_context/context";
+import { type Bounds, getContextPlugin } from "src/editor_context/context";
 import { queueSnippet } from "src/snippets/codemirror/snippet_queue_state_field";
 import { expandSnippets } from "src/snippets/snippet_management";
 import { taboutByEnclosedBrackets } from "./tabout";
@@ -22,7 +21,7 @@ const newlineMatrixShortcutCallback = (
     const current_matrix_line = cur_line.text.match(
         /(\\begin{[^]]*}|\\\\|^)((?:\s|&)+)/,
     );
-    const added_cells = current_matrix_line?.[2].trimStart() ?? "";
+    const added_cells = current_matrix_line?.[2]!.trimStart() ?? "";
     if (isBoundMultiline(view, bounds)) {
         const snippet = new ArrayNode([
             new TextNode(" \\\\\n" + added_cells),

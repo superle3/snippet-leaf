@@ -171,7 +171,7 @@ export class SnippetStringNode extends BaseNode {
         const matches = this.snippet.matchAll(pattern);
         const replacements = [];
         for (const match of matches) {
-            const index = parseInt(match[1]);
+            const index = parseInt(match[1]!);
             if (index >= captures.match.length) {
                 continue;
             }
@@ -188,7 +188,7 @@ export class SnippetStringNode extends BaseNode {
         const matches = snippet.matchAll(pattern);
         const replacements = [];
         for (const match of matches) {
-            const index = parseInt(match[1] || match[2]);
+            const index = parseInt((match[1] || match[2])!, 10);
             const start = match.index;
             const end = start + match[0].length;
             const replacement = match[3] || "";
@@ -306,7 +306,7 @@ export class VisualSnippetNode extends BaseNode {
             this.version === 1
                 ? VISUAL_SNIPPET_MAGIC_SELECTION_PLACEHOLDERv1
                 : VISUAL_SNIPPET_MAGIC_SELECTION_PLACEHOLDERv2;
-        return this.snippet.replaceAll(pattern, captures.groups[pattern]);
+        return this.snippet.replaceAll(pattern, selection);
     }
 }
 export class SnippetTabstopOnlyNode extends BaseNode {

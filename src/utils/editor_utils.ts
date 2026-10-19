@@ -1,9 +1,9 @@
 import { EditorView } from "@codemirror/view";
-import type { NodeIterator, SyntaxNode, Tree, TreeCursor } from "@lezer/common";
+import type { Tree, TreeCursor } from "@lezer/common";
+import { type NodeIterator, type SyntaxNode } from "@lezer/common";
 import type { EditorState } from "@codemirror/state";
 import type { Bounds } from "src/editor_context/context";
-import type { MacroStackOutput } from "src/editor_context/context";
-import type { MacroArea } from "../editor_context/default_text_areas";
+import { isMobile } from "src/editor_extensions/obsidian_utils";
 
 export function replaceRange(
     view: EditorView,
@@ -43,6 +43,8 @@ export function setSelection(view: EditorView, start: number, end: number) {
 }
 
 export function resetCursorBlink(view: EditorView) {
+    if (isMobile()) return;
+
     const cursorLayer = view.dom.getElementsByClassName(
         "cm-cursorLayer",
     )[0] as HTMLElement;
@@ -138,7 +140,7 @@ export function escalateToToken(
     target: string,
 ): SyntaxNode | null {
     // Allow the starting node to be a match
-    if (cursor.name.includes(target)) {
+    if (cursor.name.contains(target)) {
         return cursor.node;
     }
 
@@ -148,7 +150,7 @@ export function escalateToToken(
             (dir == Direction.Forward && cursor.next()) ||
             cursor.parent())
     ) {
-        if (cursor.name.includes(target)) {
+        if (cursor.name.contains(target)) {
             return cursor.node;
         }
     }
@@ -263,23 +265,9 @@ export function cumulativeSum(arr: number[]) {
     return result;
 }
 
-export function isMacroArgumentCount(
-    stack: Readonly<MacroStackOutput>,
-    macros: readonly MacroArea[],
-): null | MacroStackOutput {
-    const macro = macros.find((macro) => macro.name === stack.name);
-    if (!macro) return null;
-    if (!macro.arguments) return stack;
-
-    let sibling_count: number = 0;
-    let sibling: SyntaxNode | null = stack.node;
-    while ((sibling = sibling.prevSibling) !== null) {
-        if (sibling.name.endsWith("Argument")) {
-            sibling_count++;
-        }
+export function* enumerate<T>(iterable: Iterable<T>) {
+    let i = 0;
+    for (const item of iterable) {
+        yield [i++, item] as const;
     }
-    if (!macro.arguments.includes(sibling_count)) {
-        return null;
-    }
-    return stack;
 }

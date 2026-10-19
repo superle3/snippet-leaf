@@ -1,5 +1,14 @@
-import { getKeymaps, handleUpdate, onKeydown } from "./latex_suite";
-import type { LatexSuiteCMSettings } from "./settings/raw_settings";
+import {
+    getKeymaps,
+    handleUpdate,
+    keyboardEventPlugin,
+    onInput,
+    snippetStateField,
+} from "./latex_suite";
+import type {
+    LatexSuiteCMSettings,
+    LatexSuiteIntermediateSettings,
+} from "./settings/raw_settings";
 import type { LatexSuitePluginSettings } from "./settings/raw_settings";
 import { processLatexSuiteSettings } from "./settings/settings";
 import { mkConcealPlugin } from "./editor_extensions/conceal";
@@ -11,13 +20,18 @@ import {
     colorPairedBracketsPluginLowestPrec,
     highlightCursorBracketsPlugin,
 } from "./editor_extensions/highlight_brackets";
-import { createContextPlugin } from "./editor_context/context";
-import { createMathBoundsPlugin } from "./editor_context/mathbounds";
+import { mathBoundsPlugin } from "./editor_context/mathbounds";
 import { getKeymaps as getEditorCommandKeymaps } from "./keymaps";
 import { Prec, type Extension } from "@codemirror/state";
 import { EditorView, keymap } from "@codemirror/view";
 import { snippetExtensions } from "./snippets/codemirror/extensions";
 import { getLatexSuiteConfigExtension } from "./snippets/codemirror/config";
+import { contextPlugin } from "./editor_context/context";
+import { getFileConfigExtension } from "./editor_extensions/obsidian_utils";
+import { api, type PluginSnippetApi } from "src/snippets/luasnip_api";
+import type { CodeMirrorExt } from "browser_extension/set_codemirror_objects";
+import * as v from "valibot";
+import { SettingsSchema } from "./settings/setting_schemas";
 
 export function main(settings: LatexSuitePluginSettings) {
     const CMSettings: LatexSuiteCMSettings =
@@ -26,23 +40,20 @@ export function main(settings: LatexSuitePluginSettings) {
     const extensions: Extension[] = [];
 
     const snippet_leaf_extension: Extension[] = [
-        Prec.highest(
-            EditorView.domEventHandlers({
-                keydown: function (event: KeyboardEvent, view: EditorView) {
-                    return onKeydown(event, view);
-                },
-            }),
-        ),
+        Prec.highest(keyboardEventPlugin),
+        Prec.highest(EditorView.inputHandler.of(onInput)),
         EditorView.updateListener.of(handleUpdate),
         getEditorCommandKeymaps(settings),
         Prec.highest(keymap.of(getKeymaps(CMSettings))),
         latexSuiteConfig,
-        createContextPlugin(),
-        createMathBoundsPlugin(),
+        contextPlugin,
+        mathBoundsPlugin,
         snippetExtensions,
+        snippetStateField,
+        getFileConfigExtension(() => null),
     ];
     extensions.push(...snippet_leaf_extension);
-    const conceal_plugin = mkConcealPlugin(settings.concealRevealTimeout);
+    const conceal_plugin = mkConcealPlugin(CMSettings);
 
     extensions.push(conceal_plugin);
 
@@ -94,6 +105,20 @@ export function main(settings: LatexSuitePluginSettings) {
     return { extension: extensions };
 }
 
+export type Result<T, E> = { ok: true; value: T } | { ok: false; error: E };
+
+export async function parse_settings(
+    settings: unknown,
+): Promise<Result<LatexSuiteIntermediateSettings, unknown>> {
+    try {
+        const parsed = await v.parseAsync(SettingsSchema, settings);
+        return { ok: true, value: parsed };
+    } catch (error) {
+        console.error("Error parsing settings:", error);
+        return { ok: false, error };
+    }
+}
+
 export type {
     LatexSuiteCMSettings,
     LatexSuitePluginSettings,
@@ -103,3 +128,18 @@ export type {
     ProcessSnippetResult,
     SnippetData,
 };
+
+declare global {
+    var __snippet_leaf_api: ReturnType<typeof set_api>;
+}
+export function set_api(
+    codemirror_objects: CodeMirrorExt,
+    pluginApi: PluginSnippetApi,
+) {
+    const obj = {
+        ...api({}, pluginApi),
+        ...codemirror_objects,
+    };
+    globalThis.__snippet_leaf_api = obj;
+    return obj;
+}

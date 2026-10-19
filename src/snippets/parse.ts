@@ -1,4 +1,3 @@
-import type { InferOutput as Output } from "valibot";
 import {
     optional,
     object,
@@ -6,12 +5,16 @@ import {
     union,
     parse,
     number,
+    type InferOutput as Output,
     custom,
     instance,
     array,
     pipe,
     transform,
+    type BaseSchema,
+    type BaseIssue,
     literal,
+    type InferInput as Input,
 } from "valibot";
 import type { Snippet } from "./snippets";
 import {
@@ -23,19 +26,23 @@ import {
 import { Options } from "../editor_context/options";
 import { sortSnippets } from "./sort";
 import { EXCLUSIONS } from "./environment";
-import { api } from "./luasnip_api/index";
-import json5 from "json5";
+import { api, type PluginSnippetApi } from "./luasnip_api";
 import {
-    BaseNode,
     ArrayNode,
+    BaseNode,
     SnippetStringNode,
-    VisualSnippetNode,
     SnippetTabstopOnlyNode,
+    VisualSnippetNode,
 } from "./luasnip_api/node";
 import {
-    MacroAreaPipeSchema,
-    type MacroArea,
+    type MacroArgs,
+    MacroArgsPipeSchema,
 } from "src/editor_context/default_text_areas";
+import { isMacOS } from "src/editor_extensions/obsidian_utils";
+import type { EditorState } from "@codemirror/state";
+import type { Context } from "src/editor_context/context";
+import type { EditorView } from "@codemirror/view";
+import type { SyntaxNode } from "@lezer/common";
 import {
     VISUAL_SNIPPET_MAGIC_SELECTION_PLACEHOLDERv1,
     VISUAL_SNIPPET_MAGIC_SELECTION_PLACEHOLDERv2,
@@ -62,40 +69,12 @@ async function importRaw(module: string, identifier: string): Promise<unknown> {
     if (data && "default" in data) {
         return data.default;
     } else {
-        throw new Error("No default export found");
+        throw new Error(
+            "No default export found (with `export default` added to the source). Make sure its a valid javascript file and has a default export. See https://github.com/artisticat1/obsidian-latex-suite/blob/main/DOCS.md#snippet-files",
+        );
     }
 }
 
-export function parseSnippetVariables(snippetVariablesStr: string) {
-    const rawSnippetVariables = json5.parse(snippetVariablesStr);
-    return parseSnippetVariablesSync(rawSnippetVariables);
-}
-export function parseSnippetVariablesSync(
-    rawSnippetVariables: SnippetVariables | Record<string, string>,
-) {
-    if (Array.isArray(rawSnippetVariables))
-        throw new Error("Cannot parse an array as a variables object");
-
-    const snippetVariables: SnippetVariables = {};
-    for (const [variable, value] of Object.entries(rawSnippetVariables)) {
-        if (variable.startsWith("${")) {
-            if (!variable.endsWith("}")) {
-                throw new Error(
-                    `Invalid snippet variable name '${variable}': Starts with '\${' but does not end with '}'. You need to have both or neither.`,
-                );
-            }
-            snippetVariables[variable] = value;
-        } else {
-            if (variable.endsWith("}")) {
-                throw new Error(
-                    `Invalid snippet variable name '${variable}': Ends with '}' but does not start with '\${'. You need to have both or neither.`,
-                );
-            }
-            snippetVariables["${" + variable + "}"] = value;
-        }
-    }
-    return snippetVariables;
-}
 const preamble = String.raw`
 var __latex_suite_require = window.__latex_suite_require;
 function require(module) {
@@ -106,8 +85,11 @@ function require(module) {
 }
 `;
 
-function latex_suite_require(default_snippets: SnippetVariables) {
-    const parsed_api = api(default_snippets);
+function latex_suite_require(
+    default_snippets: SnippetVariables,
+    pluginApi: PluginSnippetApi,
+) {
+    const parsed_api = api(default_snippets, pluginApi);
     return (module: string): unknown => {
         if (module === "latex-suite") {
             return parsed_api;
@@ -125,12 +107,16 @@ export async function parseSnippets(
     snippetVariables: SnippetVariables,
     defaultSnippetVersion: SnippetVersion,
     identifier: string,
+    pluginApi: PluginSnippetApi,
 ) {
-    window.__latex_suite_require = latex_suite_require(snippetVariables);
+    window.__latex_suite_require = latex_suite_require(
+        snippetVariables,
+        pluginApi,
+    );
     const rawSnippets = (await importRaw(
         snippetsStr + preamble,
         identifier,
-    )) as RawSnippet[];
+    )) as InputRawSnippet[];
     return parseSnippetsSync(
         rawSnippets,
         snippetVariables,
@@ -139,7 +125,7 @@ export async function parseSnippets(
 }
 
 export function parseSnippetsSync(
-    rawSnippets: RawSnippet[],
+    rawSnippets: InputRawSnippet[],
     snippetVariables: SnippetVariables,
     defaultSnippetVersion: SnippetVersion,
 ) {
@@ -156,14 +142,16 @@ export function parseSnippetsSync(
                     snippetVariables,
                     defaultSnippetVersion,
                 );
-            } catch (e) {
+            } catch (err) {
+                const e = err as Error;
                 // provide context of which snippet errored
                 throw new Error(
                     `${e}\nErroring snippet:\n${serializeSnippetLike(raw)}`,
                 );
             }
         });
-    } catch (e) {
+    } catch (err) {
+        const e = err as Error;
         throw new Error(`Invalid snippet format: ${e}`);
     }
 
@@ -172,10 +160,43 @@ export function parseSnippetsSync(
     return parsedSnippets;
 }
 
+function singleOrArrayScheme<
+    TInput,
+    TOutput,
+    TIssue,
+    T extends BaseSchema<TInput, TOutput, BaseIssue<TIssue>>,
+>(scheme: T) {
+    return union([
+        array(scheme),
+        pipe(
+            scheme,
+            transform((value) => [value]),
+        ),
+    ]);
+}
+
+type IncludedPathsFunctionOptions = { path: string; state: EditorState };
+export type IncludedPathsFunction = (
+    options: IncludedPathsFunctionOptions,
+) => boolean;
+
+type ContextFunctionOptions = {
+    ctx: Context;
+    view: EditorView;
+    node: SyntaxNode;
+};
+export type ContextFunction = {
+    (options: ContextFunctionOptions): boolean;
+    _id?: {
+        symbol: symbol;
+        result: boolean;
+    };
+};
+
 /** raw snippet IR */
 
 export const RawSnippetSchema = object({
-    trigger: union([string_(), instance(RegExp)]),
+    trigger: optional(union([string_(), instance(RegExp)])),
     triggerAfter: optional(union([string_(), instance(RegExp)])),
     replacement: union([
         string_(),
@@ -191,11 +212,42 @@ export const RawSnippetSchema = object({
     description: optional(string_(), "no description provided"),
     version: optional(union([literal(1), literal(2)])),
     triggerKey: optional(string_(), ""),
-    excludedMacros: MacroAreaPipeSchema,
+    excludedMacros: MacroArgsPipeSchema,
     excludedEnvironments: optional(array(string_()), []),
-    includedMacros: MacroAreaPipeSchema,
+    includedMacros: MacroArgsPipeSchema,
+    includedPaths: pipe(
+        optional(
+            singleOrArrayScheme(
+                union([
+                    pipe(
+                        string_(),
+                        transform((): IncludedPathsFunction => {
+                            // const match = picomatch(value);
+                            return () => true;
+                        }),
+                    ),
+                    custom<UnknownFunction>((x) => typeof x === "function"),
+                ]),
+            ),
+            [],
+        ),
+        transform((matches): IncludedPathsFunction => {
+            if (matches.length === 0) {
+                return () => true;
+            }
+            return (options: IncludedPathsFunctionOptions) =>
+                matches.some((match) => match(options));
+        }),
+    ),
+    context: optional(
+        singleOrArrayScheme(
+            custom<ContextFunction>((x) => typeof x === "function"),
+        ),
+        [],
+    ),
 });
 
+export type InputRawSnippet = Input<typeof RawSnippetSchema>;
 export type RawSnippet = Output<typeof RawSnippetSchema>;
 export type SnippetVersion = Exclude<RawSnippet["version"], undefined>;
 
@@ -237,8 +289,9 @@ export function parseSnippet(
         excludedEnvironments: excludedEnvironments,
         excludedMacros: userExcludedMacros,
         includedMacros,
+        context,
     } = raw;
-    const options = Options.fromSource(raw.options);
+    const options = Options.fromSource(raw.options, raw.includedPaths);
     const triggerKey = parseKeyName(raw.triggerKey);
     const version = raw.version ?? defaultSnippetVersion;
 
@@ -334,6 +387,8 @@ export function parseSnippet(
             triggerAfter,
             excludedEnvironments,
             includedMacros,
+            context,
+            version,
         };
         const snippets: Snippet[] = [new RegexSnippet(normalised)];
         if (triggerKey && options.automatic) {
@@ -416,6 +471,8 @@ export function parseSnippet(
                 includedMacros,
                 triggerKey,
                 triggerAfter,
+                context,
+                version,
             };
             const snippets = [];
             if (trigger) {
@@ -448,6 +505,8 @@ export function parseSnippet(
                 includedMacros,
                 triggerKey,
                 triggerAfter,
+                context,
+                version,
             };
 
             const snippets = [new StringSnippet(normalised)];
@@ -494,10 +553,11 @@ function insertSnippetVariables(trigger: string, variables: SnippetVariables) {
     return trigger;
 }
 
-function getExcludedMacros(trigger: string): MacroArea[] {
-    const result = [];
-    if (trigger in EXCLUSIONS) {
-        result.push(...EXCLUSIONS[trigger]);
+function getExcludedMacros(trigger: string): MacroArgs[] {
+    const result = Array<MacroArgs>();
+    const exclusion = EXCLUSIONS[trigger];
+    if (exclusion) {
+        result.push(...exclusion);
     }
     return result;
 }
@@ -515,18 +575,13 @@ function normalizeKeyName(name: string) {
     if (result === "Space") result = " ";
     let alt, ctrl, shift, meta;
     for (let i = 0; i < parts.length - 1; ++i) {
-        const mod = parts[i];
+        const mod = parts[i]!;
         if (/^(cmd|meta|m)$/i.test(mod)) meta = true;
         else if (/^a(lt)?$/i.test(mod)) alt = true;
         else if (/^(c|ctrl|control)$/i.test(mod)) ctrl = true;
         else if (/^s(hift)?$/i.test(mod)) shift = true;
         else if (/^mod$/i.test(mod)) {
-            // fixme
-            if (
-                navigator.platform.startsWith("Mac") ||
-                navigator.platform === "iPhone"
-            )
-                meta = true;
+            if (isMacOS()) meta = true;
             else ctrl = true;
         } else throw new Error("Unrecognized modifier name: " + mod);
     }

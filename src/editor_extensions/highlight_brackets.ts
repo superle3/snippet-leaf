@@ -1,21 +1,30 @@
-import type { EditorView, ViewUpdate, DecorationSet } from "@codemirror/view";
-import { Decoration, ViewPlugin } from "@codemirror/view";
+import type { ViewUpdate } from "@codemirror/view";
+import {
+    EditorView,
+    Decoration,
+    type DecorationSet,
+    ViewPlugin,
+} from "@codemirror/view";
 import type { Range } from "@codemirror/state";
 import { Prec } from "@codemirror/state";
-import { tempKeyPress } from "src/snippets/snippet_management";
+import { isTempKeypressUpdate } from "src/snippets/snippet_management";
 import {
     EquationText,
     findIndexReverse,
     iterateTreeCursor,
 } from "src/utils/tokenizer";
 import { walkPairedBrackets } from "src/utils/tokenizer";
-import type { SyntaxNode, TreeCursor } from "@lezer/common";
-import type { CMBound } from "src/editor_context/context";
-import { getContextPlugin } from "src/editor_context/context";
+import type { TreeCursor } from "@lezer/common";
+import { type SyntaxNode } from "@lezer/common";
+import { type CMBound, getContextPlugin } from "src/editor_context/context";
 import { getMathBoundsPlugin } from "src/editor_context/mathbounds";
 import { latex } from "src/parser/latex-terms";
+import { cmDarkClass, cmLightClass } from "./obsidian_utils";
 
 const Ncolors = 3;
+const HIGHLIGHTED_BRACKET_CLASS = "latex-suite-highlighted-bracket";
+const COLOR_BRACKET_CLASS = "latex-suite-color-bracket";
+const MISMATCHED_BRACKET_CLASS = "latex-suite-mismatched-bracket";
 
 /**
  * Helper function to create a decoration to highlight a bracket at a given position
@@ -85,7 +94,7 @@ function handleDelimitedGroup(
     }
     const to = close?.to ?? open.to;
     if (to) {
-        cursor.moveTo(to, -1);
+        doc.moveTo(cursor, to, -1);
     }
     let bracket: BracketResult;
     if (open && close) {
@@ -213,7 +222,7 @@ function handleMathSpecialChar(
     const chars = doc.slice(cursor.from, cursor.to);
     const brackets: BracketResult[] = [];
     for (let i = 0; i < chars.length; i++) {
-        const char = chars[i];
+        const char = chars[i]!;
         const bound = { from: cursor.from + i, to: cursor.from + i + 1 };
         const isOpen = char in bracket_delimiters;
         const isClose = char in reverse_bracket_delimiters;
@@ -291,9 +300,8 @@ export function pairBrackets(specs: BracketResult[]) {
     const paired: PairedBrackets[] = [];
     let parent: PairedBracketParent = null;
     const openStack: (PairedBrackets & { kind: "error_open" })[] = [];
-    for (let i = 0; i < specs.length; i++) {
+    for (const spec of specs) {
         const children = parent?.children ?? paired;
-        const spec = specs[i];
         const pairedSpec: PairedBrackets = {
             ...spec,
             parent,
@@ -305,14 +313,14 @@ export function pairBrackets(specs: BracketResult[]) {
             parent = pairedSpec;
         } else if (pairedSpec.kind === "error_close") {
             const bracket: string =
-                reverse_bracket_delimiters[pairedSpec.bracket];
+                reverse_bracket_delimiters[pairedSpec.bracket]!;
             const index = findIndexReverse(
                 openStack,
                 (open) => open.bracket === bracket,
             );
 
             if (index !== null) {
-                const open = openStack[index];
+                const open = openStack[index]!;
                 parent = open;
                 openStack.length = index;
                 Object.assign(open, {
@@ -344,7 +352,7 @@ type ColorBracketsCachedEquations = Record<string, BracketConcealment[]>;
  * @param cached_equations previously cached equations to avoid re-tokenizing them
  * @returns new decorations and the updated cached equations
  */
-function colorPairedBrackets(
+export function colorPairedBrackets(
     view: EditorView,
     cached_equations: ColorBracketsCachedEquations,
 ) {
@@ -352,9 +360,10 @@ function colorPairedBrackets(
     const new_equations: typeof cached_equations = {};
     const widgets: Range<Decoration>[] = [];
     for (const eqn_info of overlays) {
-        if (eqn_info.text in cached_equations) {
-            new_equations[eqn_info.text] = cached_equations[eqn_info.text];
-            for (const spec of cached_equations[eqn_info.text]) {
+        const cached = cached_equations[eqn_info.text];
+        if (cached) {
+            new_equations[eqn_info.text] = cached;
+            for (const spec of cached) {
                 widgets.push(
                     getHighlightBracketMark(
                         spec.pos + eqn_info.overlay.from,
@@ -381,7 +390,7 @@ function colorPairedBrackets(
                         : token.close.from;
                 localSpecs.push({
                     pos,
-                    className: "latex-suite-mismatched-bracket",
+                    className: MISMATCHED_BRACKET_CLASS,
                     bracket: token.bracket.length,
                 });
                 continue;
@@ -390,12 +399,12 @@ function colorPairedBrackets(
             const colorIndex = depth % Ncolors;
             localSpecs.push({
                 pos: token.open.from,
-                className: `latex-suite-color-bracket-${colorIndex}`,
+                className: `${COLOR_BRACKET_CLASS}-${colorIndex}`,
                 bracket: token.open.to - token.open.from,
             });
             localSpecs.push({
                 pos: token.close.from,
-                className: `latex-suite-color-bracket-${colorIndex}`,
+                className: `${COLOR_BRACKET_CLASS}-${colorIndex}`,
                 bracket: token.close.to - token.close.from,
             });
         }
@@ -490,12 +499,12 @@ function highlightCursorBrackets(view: EditorView) {
         widgets.push(
             getHighlightBracketMark(
                 prev_token.region.open.from,
-                "latex-suite-highlighted-bracket",
+                HIGHLIGHTED_BRACKET_CLASS,
                 prev_token.region.open.to - prev_token.region.open.from,
             ),
             getHighlightBracketMark(
                 prev_token.region.close.from,
-                "latex-suite-highlighted-bracket",
+                HIGHLIGHTED_BRACKET_CLASS,
                 prev_token.region.close.to - prev_token.region.close.from,
             ),
         );
@@ -517,7 +526,7 @@ export const colorPairedBracketsPlugin = ViewPlugin.fromClass(
         }
 
         update(update: ViewUpdate) {
-            if (update.transactions.some((tr) => tr.annotation(tempKeyPress))) {
+            if (isTempKeypressUpdate(update)) {
                 return;
             }
             if (update.docChanged || update.viewportChanged) {
@@ -531,9 +540,45 @@ export const colorPairedBracketsPlugin = ViewPlugin.fromClass(
     { decorations: (v) => v.decorations },
 );
 
-export const colorPairedBracketsPluginLowestPrec = Prec.lowest(
-    colorPairedBracketsPlugin.extension,
-);
+const _colorPairedBracketsTheme = EditorView.baseTheme({
+    [`${cmLightClass} .${COLOR_BRACKET_CLASS}-0, ${cmLightClass} .${COLOR_BRACKET_CLASS}-0 .cm-bracket`]:
+        {
+            color: "#527aff",
+        },
+    [`${cmDarkClass} .${COLOR_BRACKET_CLASS}-0, ${cmDarkClass} .${COLOR_BRACKET_CLASS}-0 .cm-bracket`]:
+        {
+            color: "#47b8ff",
+        },
+    [`${cmLightClass} .${COLOR_BRACKET_CLASS}-1, ${cmLightClass} .${COLOR_BRACKET_CLASS}-1 .cm-bracket`]:
+        {
+            color: "#ff50b7",
+        },
+    [`${cmDarkClass} .${COLOR_BRACKET_CLASS}-1, ${cmDarkClass} .${COLOR_BRACKET_CLASS}-1 .cm-bracket`]:
+        {
+            color: "#ff55cd",
+        },
+    [`${cmLightClass} .${COLOR_BRACKET_CLASS}-2, ${cmLightClass} .${COLOR_BRACKET_CLASS}-2 .cm-bracket`]:
+        {
+            color: "#69ba00",
+        },
+    [`${cmDarkClass} .${COLOR_BRACKET_CLASS}-2, ${cmDarkClass} .${COLOR_BRACKET_CLASS}-2 .cm-bracket`]:
+        {
+            color: "#73ff63",
+        },
+    [`${cmLightClass} .${MISMATCHED_BRACKET_CLASS}, ${cmLightClass} .${MISMATCHED_BRACKET_CLASS} .cm-bracket`]:
+        {
+            color: "rgb(255 18 18 / 80%)",
+        },
+    [`${cmDarkClass} .${MISMATCHED_BRACKET_CLASS}, ${cmDarkClass} .${MISMATCHED_BRACKET_CLASS} .cm-bracket`]:
+        {
+            color: "rgb(255 18 18 / 80%)",
+        },
+});
+
+export const colorPairedBracketsPluginLowestPrec = Prec.lowest([
+    colorPairedBracketsPlugin,
+    // colorPairedBracketsTheme,
+]);
 
 export const highlightCursorBracketsPlugin = ViewPlugin.fromClass(
     class {
@@ -544,7 +589,7 @@ export const highlightCursorBracketsPlugin = ViewPlugin.fromClass(
         }
 
         update(update: ViewUpdate) {
-            if (update.transactions.some((tr) => tr.annotation(tempKeyPress))) {
+            if (isTempKeypressUpdate(update)) {
                 return;
             }
             if (update.docChanged || update.selectionSet)
@@ -553,3 +598,26 @@ export const highlightCursorBracketsPlugin = ViewPlugin.fromClass(
     },
     { decorations: (v) => v.decorations },
 );
+
+const HIGHLIGHT_ACCENT_COLOR = "hsl(var(--accent-h) var(--accent-s)";
+
+export const _highlightBracketsTheme = EditorView.baseTheme({
+    //todo: obsidian
+    "*": {
+        "--accent-h": "",
+        "--accent-s": "",
+    },
+    [`${cmLightClass} .${HIGHLIGHTED_BRACKET_CLASS}, ${cmLightClass} .${HIGHLIGHTED_BRACKET_CLASS} [class^="${COLOR_BRACKET_CLASS}-"]`]:
+        {
+            backgroundColor: `${HIGHLIGHT_ACCENT_COLOR} 40% / 30%)`,
+        },
+    [`${cmDarkClass} .${HIGHLIGHTED_BRACKET_CLASS}, ${cmDarkClass} .${HIGHLIGHTED_BRACKET_CLASS} [class^="${COLOR_BRACKET_CLASS}-"]`]:
+        {
+            backgroundColor: `${HIGHLIGHT_ACCENT_COLOR} 70% / 60%)`,
+        },
+});
+
+export const highlightCursorBracketsExtension = [
+    highlightCursorBracketsPlugin,
+    // highlightBracketsTheme,
+];

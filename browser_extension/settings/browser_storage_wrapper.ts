@@ -97,15 +97,13 @@ async function get_decompressed(key: string): Promise<string> {
         return "";
     }
     const total_chunks = settings[`${key}_number`];
-    const chunks = Array.from(
-        { length: total_chunks },
-        (_, i) => `${key}${i + 1}`,
-    );
+    const chunks = Array(total_chunks)
+        .fill(undefined)
+        .map((_, i) => `${key}${i + 1}`);
     const results = await browser.storage.sync.get(chunks);
-    const results_joined = Array.from(
-        { length: total_chunks },
-        (_, i) => results[`${key}${i + 1}`],
-    );
+    const results_joined = Array(total_chunks)
+        .fill(undefined)
+        .map((_, i) => results[`${key}${i + 1}`]);
     return decompressFromUint8Array(
         base64ToUint8Array(results_joined.join("")),
     );

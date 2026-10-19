@@ -3,14 +3,18 @@ import type { EditorState } from "@codemirror/state";
 import { getLatexSuiteConfig } from "src/snippets/codemirror/config";
 import { queueSnippet } from "src/snippets/codemirror/snippet_queue_state_field";
 import { expandSnippets } from "src/snippets/snippet_management";
-import type { CMBound, Context } from "src/editor_context/context";
-import { getContextPlugin } from "src/editor_context/context";
+import type { Context } from "src/editor_context/context";
+import { type CMBound, getContextPlugin } from "src/editor_context/context";
 import { autoEnlargeBrackets } from "./auto_enlarge_brackets";
 import type { snippetDebugLevel } from "src/settings/settings";
-import type { Snippet, SnippetType } from "src/snippets/snippets";
-import { IncludedEnvironmentResult } from "src/snippets/snippets";
+import type { Snippet } from "src/snippets/snippets";
+import {
+    IncludedEnvironmentResult,
+    type SnippetType,
+} from "src/snippets/snippets";
 import { showSnippetInfo } from "src/editor_extensions/obsidian_utils";
 import type { ResultInsert } from "src/snippets/luasnip_api/node";
+import { syntaxTree } from "@codemirror/language";
 
 type SnippetInfo = {
     snippets: Snippet<SnippetType>[];
@@ -90,17 +94,13 @@ const getParsedSelection = (view: EditorView, original_range: CMBound) => {
     if (!startCalloutMatch) {
         return originalResult;
     }
-    const calloutCount = startCalloutMatch[1].split(">").length - 1;
-    const indentation = startCalloutMatch[2];
+    const indentation = startCalloutMatch[2]!;
     let exit = false;
     parsedSel = original_sel.replaceAll(
-        new RegExp("\\n((?:> ?)*)(\\s*)", "g"),
-        (match, callouts: string, indent: string) => {
+        new RegExp("\\n(\\s*)", "g"),
+        (match, indent: string) => {
             if (exit) return match;
-            if (
-                callouts.split(">").length - 1 !== calloutCount ||
-                indent.length < indentation.length
-            ) {
+            if (indent.length < indentation.length) {
                 exit = true;
                 return match;
             }
@@ -146,9 +146,20 @@ const runSnippetCursor = (
     }
     const envNames = Array.from(ctx.getEnvNames(to));
     const updatedLine = line + key;
-    for (let i = 0; i < snippetInfo.snippets.length; i++) {
-        const snippet = snippetInfo.snippets[i];
-        const inIncludedScope = snippet.isWithinIncludedScope(envNames);
+    const bounds = ctx.getBounds(to);
+    const node =
+        bounds && "tree" in bounds && bounds.tree
+            ? bounds.tree
+            : syntaxTree(view.state).resolveInner(to, -1);
+    const symbol = Symbol("snippet context update");
+    for (const [i, snippet] of snippetInfo.snippets.entries()) {
+        const inIncludedScope = snippet.isWithinIncludedScope(
+            envNames,
+            ctx,
+            view,
+            node,
+            symbol,
+        );
         if (
             !snippet.options.snippetShouldRunInMode(
                 ctx.mode,

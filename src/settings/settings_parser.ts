@@ -1,5 +1,7 @@
+import type { PluginSnippetApi } from "src/snippets/luasnip_api";
 import type { SnippetVariables, SnippetVersion } from "src/snippets/parse";
-import { parseSnippets, parseSnippetVariables } from "src/snippets/parse";
+import { parseSnippets } from "src/snippets/parse";
+import { parseSnippetVariables } from "src/snippets/intermediate-parse";
 
 export function getSettingsSnippetVariables(snippetVariables: string) {
     try {
@@ -14,6 +16,7 @@ export async function getSettingsSnippets(
     snippetVariables: SnippetVariables,
     defaultSnippetVersion: SnippetVersion = 2,
     identifier: string = "snippets.ts",
+    pluginApi: PluginSnippetApi,
 ) {
     try {
         return await parseSnippets(
@@ -21,6 +24,7 @@ export async function getSettingsSnippets(
             snippetVariables,
             defaultSnippetVersion,
             identifier,
+            pluginApi,
         );
     } catch (e) {
         console.error(`Failed to load snippets from settings: ${e}`);

@@ -1,6 +1,6 @@
-import type { Snippet } from "codemirror_extension/codemirror_extensions";
-import type { EditorState } from "@codemirror/state";
-import type { SnippetType } from "src/snippets/snippets";
+import { Facet, StateField, type EditorState } from "@codemirror/state";
+import type { Snippet, SnippetType } from "src/snippets/snippets";
+import { EditorView, ViewPlugin } from "@codemirror/view";
 
 declare global {
     interface String {
@@ -72,15 +72,15 @@ export function createElement(
  * @returns a debounced function that takes the same parameter as the original function.
  * @public
  */
-export function debounce<T extends unknown[]>(
-    cb: (...args: [...T]) => unknown,
+export function debounce<T extends unknown[], V>(
+    cb: (...args: [...T]) => V,
     timeout: number = 0,
     resetTimer?: boolean,
-): Debouncer<T> {
+): Debouncer<T, void> {
     let timer: ReturnType<typeof setTimeout> | null = null;
     let cached_args: [...T] | null = null;
 
-    const debounced = (...args: [...T]) => {
+    const debounced = (...args: [...T]): void => {
         if (timer) {
             if (resetTimer) clearTimeout(timer);
             else return;
@@ -115,9 +115,9 @@ export function debounce<T extends unknown[]>(
 }
 
 /** @public */
-export interface Debouncer<T extends unknown[]> {
+export interface Debouncer<T extends unknown[], V> {
     /** @public */
-    (...args: [...T]): void;
+    (...args: [...T]): V;
     /** @public */
     cancel(): this;
     now(): this;
@@ -153,9 +153,16 @@ function createNoticeManager(): NoticeCallback {
     return lastNoticeFunc;
 }
 
-const notice = createNoticeManager();
+export const notice = StateField.define<NoticeCallback>({
+    create() {
+        return createNoticeManager();
+    },
+    update(value) {
+        return value;
+    },
+});
 export function showSnippetInfo(
-    _state: EditorState,
+    state: EditorState,
     snippet: Snippet<SnippetType>,
     replacement: string,
     containsTrigger: boolean,
@@ -197,6 +204,65 @@ export function showSnippetInfo(
             }
         }
     });
-    notice(fragment, 5000);
+    state.field(notice)(fragment, 5000);
     console.debug(div.textContent);
+}
+
+export function isMobile(): boolean {
+    //todo
+    return false;
+}
+
+export function isMacOS(): boolean {
+    //todo
+    return false;
+}
+
+export const cmLightClass = "&light ";
+export const cmDarkClass = "&dark ";
+
+export const livePreviewState = ViewPlugin.fromClass(
+    class {
+        mousedown: boolean = false;
+        _symbol: symbol = Symbol("livePreviewState");
+    },
+    {
+        eventObservers: {
+            mousedown() {
+                this.mousedown = true;
+            },
+            mouseup() {
+                this.mousedown = false;
+            },
+        },
+    },
+);
+
+export const fileConfig = Facet.define<
+    { getFile: () => string | null },
+    { getFile: () => string | null }
+>({
+    combine: (input) => {
+        return input[0] ?? { getFile: () => null };
+    },
+});
+
+export function getFileConfig(viewOrState: EditorView | EditorState) {
+    const state =
+        viewOrState instanceof EditorView ? viewOrState.state : viewOrState;
+    return state.facet(fileConfig);
+}
+
+export function getFileConfigExtension(getFile: () => string | null) {
+    return fileConfig.of({ getFile });
+}
+
+export function getFilePathFromState(_state: EditorState): string | null {
+    //todo: obsidian
+    return null;
+    // const fileInfo = state.field(editorInfoField, false);
+    // if (fileInfo === undefined) {
+    //     return getFileConfig(state).getFile()?.path ?? null;
+    // }
+    // return fileInfo.file?.path ?? null;
 }

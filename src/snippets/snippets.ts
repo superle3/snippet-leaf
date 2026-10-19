@@ -1,29 +1,26 @@
 import type { Options } from "../editor_context/options";
-import type {
-    ResultInsert,
-    Options as InsertOptions,
-} from "./luasnip_api/node";
 import {
     BaseNode,
+    type ResultInsert,
     ArrayNode,
     SnippetTabstopOnlyNode,
+    type Options as InsertOptions,
 } from "./luasnip_api/node";
 import * as v from "valibot";
-import type { SnippetVersion } from "./parse";
-// import type { MacroArea } from "src/utils/default_text_areas";
-// import type { StackOutput } from "src/utils/context";
-// import { isMacroArgumentCount } from "src/utils/context";
-import type { EditorView } from "@codemirror/view";
+import type { MacroArgs } from "src/editor_context/default_text_areas";
+import type { Context } from "src/editor_context/context";
 import {
-    isMacroArgumentCount,
     type CMBound,
     type StackOutput,
+    isMacroArgumentCount,
 } from "src/editor_context/context";
 import {
     VISUAL_SNIPPET_MAGIC_SELECTION_PLACEHOLDERv2,
     VISUAL_SNIPPET_MAGIC_SELECTION_PLACEHOLDERv2_ORIGINAL,
 } from "./snippet_version";
-import type { MacroArea } from "src/editor_context/default_text_areas";
+import type { ContextFunction, SnippetVersion } from "./parse";
+import type { EditorView } from "codemirror";
+import type { SyntaxNode } from "@lezer/common";
 
 /**
  * there are 3 distinct types of snippets:
@@ -116,6 +113,23 @@ export enum IncludedEnvironmentResult {
     NotIncluded,
 }
 
+function combineIncludedEnvironmentResults(
+    a: IncludedEnvironmentResult,
+    b: IncludedEnvironmentResult,
+): IncludedEnvironmentResult {
+    if (
+        a === IncludedEnvironmentResult.None &&
+        b === IncludedEnvironmentResult.None
+    )
+        return IncludedEnvironmentResult.None;
+    if (
+        a === IncludedEnvironmentResult.NotIncluded ||
+        b === IncludedEnvironmentResult.NotIncluded
+    )
+        return IncludedEnvironmentResult.NotIncluded;
+    return IncludedEnvironmentResult.Included;
+}
+
 type ProccesArgs = {
     effectiveLine: string;
     range: {
@@ -145,21 +159,23 @@ export abstract class Snippet<T extends SnippetType = SnippetType> {
     excludedEnvironments: string[];
     version: SnippetVersion;
     [ARE_SETTINGS_PARSED] = true;
-    excludedMacros: MacroArea[] = [];
-    includedMacros: MacroArea[] = [];
+    excludedMacros: MacroArgs[];
+    includedMacros: MacroArgs[];
+    context: ContextFunction[];
 
     constructor(
         type: T,
         trigger: SnippetData<T>["trigger"],
         replacement: SnippetData<T>["replacement"],
         options: Options,
-        priority: number = 0,
-        description: string = "no description provided",
-        excludedEnvironments: string[] = [],
-        excludedMacros: MacroArea[] = [],
-        includedMacros: MacroArea[] = [],
-        triggerKey: string = "",
-        version: SnippetVersion = 2,
+        priority: number,
+        description: string,
+        excludedEnvironments: string[],
+        excludedMacros: MacroArgs[],
+        includedMacros: MacroArgs[],
+        triggerKey: string,
+        context: ContextFunction[],
+        version: SnippetVersion,
     ) {
         this.type = type;
         // @ts-ignore
@@ -171,6 +187,7 @@ export abstract class Snippet<T extends SnippetType = SnippetType> {
         this.excludedMacros = excludedMacros;
         this.includedMacros = includedMacros;
         this.triggerKey = triggerKey;
+        this.context = context;
         this.version = version;
     }
 
@@ -206,8 +223,50 @@ export abstract class Snippet<T extends SnippetType = SnippetType> {
         }
         return false;
     }
+    isWithinContextScope(
+        ctx: Context,
+        view: EditorView,
+        node: SyntaxNode,
+        symbol: symbol,
+    ): IncludedEnvironmentResult {
+        if (this.context.length === 0) return IncludedEnvironmentResult.None;
+        const result = this.context.some((fn) => {
+            if (fn?._id?.symbol === symbol) {
+                return fn._id.result;
+            }
+            const result = fn({ ctx, view, node });
+            fn._id = {
+                symbol,
+                result,
+            };
+            return result;
+        });
+        if (result === null) return IncludedEnvironmentResult.None;
+        if (result === true) return IncludedEnvironmentResult.Included;
+        else if (result === false) return IncludedEnvironmentResult.NotIncluded;
+        return result satisfies never;
+    }
 
-    isWithinIncludedScope(stack: StackOutput[]): IncludedEnvironmentResult {
+    isWithinIncludedScope(
+        stack: StackOutput[],
+        ctx: Context,
+        view: EditorView,
+        node: SyntaxNode,
+        symbol: symbol,
+    ): IncludedEnvironmentResult {
+        const includedResult = this.isWithinIncludedMacroScope(stack);
+        const contextResult = this.isWithinContextScope(
+            ctx,
+            view,
+            node,
+            symbol,
+        );
+        return combineIncludedEnvironmentResults(includedResult, contextResult);
+    }
+
+    isWithinIncludedMacroScope(
+        stack: StackOutput[],
+    ): IncludedEnvironmentResult {
         if (this.includedMacros.length === 0)
             return IncludedEnvironmentResult.None;
         // Environments are skipped for the same reason as in isWithinExcludedScope, but only the
@@ -247,6 +306,7 @@ export class VisualSnippet extends Snippet<"visual"> {
         excludedMacros,
         includedMacros,
         triggerKey,
+        context,
         version,
     }: CreateSnippet<"visual">) {
         super(
@@ -260,6 +320,7 @@ export class VisualSnippet extends Snippet<"visual"> {
             excludedMacros,
             includedMacros,
             triggerKey,
+            context,
             version,
         );
     }
@@ -336,6 +397,7 @@ export class RegexSnippet extends Snippet<"regex"> {
         includedMacros,
         triggerKey,
         triggerAfter,
+        context,
         version,
     }: CreateSnippet<"regex">) {
         super(
@@ -349,6 +411,7 @@ export class RegexSnippet extends Snippet<"regex"> {
             excludedMacros,
             includedMacros,
             triggerKey,
+            context,
             version,
         );
         this.data.triggerAfter = triggerAfter;
@@ -421,6 +484,7 @@ export class StringSnippet extends Snippet<"string"> {
         includedMacros,
         triggerKey,
         triggerAfter,
+        context,
         version,
     }: CreateSnippet<"string">) {
         super(
@@ -434,6 +498,7 @@ export class StringSnippet extends Snippet<"string"> {
             excludedMacros,
             includedMacros,
             triggerKey,
+            context,
             version,
         );
         this.data.triggerAfter = triggerAfter;
@@ -513,13 +578,14 @@ function replacer(_k: string, v: unknown) {
 
 type CreateSnippet<T extends SnippetType> = {
     options: Options;
-    priority?: number;
-    description?: string;
-    excludedEnvironments?: string[];
-    excludedMacros?: MacroArea[];
-    includedMacros?: MacroArea[];
-    triggerKey?: string;
-    version?: SnippetVersion;
+    priority: number;
+    description: string;
+    excludedEnvironments: string[];
+    excludedMacros: MacroArgs[];
+    includedMacros: MacroArgs[];
+    triggerKey: string;
+    context: ContextFunction[];
+    version: SnippetVersion;
 } & SnippetData<T>;
 
 /**

@@ -42,12 +42,11 @@ import {
     DEFAULT_SNIPPET_VARIABLES,
     DEFAULT_SNIPPET_VARIABLES_str,
 } from "src/utils/default_snippet_variables";
+import { parseSnippets, parseSnippetsSync } from "src/snippets/parse";
 import {
-    parseSnippets,
-    parseSnippetsSync,
     parseSnippetVariables,
     parseSnippetVariablesSync,
-} from "src/snippets/parse";
+} from "src/snippets/intermediate-parse";
 
 const _codeMirrorExt = {
     Decoration,

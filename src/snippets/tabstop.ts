@@ -1,10 +1,11 @@
 import type { ChangeDesc, SelectionRange } from "@codemirror/state";
 import { EditorSelection } from "@codemirror/state";
-import type { DecorationSet, EditorView } from "@codemirror/view";
-import { Decoration, WidgetType } from "@codemirror/view";
+import type { EditorView } from "@codemirror/view";
+import { Decoration, type DecorationSet, WidgetType } from "@codemirror/view";
 import { resetCursorBlink } from "src/utils/editor_utils";
 import { endSnippet } from "./codemirror/history";
 import { createElement } from "src/editor_extensions/obsidian_utils";
+import { FIELD_MARKER_CLASS } from "./codemirror/tabstops_state_field";
 
 const LATEX_SUITE_TABSTOP_DECO_CLASS = "latex-suite-snippet-placeholder";
 
@@ -156,7 +157,7 @@ export function tabstopSpecsToTabstopGroups(
         .sort((a, b) => {
             for (let i = 0; i < Math.min(a.index.length, b.index.length); i++) {
                 if (a.index[i] != b.index[i]) {
-                    return a.index[i] - b.index[i];
+                    return a.index[i]! - b.index[i]!;
                 }
             }
             return a.index.length - b.index.length;
@@ -166,9 +167,9 @@ export function tabstopSpecsToTabstopGroups(
                 return { ...ts, index: currentIndex };
             }
             const isEqualIndex =
-                ts.index.length === arr[i - 1].index.length &&
+                ts.index.length === arr[i - 1]!.index.length &&
                 ts.index.every(
-                    (value, index) => value === arr[i - 1].index[index],
+                    (value, index) => value === arr[i - 1]!.index[index],
                 );
             currentIndex += isEqualIndex ? 0 : 1;
             return { ...ts, index: currentIndex };
@@ -186,8 +187,8 @@ export function tabstopSpecsToTabstopGroups(
 
     const result = [];
 
-    for (let number = 0; number < tabstopsByNumber.length; number++) {
-        const grp = new TabstopGroup(tabstopsByNumber[number], color);
+    for (const tabstops of tabstopsByNumber) {
+        const grp = new TabstopGroup(tabstops, color);
         result.push(grp);
     }
 
@@ -206,7 +207,7 @@ const FieldMarker = Decoration.widget({
     widget: new (class extends WidgetType {
         toDOM() {
             const span = createElement("span");
-            span.className = "cm-snippetFieldPosition";
+            span.className = FIELD_MARKER_CLASS;
             return span;
         }
         ignoreEvent() {

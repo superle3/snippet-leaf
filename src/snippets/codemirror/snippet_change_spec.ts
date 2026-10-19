@@ -1,4 +1,5 @@
-import type { ChangeSet, ChangeSpec } from "@codemirror/state";
+import type { ChangeSet } from "@codemirror/state";
+import { type ChangeSpec } from "@codemirror/state";
 import type { TabstopSpec } from "../tabstop";
 import type { ResultInsert } from "../luasnip_api/node";
 

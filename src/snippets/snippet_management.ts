@@ -1,26 +1,22 @@
 import type { EditorView } from "@codemirror/view";
-import type { EditorSelection } from "@codemirror/state";
+import type { EditorSelection, Transaction } from "@codemirror/state";
 import { Annotation, ChangeSet } from "@codemirror/state";
 import { endSnippet, startSnippet } from "./codemirror/history";
 import { isolateHistory } from "@codemirror/commands";
-import type { TabstopSpec } from "./tabstop";
-import { tabstopSpecsToTabstopGroups } from "./tabstop";
+import { type TabstopSpec, tabstopSpecsToTabstopGroups } from "./tabstop";
 import {
     addTabstops,
     getNextTabstopColor,
     tabstopsStateField,
 } from "./codemirror/tabstops_state_field";
-import {
-    clearSnippetQueue,
-    getSnippetQueue,
-} from "./codemirror/snippet_queue_state_field";
-import type { SnippetChangeSpec } from "./codemirror/snippet_change_spec";
+import { getSnippetQueue } from "./codemirror/snippet_queue_state_field";
 import { resetCursorBlink } from "src/utils/editor_utils";
+import type { SnippetChangeSpec } from "./codemirror/snippet_change_spec";
 
 // this function and the functions it calls are a bit too statefull
 // its use as few dispatches as possible, but probably can be simplified.
 export function expandSnippets(view: EditorView): boolean {
-    const snippetsToExpand = getSnippetQueue(view).snippetQueueValue;
+    const snippetsToExpand = getSnippetQueue(view).executeSnippetQueue();
     if (snippetsToExpand.length === 0) return false;
 
     // Try to apply changes all at once, because `view.dispatch` gets expensive for large documents
@@ -44,17 +40,18 @@ export function expandSnippets(view: EditorView): boolean {
     // Insert any tabstops
     if (tabstopsToAdd.length === 0) {
         view.dispatch(changes);
-        clearSnippetQueue(view);
         return true;
     }
 
     expandTabstops(view, tabstopsToAdd, changes);
 
-    clearSnippetQueue(view);
     return true;
 }
 // optimization to avoid updating math preview and conceal when a keypress is pushed into the history but immediately undone
 export const tempKeyPress = Annotation.define<true>();
+export const isTempKeypressUpdate = (update: {
+    transactions: readonly Transaction[];
+}) => update.transactions.some((t) => t.annotation(tempKeyPress));
 
 function handleUndoKeypresses(view: EditorView, snippets: SnippetChangeSpec[]) {
     const originalDoc = view.state.doc;
@@ -108,7 +105,7 @@ function expandTabstops(
     const frozenTabstopGroups = tabstopGroups.map((grp) => grp.copy());
     // Insert the replacements
     const effects = addTabstops(tabstopGroups).effects;
-    const firstGrp = tabstopGroups[0];
+    const firstGrp = tabstopGroups[0]!;
     const sel = firstGrp.toEditorSelection();
     const spec = {
         selection: sel,

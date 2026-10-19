@@ -6,13 +6,13 @@ import type { Extension } from "@codemirror/state";
 import { EditorState } from "@codemirror/state";
 import { compiler } from "./typescript";
 import type { SnippetVersion } from "src/snippets/parse";
-import { parseSnippetVariables } from "src/snippets/parse";
+import { parseSnippetVariables } from "src/snippets/intermediate-parse";
 import {
     get_default_snippets,
     get_settings,
     store_settings,
 } from "./browser_storage_wrapper";
-import { debounce } from "src/editor_extensions/obsidian_utils";
+import { debounce } from "./debounce";
 import type { Diagnostic } from "typescript";
 
 class Setting {

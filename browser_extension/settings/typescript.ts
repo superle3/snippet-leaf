@@ -226,7 +226,7 @@ const createCompilerService = (options: ts.CompilerOptions) => {
         getDefaultLibFileName: (opts) => ts.getDefaultLibFileName(opts),
         fileExists: (fileName) =>
             files[fileName] !== undefined || libFiles.has(fileName),
-        readFile: (fileName) => files[fileName].text ?? libFiles.get(fileName),
+        readFile: (fileName) => files[fileName]?.text ?? libFiles.get(fileName),
     };
 
     const languageService = ts.createLanguageService(

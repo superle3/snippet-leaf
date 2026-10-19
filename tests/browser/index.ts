@@ -1,16 +1,17 @@
-import type { Text } from "@codemirror/state";
+import type { EditorState, Text } from "@codemirror/state";
 import { Compartment, StateField, type Extension } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 import { latex } from "codemirror-lang-latex";
 import { basicSetup } from "codemirror";
 import {
     DEFAULT_SETTINGS,
-    latex_suite,
     type LatexSuitePluginSettings,
 } from "codemirror_extension/codemirror_extensions";
 import { conceal } from "src/editor_extensions/conceal_fns";
 import { contextPlugin } from "src/editor_context/context";
 import { debounce } from "src/editor_extensions/obsidian_utils";
+import { getLatexSuiteConfig } from "src/snippets/codemirror/config";
+import { main, type LatexSuiteCMSettings } from "src/extension";
 
 declare global {
     interface Uint8Array {
@@ -44,7 +45,7 @@ const latex_suite_compartment = new Compartment();
 const extensions: Extension[] = [
     latex(),
     basicSetup,
-    latex_suite_compartment.of(latex_suite()),
+    latex_suite_compartment.of(main(DEFAULT_SETTINGS)),
     StateField.define({
         create(state) {
             setUrl(state.doc);
@@ -89,9 +90,10 @@ const view = new EditorView({
 });
 
 function setSettings(settings: Partial<LatexSuitePluginSettings>) {
-    latex_suite_compartment.reconfigure(
-        latex_suite(Object.assign({}, DEFAULT_SETTINGS, settings)),
-    );
+    const new_settings = Object.assign({}, DEFAULT_SETTINGS, settings);
+    view.dispatch({
+        effects: latex_suite_compartment.reconfigure(main(new_settings)),
+    });
 }
 
 declare module "@codemirror/view" {
@@ -106,9 +108,12 @@ view.setDoc = function (doc: string, pos?: number) {
     });
 };
 
+view.focus();
 window.view = view;
 window.conceal = conceal;
 window.setSettings = setSettings;
+window.getLatexSuiteSettings = (state: EditorState) =>
+    getLatexSuiteConfig(state);
 window.contextPlugin = contextPlugin;
 const ctx = view.plugin(contextPlugin)!;
 window.ctx = ctx;
@@ -121,7 +126,8 @@ declare global {
     interface Window {
         view: EditorView;
         conceal: typeof conceal;
-        setSettings: (settings: Partial<LatexSuitePluginSettings>) => void;
+        setSettings: typeof setSettings;
+        getLatexSuiteSettings: (state: EditorState) => LatexSuiteCMSettings;
         contextPlugin: typeof contextPlugin;
         ctx: typeof ctx;
     }

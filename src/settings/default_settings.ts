@@ -4,10 +4,31 @@ import type {
     LatexSuitePluginSettings,
     LatexSuiteRawSettings,
 } from "./raw_settings";
+import { DEFAULT_MATHLESS_ARGS } from "src/editor_context/default_text_areas";
+import type { RawConcealMapping } from "src/editor_extensions/conceal_maps";
+
+const EMPTY_MAPPING: RawConcealMapping = {
+    not_remap: {},
+    cmd_symbols: {},
+    operators: {},
+    fractions: {},
+    greek: {},
+    map_super: {},
+    map_sub: {},
+    bar: {},
+    dot: {},
+    hat: {},
+    brackets: {},
+    leftrightBrackets: {},
+    mathbb: {},
+    mathscrcal: {},
+    mathfrak: {},
+};
 
 export const DEFAULT_SETTINGS = {
     snippets: DEFAULT_SNIPPETS,
     snippetVariables: DEFAULT_SNIPPET_VARIABLES,
+    snippetIMEVersion: false,
 
     // Basic settings
     snippetsEnabled: true,
@@ -18,6 +39,8 @@ export const DEFAULT_SETTINGS = {
     concealEnabled: false,
     concealRevealTimeout: 0,
     concealLinewise: false,
+    concealMaps: JSON.stringify(EMPTY_MAPPING),
+    // concealMaps: JSON.stringify(EMPTY_MAPPING, null, "\t"),
     colorPairedBracketsEnabled: true,
     highlightCursorBracketsEnabled: true,
     autofractionEnabled: true,
@@ -54,4 +77,6 @@ export const DEFAULT_SETTINGS = {
     matrixShortcutsNewlineTrigger: "Enter",
     matrixShortcutsExitTrigger: "Shift-Enter",
     taboutTrigger: "Tab",
+    reverseTaboutTrigger: "Shift-Tab",
+    textMacros: JSON.stringify(DEFAULT_MATHLESS_ARGS, null, "\t"),
 } as const satisfies LatexSuitePluginSettings & LatexSuiteRawSettings;

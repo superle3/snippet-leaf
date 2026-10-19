@@ -1,5 +1,5 @@
 import type { Text } from "@codemirror/state";
-import type { SyntaxNode } from "@lezer/common";
+import type { SyntaxNode, TreeCursor } from "@lezer/common";
 import type { PairedBrackets } from "src/editor_extensions/highlight_brackets";
 
 export interface Token {
@@ -10,10 +10,8 @@ export interface Token {
 
 export const tokenize = (latexString: string): Token[] => {
     const tokens: Token[] = [];
-    let index = 0;
-
-    while (index < latexString.length) {
-        const char = latexString[index];
+    for (let index = 0; index < latexString.length; ) {
+        const char = latexString[index]!;
 
         if (/\s/.test(char)) {
             index++;
@@ -71,13 +69,13 @@ const readEscapeToken = (
     const length = latexString.length;
     let current = start + 1;
 
-    const nextChar = latexString[current];
+    const nextChar = latexString[current]!;
 
     // Case: Command token (e.g., \sin, \frac)
     if (/[A-Za-z]/.test(nextChar)) {
         do {
             current++;
-        } while (current < length && /[A-Za-z]/.test(latexString[current]));
+        } while (current < length && /[A-Za-z]/.test(latexString[current]!));
     }
     // Case: Symbol token (e.g., \%, \_, \{)
     else {
@@ -113,7 +111,7 @@ export function findIndexReverse<T>(
     predicate: (value: T, index: number, array: T[]) => boolean,
 ): number | null {
     for (let i = array.length - 1; i >= 0; i--) {
-        if (predicate(array[i], i, array)) {
+        if (predicate(array[i]!, i, array)) {
             return i;
         }
     }
@@ -148,7 +146,7 @@ export function* iterateTreeCursor(topNode: SyntaxNode, doc: EquationText) {
         cursor.node.parent &&
         cursor.node.parent.from >= doc.from &&
         cursor.parent() &&
-        !NodeEquals(cursor.node, cursor.node.parent)
+        !NodeEquals(topNode, cursor.node)
     ) {
         // empty
     }
@@ -160,12 +158,13 @@ export function* iterateTreeCursor(topNode: SyntaxNode, doc: EquationText) {
     } while (
         (doc.skipCursorMove || cursor.next()) &&
         cursor.from <= doc.to &&
-        cursor.node !== topNode
+        cursor.node !== topNode &&
+        !doc.exit
     );
 }
-
 export class EquationText {
     public skipCursorMove: boolean = false;
+    public exit: boolean = false;
 
     constructor(
         public readonly eqn: string,
@@ -185,6 +184,13 @@ export class EquationText {
             node.to,
         );
     }
+
+    moveTo = (cursor: TreeCursor, pos: number, side: -1 | 0 | 1) => {
+        cursor.moveTo(pos, side);
+        if ((side === 1 && cursor.from < this.from) || cursor.node.type.isTop) {
+            this.exit = true;
+        }
+    };
 }
 
 export function* iterateParents(node: SyntaxNode): Generator<SyntaxNode> {
@@ -193,4 +199,24 @@ export function* iterateParents(node: SyntaxNode): Generator<SyntaxNode> {
         yield parent;
         parent = parent.parent;
     }
+}
+
+export function* iterateTreeCursorReverse(
+    topNode: SyntaxNode,
+    doc: EquationText,
+) {
+    const cursor = topNode.cursor();
+    cursor.moveTo(doc.to, -1);
+    if (cursor.node.from < doc.from) {
+        return;
+    }
+    do {
+        doc.skipCursorMove = false;
+        yield cursor;
+    } while (
+        (doc.skipCursorMove || cursor.prev()) &&
+        cursor.from >= doc.from &&
+        cursor.node !== topNode &&
+        !doc.exit
+    );
 }

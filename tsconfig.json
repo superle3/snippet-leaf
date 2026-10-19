@@ -12,6 +12,8 @@
         "importHelpers": true,
         "declaration": true,
         "verbatimModuleSyntax": true,
+        "noUncheckedIndexedAccess": true,
+        "skipLibCheck": true,
         "ignoreDeprecations": "6.0",
 
         "lib": ["DOM", "es2022"],

@@ -10,11 +10,8 @@ import type { Environment } from "../snippets/environment";
 import type { SyntaxNode, Tree, NodeIterator } from "@lezer/common";
 import { getMathBoundsPlugin } from "./mathbounds";
 import { syntaxTree } from "@codemirror/language";
-import {
-    snippetLessArea,
-    type MacroArea,
-    allTextAreas,
-} from "src/editor_context/default_text_areas";
+import { getLatexSuiteConfig } from "src/snippets/codemirror/config";
+import type { MacroArgs } from "./default_text_areas";
 
 export type StackOutput = (
     | {
@@ -30,6 +27,11 @@ export type StackOutput = (
     Bounds & { node: SyntaxNode };
 
 export type MacroStackOutput = StackOutput & { kind: "command" };
+type MacroStackOutputWithCount<T extends MacroArgs> = {
+    stack: MacroStackOutput;
+    macro: T;
+    count?: number;
+};
 export interface SmallBounds {
     start: number;
     end: number;
@@ -46,7 +48,7 @@ export class Context {
     mode!: Mode;
     pos!: number;
     ranges!: SelectionRange[];
-    boundsCache!: Map<number, EquationInfo>;
+    boundsCache!: Map<number, EquationInfo | null>;
     innerBoundsCache!: Map<number, SmallBounds>;
     constructor(view: EditorView) {
         this.updateFromView(view);
@@ -121,10 +123,10 @@ export class Context {
         }
     }
 
-    isWithinMacros(
+    isWithinMacros<T extends MacroArgs>(
         pos: number,
-        macros: readonly MacroArea[],
-    ): (StackOutput & { kind: "command" }) | null {
+        macros: readonly T[],
+    ): null | MacroStackOutputWithCount<T> {
         for (const result of this.getEnvNames(pos)) {
             if (result.kind === "environment") continue;
             if (result.kind === "math") return null;
@@ -275,24 +277,29 @@ export class Context {
     }
 
     inTextEnvironment(): "text" | "none" | null {
-        const result = this.isWithinMacros(this.pos, allTextAreas);
+        const { all } = getLatexSuiteConfig(this.state).mathlessMacros;
+        const result = this.isWithinMacros(this.pos, all);
         if (!result) return null;
-        const openSymbol = result.name;
-        if (snippetLessArea.some((macro) => macro.name === openSymbol)) {
+        if (result.macro.kind === "restricted") {
             return "none";
         } else {
             return "text";
         }
     }
 
-    getBounds(pos: number = this.pos): Bounds | null {
+    getBounds(pos: number = this.pos) {
         // yes, I also want the cache to work over the produced range instead of just that one through
         // a BTree or the like, but that'd be probably overkill
         const bound = this.boundsCache.get(pos);
         if (this.boundsCache.has(pos) && bound !== undefined) {
             return bound;
         }
-        return null;
+        const mathMode = getMathBoundsPlugin(this.view).inMathBound(
+            this.state,
+            this.pos,
+        );
+        this.boundsCache.set(pos, mathMode);
+        return mathMode;
     }
 
     // Accounts for equations within text environments, e.g. $$\text{... $...$}$$
@@ -309,11 +316,7 @@ export class Context {
         return mathMode.EnvName;
     }
 }
-export let contextPlugin: ViewPlugin<Context>;
-export const createContextPlugin = () => {
-    contextPlugin = ViewPlugin.fromClass(Context);
-    return contextPlugin;
-};
+export const contextPlugin: ViewPlugin<Context> = ViewPlugin.fromClass(Context);
 
 export const getContextPlugin = (view: EditorView) => {
     const plugin = view.plugin(contextPlugin);
@@ -406,10 +409,10 @@ export const mathContext: Record<
      */
     DollarMath: (node: SyntaxNode, state: EditorState): EquationInfo => {
         if (node.to - node.from < 4) {
-            return mathContext.InlineMath(node, state) as EquationInfo;
+            return mathContext.InlineMath!(node, state) as EquationInfo;
         }
         const mathNode = node.firstChild!.nextSibling!;
-        return mathContext[mathNode.name](mathNode, state) as EquationInfo;
+        return mathContext[mathNode.name]!(mathNode, state) as EquationInfo;
     },
     BeginEnv: (node: SyntaxNode): EquationInfo => ({
         type: MathMode.TextEnv,
@@ -527,7 +530,7 @@ const getInnerBoundsFromEquation = (
     const equation_name_node = node
         .getChild("EndEnv")
         ?.getChild("EnvNameGroup")
-        ?.getChild(hash_map[node.name]);
+        ?.getChild(hash_map[node.name]!);
     const content = node.getChild("Content");
     const begin_env = node.getChild("BeginEnv");
     if (!content || !equation_name_node || !begin_env) {
@@ -611,25 +614,34 @@ const _printSyntaxTree = (state: EditorState, pos: number) => {
     console.log(buildTreeString(tree.topNode));
 };
 
-export function isMacroArgumentCount(
+export function isMacroArgumentCount<T extends MacroArgs>(
     stack: Readonly<MacroStackOutput>,
-    macros: readonly MacroArea[],
-): null | MacroStackOutput {
-    const macro = macros.find((macro) => macro.name === stack.name);
-    if (!macro) return null;
-    if (!macro.arguments) return stack;
+    macros: readonly T[],
+): null | MacroStackOutputWithCount<T> {
+    const filtered_macros = macros.filter((macro) => macro.name === stack.name);
+    if (filtered_macros.length === 0) return null;
+    for (const macro of filtered_macros) {
+        if (!macro.arguments) return { stack, macro };
+    }
 
     let sibling_count: number = 0;
     let sibling: SyntaxNode | null = stack.node;
     while ((sibling = sibling.prevSibling) !== null) {
-        if (sibling.name.endsWith("Argument")) {
+        if (
+            sibling.name.endsWith("Argument") ||
+            sibling.name === "EnvNameGroup" ||
+            sibling.name === "Group" ||
+            sibling.name === "MathCommand"
+        ) {
             sibling_count++;
         }
     }
-    if (!macro.arguments.includes(sibling_count)) {
-        return null;
+    for (const macro of filtered_macros) {
+        if (macro.arguments?.includes(sibling_count)) {
+            return { stack, macro, count: sibling_count };
+        }
     }
-    return stack;
+    return null;
 }
 export interface Bounds {
     inner_start: number;
