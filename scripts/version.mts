@@ -17,11 +17,8 @@ const files = [
     "browser_extension/package.json",
     "package-lock.json",
 ];
-const dir = import.meta.dirname;
 const versions: string[] = [];
-for (const filename of files) {
-    console.log(dir, filename);
-    const file = path.join(dir, filename);
+for (const file of files) {
     const content = readFileSync(file, "utf-8");
     const version = JSON.parse(content).version;
     versions.push(version);
@@ -40,13 +37,12 @@ const [major, minor, patch] = maxVersion.split(".").map(Number);
 /** @type {string} */
 console.log(semanticBump, major, minor, patch);
 
-for (const filename of files) {
-    const file = path.join(dir, filename);
+for (const file of files) {
     const content = readFileSync(file, "utf-8");
     const json = JSON.parse(content);
     json.version = semanticBump;
     writeFileSync(file, JSON.stringify(json, null, 4) + "\n", "utf-8");
-    console.log(`Bumped version in ${filename} to ${semanticBump}`);
+    console.log(`Bumped version in ${file} to ${semanticBump}`);
 }
 
 execSync("npm run format");
