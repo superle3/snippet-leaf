@@ -1,11 +1,11 @@
 import { defineConfig } from "vitest/config";
 import { webdriverio } from "@vitest/browser-webdriverio";
-import { textPlugin, json5Plugin } from "./vite.config.ts";
+import { json5Plugin } from "./vite.config.ts";
 
 const cacheDir = process.env.VITEST_CACHE_DIR || `${process.env.HOME}/.cache`;
 
 export default defineConfig({
-    plugins: [textPlugin(), json5Plugin()],
+    plugins: [json5Plugin()],
     resolve: {
         tsconfigPaths: true,
     },

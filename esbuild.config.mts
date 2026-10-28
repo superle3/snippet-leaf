@@ -55,7 +55,7 @@ export const inlin_plugin = (options?: InlinePluginOptions): Plugin => {
              * imports that start with `inline:`, e.g. import
              * 'inline:./file.ext';
              */
-            filter: /^inline:/,
+            filter: /\?raw$/,
 
             /**
              * The namespace to use. If you use more than one instance of
@@ -63,7 +63,7 @@ export const inlin_plugin = (options?: InlinePluginOptions): Plugin => {
              * a random string by default, so you won't need to change it
              * unless you're targeting a specific namespace.
              */
-            namespace: "_" + Math.random().toString(36).substr(2, 9),
+            namespace: "_" + Math.random().toString(36).slice(2, 11),
 
             /**
              * A function to transform the contents of the imported file.

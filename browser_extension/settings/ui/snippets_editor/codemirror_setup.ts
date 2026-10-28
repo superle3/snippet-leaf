@@ -45,7 +45,7 @@ import {
 import { libFiles } from "browser_extension/settings/typescript";
 import { highlightSelectionMatches, searchKeymap } from "@codemirror/search";
 import { lintKeymap } from "@codemirror/lint";
-import snippet_leaf from "inline:../../snippet_leaf.ts";
+import snippet_leaf from "../../snippet_leaf.ts?raw";
 
 const tsSetup = (snippets: string): Extension[] => {
     const fsMap = new Map();
@@ -67,7 +67,6 @@ const tsSetup = (snippets: string): Extension[] => {
     const env = createVirtualTypeScriptEnvironment(
         system,
         ["/user_snippets.ts", "/snippet_leaf.ts"],
-        //@ts-ignore
         ts,
         compilerOpts,
     );

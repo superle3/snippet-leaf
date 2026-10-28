@@ -1,4 +1,4 @@
-import default_snippets_str from "inline:src/default_snippets.js";
+import default_snippets_str from "src/default_snippets.js?raw";
 import default_snippets from "../default_snippets";
 import type { InputRawSnippet } from "src/snippets/parse";
 
