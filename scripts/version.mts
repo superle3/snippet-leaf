@@ -2,7 +2,6 @@
 
 import { execSync } from "child_process";
 import { readFileSync, writeFileSync } from "fs";
-import path from "path";
 
 execSync("npm run lint");
 execSync("npm run build:greasemonkey");
