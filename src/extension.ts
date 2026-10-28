@@ -75,6 +75,10 @@ export function main(settings: LatexSuitePluginSettings) {
             {
                 color: "#73ff63",
             },
+        '&dark .latex-suite-mismatched-bracket, &dark .latex-suite-mismatched-bracket [class^="tok-"], &dark .latex-suite-mismatched-bracket .cm-bracket, &dark .latex-suite-mismatched-bracket .cm-math':
+            {
+                color: "rgb(255 18 18 / 80%)",
+            },
         "&dark .latex-suite-highlighted-bracket, &dark .latex-suite-highlighted-bracket .cm-bracket, &dark .latex-suite-highlighted-bracket .cm-math ":
             {
                 backgroundColor: "hsla(170, 50%, 40%, 0.3)",
@@ -93,6 +97,10 @@ export function main(settings: LatexSuitePluginSettings) {
         '&light .latex-suite-color-bracket-2, &light .latex-suite-color-bracket-2 [class^="tok-"], &light .latex-suite-color-bracket-2 .cm-bracket, &light .latex-suite-color-bracket-2 .cm-math':
             {
                 color: "#69ba00",
+            },
+        '&light .latex-suite-mismatched-bracket, &light .latex-suite-mismatched-bracket [class^="tok-"], &light .latex-suite-mismatched-bracket .cm-bracket, &light .latex-suite-mismatched-bracket .cm-math':
+            {
+                color: "rgb(255 18 18 / 80%)",
             },
         "&light .latex-suite-highlighted-bracket, &light .latex-suite-highlighted-bracket .cm-bracket, &light .latex-suite-highlighted-bracket .cm-math ":
             {
