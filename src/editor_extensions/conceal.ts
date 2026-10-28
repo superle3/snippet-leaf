@@ -389,6 +389,11 @@ export class Conceal implements PluginValue {
             !isUpdateConcealEffect(update)
         )
             return;
+        if (!getLatexSuiteConfig(update.view).concealEnabled) {
+            this.decorations = Decoration.none;
+            this.atomicRanges = RangeSet.empty as RangeSet<RangeValue>;
+            return;
+        }
         if (isTempKeypressUpdate(update)) {
             this.decorations = this.decorations.map(update.changes);
             this.atomicRanges = this.atomicRanges.map(update.changes);

@@ -54,14 +54,8 @@ export function main(settings: LatexSuitePluginSettings) {
     ];
     extensions.push(...snippet_leaf_extension);
     const conceal_plugin = mkConcealPlugin(CMSettings);
-
     extensions.push(conceal_plugin);
 
-    const highlighting_brackets = [
-        colorPairedBracketsPluginLowestPrec,
-        highlightCursorBracketsPlugin,
-    ];
-    extensions.push(...highlighting_brackets);
     const dark_theme_extension = EditorView.baseTheme({
         '&dark .latex-suite-color-bracket-0, &dark .latex-suite-color-bracket-0 [class^="tok-"], &dark .latex-suite-color-bracket-0 .cm-bracket, &dark .latex-suite-color-bracket-0 .cm-math':
             {
@@ -107,8 +101,18 @@ export function main(settings: LatexSuitePluginSettings) {
                 backgroundColor: "hsla(170, 50%, 70%, 0.6)",
             },
     });
-
-    extensions.push(light_theme_extension, dark_theme_extension);
+    if (
+        CMSettings.highlightCursorBracketsEnabled ||
+        CMSettings.colorPairedBracketsEnabled
+    ) {
+        extensions.push(light_theme_extension, dark_theme_extension);
+    }
+    if (CMSettings.colorPairedBracketsEnabled) {
+        extensions.push(colorPairedBracketsPluginLowestPrec);
+    }
+    if (CMSettings.highlightCursorBracketsEnabled) {
+        extensions.push(highlightCursorBracketsPlugin);
+    }
 
     return { extension: extensions };
 }
