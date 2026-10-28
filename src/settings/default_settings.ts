@@ -4,8 +4,13 @@ import type {
     LatexSuitePluginSettings,
     LatexSuiteRawSettings,
 } from "./raw_settings";
-import { DEFAULT_MATHLESS_ARGS } from "src/editor_context/default_text_areas";
 import type { RawConcealMapping } from "src/editor_extensions/conceal_maps";
+import type { MathlessMacroArgs } from "src/editor_context/default_text_areas";
+
+const DEFAULT_MATHLESS_ARGS: MathlessMacroArgs = {
+    text: [],
+    restricted: [{ name: "operatorname", arguments: [0] }],
+};
 
 const EMPTY_MAPPING: RawConcealMapping = {
     not_remap: {},

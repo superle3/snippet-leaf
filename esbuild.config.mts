@@ -384,6 +384,14 @@ async function userScriptBuild(version: string) {
     );
     const new_config = userscriptSettingsBundleConfigs(settings_bundle_version);
     await esbuild.build(new_config);
+    const new_bundle_path = `greasemonkey/dist/settings_bundle-${settings_bundle_version}.user.js`;
+    const new_bundle_text = await fs.readFile(new_bundle_path, "utf-8");
+    if (/\/\/ node_modules/.test(new_bundle_text)) {
+        console.error(
+            "Error: The settings bundle contains node_modules code. This is likely due to a misconfiguration in the build process.",
+        );
+        process.exit(1);
+    }
     console.log(
         "Building codemirror extension",
         version,
