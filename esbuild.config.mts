@@ -366,9 +366,8 @@ async function userScriptBuild(version: string) {
             old_settings_bundle_asset.url,
         );
         const old_settings_bundle = await old_settings_bundle_response.text();
-        const new_file = await fs.readFile(
-            `greasemonkey/dist/settings_bundle-${version}.user.js`,
-        );
+        const new_file_path = `greasemonkey/dist/settings_bundle-${version}.user.js`;
+        const new_file = await fs.readFile(new_file_path);
         if (
             stripUserScript(old_settings_bundle) ===
             stripUserScript(new_file.toString())
@@ -377,6 +376,7 @@ async function userScriptBuild(version: string) {
                 "Nothing changed in settings bundle, keeping the old version",
             );
             settings_bundle_version = `${major}.${minor}.${patch}`;
+            await fs.unlink(new_file_path);
         }
     }
     console.log(
