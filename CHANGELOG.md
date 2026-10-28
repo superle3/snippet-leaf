@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.1.3 (2026-10-28)
+
+- Only enable conceal, color brackets and highlighting brackets when enabled.
+- Remove unnecessary valibot code from settings_bundle userscript, keeping only the settings and the loading of the settings.
+- Add ui for missing settings.
+
+## 0.1.2 (2026-10-19)
+
+- fix: only run visual snippets on their trigger key (by @Andr3wPearce in https://github.com/superle3/snippet-leaf/pull/34)
+- pull upstream changes from 1.13.0-1.14.0
+
+### Added settings
+
+```ts
+type Added = {
+    snippetIMEVersion: boolean;
+    /** json stringified version of the latex suite conceal maps */
+    concealMaps: string;
+    reverseTaboutTrigger: string;
+    /** json stringified version of the latex suite text macros, e.g. `text` and `restricted` */
+    textMacros: string;
+};
+```
+
 ## 0.1.1 (2026-09-14)
 
 ### Bug fixes

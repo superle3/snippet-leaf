@@ -47,7 +47,7 @@ import { highlightSelectionMatches, searchKeymap } from "@codemirror/search";
 import { lintKeymap } from "@codemirror/lint";
 import snippet_leaf from "inline:../../snippet_leaf.ts";
 
-export const basicSetup = (snippets: string): Extension[] => {
+const tsSetup = (snippets: string): Extension[] => {
     const fsMap = new Map();
     for (const file of libFiles.keys()) {
         fsMap.set("/" + file, libFiles.get(file));
@@ -163,7 +163,7 @@ export const basicSetup = (snippets: string): Extension[] => {
         }
     });
 
-    const ts_extensions = [
+    return [
         javascript({
             typescript: true,
             jsx: false,
@@ -179,32 +179,40 @@ export const basicSetup = (snippets: string): Extension[] => {
         }),
         tsJSDocHover,
     ];
-    return [
-        basicSetupC,
-        lineNumbers(),
-        highlightSpecialChars(),
-        history(),
-        drawSelection(),
-        dropCursor(),
-        EditorState.allowMultipleSelections.of(true),
-        indentOnInput(),
-        indentUnit.of("    "),
-        syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
-        EditorView.lineWrapping,
-        bracketMatching(),
-        closeBrackets(),
-        rectangularSelection(),
-        highlightSelectionMatches(),
-        Prec.highest(
-            keymap.of([
-                ...closeBracketsKeymap,
-                ...defaultKeymap,
-                ...searchKeymap,
-                ...historyKeymap,
-                indentWithTab,
-                ...lintKeymap,
-            ]),
-        ),
-        ts_extensions,
-    ];
 };
+
+export const basicSetup = (snippets: string, ts: boolean): Extension[] => {
+    if (ts) {
+        return [...tsSetup(snippets), ...minimalSetup];
+    } else {
+        return [javascript(), ...minimalSetup];
+    }
+};
+
+export const minimalSetup = [
+    basicSetupC,
+    lineNumbers(),
+    highlightSpecialChars(),
+    history(),
+    drawSelection(),
+    dropCursor(),
+    EditorState.allowMultipleSelections.of(true),
+    indentOnInput(),
+    indentUnit.of("    "),
+    syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
+    EditorView.lineWrapping,
+    bracketMatching(),
+    closeBrackets(),
+    rectangularSelection(),
+    highlightSelectionMatches(),
+    Prec.highest(
+        keymap.of([
+            ...closeBracketsKeymap,
+            ...defaultKeymap,
+            ...searchKeymap,
+            ...historyKeymap,
+            indentWithTab,
+            ...lintKeymap,
+        ]),
+    ),
+];

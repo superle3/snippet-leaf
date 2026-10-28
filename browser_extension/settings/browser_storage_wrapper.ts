@@ -116,13 +116,20 @@ export async function store_settings(
     const compressedSnippetVariables = compressToUint8Array(
         settings.snippetVariables,
     );
+    const compressedConcealMaps = compressToUint8Array(settings.concealMaps);
+    const textMacros = compressToUint8Array(settings.textMacros);
     const results: Promise<void>[] = [];
 
     results.push(
         browser.storage.sync.set({
             ...Object.entries(settings).reduce(
                 (acc, [key, value]) => {
-                    if (key === "snippets" || key === "snippetVariables")
+                    if (
+                        key === "snippets" ||
+                        key === "snippetVariables" ||
+                        key === "concealMaps" ||
+                        key === "textMacros"
+                    )
                         return acc;
                     acc[key] = value;
                     return acc;
@@ -134,6 +141,8 @@ export async function store_settings(
     results.push(
         store_compressed("snippets", compressedSnippets),
         store_compressed("snippetVariables", compressedSnippetVariables),
+        store_compressed("concealMaps", compressedConcealMaps),
+        store_compressed("textMacros", textMacros),
     );
     await Promise.all(results);
 }

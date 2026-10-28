@@ -14,6 +14,10 @@ import {
 } from "./browser_storage_wrapper";
 import { debounce } from "./debounce";
 import type { Diagnostic } from "typescript";
+import * as v from "valibot";
+import { MappingSchema } from "src/editor_extensions/conceal_maps";
+import { mathlessArgsSchema } from "src/editor_context/default_text_areas";
+import json5 from "json5";
 
 class Setting {
     container_element: HTMLElement;
@@ -523,7 +527,12 @@ class LatexSuiteSettingTab {
             )
             .setClass("snippets-text-area");
 
-        this.createSnippetsEditor(snippetsSetting);
+        this.createSnippetsEditor(snippetsSetting, {
+            type: "snippets",
+            default: get_default_snippets,
+            empty: () => "export default [\n\n]\n",
+            validate: validateSnippets,
+        });
 
         new Setting(containerEl)
             .setName("Key trigger for non-auto snippets")
@@ -655,6 +664,32 @@ class LatexSuiteSettingTab {
                         await this.plugin.saveSettings();
                     }),
             );
+        const concealMapsSetting = new Setting(containerEl)
+            .setName("Conceal maps")
+            .setDesc(
+                this.renderHtml(
+                    'Conceal maps to add or remove macro/symbol concealments<br>For example if you don\'t like that <code>\\quad</code> is concealed as a space, or have a custom macro like <code>\\euro</code> you can add <code>€</code> to the <code>cmd_symbols</code> conceal map.<br><br>\nEvery map except <code>operators</code> and <code>function_macros</code> follows a scheme like <code>"euro": "€"</code> to add a conceal map and <code>"quad": null</code> to remove a conceal map.<br><code>operators</code> follows <code>"sin": false</code> to either enable or disable the concealment of <code>\\sin</code> to <code>sin</code>.<br><br>See <a href=\'https://github.com/artisticat1/obsidian-latex-suite/blob/main/DOCS.md#conceal-maps\'>Conceal Maps</a> for more information.',
+                ),
+            );
+        this.createSnippetsEditor(concealMapsSetting, {
+            type: "concealMaps",
+            validate: async (value) => {
+                const parsed = v.safeParse(
+                    v.pipe(
+                        v.string(),
+                        v.transform((obj): unknown => json5.parse(obj)),
+                        MappingSchema,
+                    ),
+                    value,
+                );
+                if (parsed.success) {
+                    return;
+                }
+                return parsed.issues.map((issue) => issue.message).join("\n");
+            },
+            default: () => DEFAULT_SETTINGS_RAW.concealMaps,
+            empty: () => "{\n\n}",
+        });
     }
 
     displayColorHighlightBracketsSettings() {
@@ -960,6 +995,7 @@ class LatexSuiteSettingTab {
             "next-tabstop": "Next tabstop",
             "prev-tabstop": "Previous tabstop",
             tabout: "Tabout",
+            "reverse-tabout": "Reverse tabout",
             "matrix-newline": 'Matrix: insert newline and "\\\\"',
             "matrix-cell": 'Matrix: insert " & "',
             "matrix-exit": "Matrix: move to the next line",
@@ -974,6 +1010,7 @@ class LatexSuiteSettingTab {
             ["matrix-cell", "matrixShortcutsCellTrigger"],
             ["matrix-exit", "matrixShortcutsExitTrigger"],
             ["tabout", "taboutTrigger"],
+            ["reverse-tabout", "reverseTaboutTrigger"],
         ] as const;
         for (const [name, key] of settings) {
             new Setting(containerEl).setName(name_map[name]).addText((text) =>
@@ -992,29 +1029,25 @@ class LatexSuiteSettingTab {
         const containerEl = this.containerEl;
         this.addHeading(containerEl, "Advanced snippet settings");
 
-        new Setting(containerEl)
+        const snippetVariablesSetting = new Setting(containerEl)
             .setName("Snippet variables")
             .setDesc(
                 "Assign snippet variables that can be used as shortcuts when writing snippets.",
-            )
-            .addTextArea((text) =>
-                text
-                    .setValue(this.plugin.settings.snippetVariables)
-                    .onChange(async (value) => {
-                        try {
-                            parseSnippetVariables(value);
-                            this.plugin.settings.snippetVariables = value;
-                        } catch (e) {
-                            console.error(
-                                "Failed to parse snippet variables:",
-                                e,
-                            );
-                        }
-                        await this.plugin.saveSettings();
-                    })
-                    .setPlaceholder(DEFAULT_SETTINGS_RAW.snippetVariables),
-            )
-            .setClass("latex-suite-snippet-variables-setting");
+            );
+
+        this.createSnippetsEditor(snippetVariablesSetting, {
+            type: "snippetVariables",
+            default: () => DEFAULT_SETTINGS_RAW.snippetVariables,
+            empty: () => "{\n\n}",
+            validate: async (value) => {
+                try {
+                    parseSnippetVariables(value);
+                } catch (e) {
+                    console.error("Snippet variable validation failed:", e);
+                    return String(e);
+                }
+            },
+        });
 
         new Setting(containerEl)
             .setName("Word delimiters")
@@ -1096,6 +1129,30 @@ class LatexSuiteSettingTab {
                         await this.plugin.saveSettings();
                     }),
             );
+
+        const textMacrosSetting = new Setting(containerEl)
+            .setName("Text macros")
+            .setDesc(
+                this.renderHtml(
+                    'A list of macros that should be treated as text. <ul><li>"text" macros will be treated as latex text mode, and thus snippets with option <code>T</code> will be expanded.</li><li> "restricted" macros will be treated like <code>\\begin</code> and <code>\\end</code> macros. Thus snippets will only expand in these if they have the <code>includedMacros</code> option set to include these macros.</li></ul><br>They follow the same format as <code>includedMacros</code> in snippets, see <a href="https://github.com/artisticat1/obsidian-latex-suite/blob/main/DOCS.md#macro-scopes">here</a> for more info.',
+                ),
+            );
+        this.createSnippetsEditor(textMacrosSetting, {
+            type: "textMacros",
+            default: () => DEFAULT_SETTINGS_RAW.textMacros,
+            empty: () => "{\n\n}",
+            validate: async (value) => {
+                const result = validateTextMacros(value);
+                if (!result.success) {
+                    const message = result.issues.map((issue) => issue.message);
+                    console.error(
+                        "Text macro validation failed:",
+                        message.join("\n"),
+                    );
+                    return message.join("\n");
+                }
+            },
+        });
         //The toggle both hides the settings and makes the plugin not load the vim commands on startup.
         // the vim toggle is loaded before the rest since expanding down looks better.
     }
@@ -1146,9 +1203,37 @@ class LatexSuiteSettingTab {
                         await this.plugin.saveSettings();
                     }),
             );
+        new Setting(containerEl)
+            .setName("IME support for automatic snippets")
+            .setDesc(
+                "Whether to expand automatic snippets when a key is pressed after IME composition is completed. This may solve some issues with IME/Chinese keyboards.",
+            )
+            .addToggle((toggle) =>
+                toggle
+                    .setValue(this.plugin.settings.snippetIMEVersion)
+                    .onChange(async (value) => {
+                        this.plugin.settings.snippetIMEVersion = value;
+                        await this.plugin.saveSettings();
+                    }),
+            );
     }
 
-    createSnippetsEditor(snippetsSetting: Setting) {
+    createSnippetsEditor(
+        snippetsSetting: Setting,
+        config: {
+            type:
+                | "snippets"
+                | "snippetVariables"
+                | "concealMaps"
+                | "textMacros";
+            validate: (
+                content: string,
+                view: EditorView,
+            ) => Promise<void | string>;
+            default: () => string;
+            empty: () => string;
+        },
+    ) {
         const customCSSWrapper = document.createElement("div");
         customCSSWrapper.classList.add("snippets-editor-wrapper");
         const snippets_footer = document.createElement("div");
@@ -1195,43 +1280,22 @@ class LatexSuiteSettingTab {
         snippetsSetting.setting_control.appendChild(customCSSWrapper);
         snippetsSetting.setting_control.appendChild(snippets_footer);
 
-        const extensions = basicSetup(this.plugin.settings.snippets);
+        const extensions = basicSetup(
+            this.plugin.settings[config.type],
+            config.type === "snippets",
+        );
         updateValidityIndicator(ValidityIndicator.VALID, "");
 
-        const delayedSave = debounce(async (v: ViewUpdate) => {
-            const snippets = v.state.doc.toString();
-            let success = ValidityIndicator.VALID;
-            let error = "";
-            const diagnostics = compiler(snippets);
-            const parsedDiagnostics = diagnostics.flatMap((d) => {
-                function getDiagnosticMessageText(d: Diagnostic): string {
-                    let result: string;
-                    if (typeof d.messageText !== "string") {
-                        result = d.messageText.messageText;
-                    } else {
-                        result = d.messageText;
-                    }
-                    if (typeof d.start === "number") {
-                        const start_line = v.state.doc.lineAt(d.start);
-                        const start_line_number = start_line.number;
-                        const start_char = start_line.from - d.start;
-                        result += ` at Ln ${start_line_number}, Col ${start_char}`;
-                    }
-                    return result;
-                }
-                if (Array.isArray(d)) {
-                    return d.map(getDiagnosticMessageText);
-                }
-                return [getDiagnosticMessageText(d)];
-            });
-            if (parsedDiagnostics.length > 0) {
-                console.error("Snippet syntax error:", diagnostics);
-                success = ValidityIndicator.INVALID;
-                error = "\n" + parsedDiagnostics.join("\n\n");
-            }
-            updateValidityIndicator(success, error);
+        const delayedSave = debounce(async (view: ViewUpdate) => {
+            const value = view.state.doc.toString();
+            const error = await config.validate(value, view.view);
+            const success =
+                error === undefined
+                    ? ValidityIndicator.VALID
+                    : ValidityIndicator.INVALID;
+            updateValidityIndicator(success, error ?? "");
             if (success !== ValidityIndicator.VALID) return;
-            this.plugin.settings.snippets = snippets;
+            this.plugin.settings[config.type] = value;
             await this.plugin.saveSettings();
         }, 1000);
         validityIndicator.onClick(() => {
@@ -1247,8 +1311,13 @@ class LatexSuiteSettingTab {
 
         extensions.push(change);
 
-        const view = createCMEditor(this.plugin.settings.snippets, extensions);
-        compiler(this.plugin.settings.snippets);
+        const view = createCMEditor(
+            this.plugin.settings[config.type],
+            extensions,
+        );
+        if (config.type === "snippets") {
+            compiler(this.plugin.settings.snippets);
+        }
         customCSSWrapper.appendChild(view.dom);
         snippetsSetting.setting_info.style.marginBottom = "20px";
         snippetsSetting.container_element.style.flexDirection = "column";
@@ -1263,26 +1332,37 @@ class LatexSuiteSettingTab {
         snippets_footer.appendChild(buttonsDiv);
         const reset = new ExtraButtonComponent(buttonsDiv);
         reset.setIcon("repeat").onClick(async () => {
-            const snippets = get_default_snippets();
+            const default_value = config.default();
             view.setState(
                 EditorState.create({
-                    doc: snippets,
+                    doc: default_value,
                     extensions: extensions,
                 }),
             );
             updateValidityIndicator(ValidityIndicator.VALID, "");
-            this.plugin.settings.snippets = snippets;
+            this.plugin.settings[config.type] = default_value;
             await this.plugin.saveSettings();
         });
 
         const trash = new ExtraButtonComponent(buttonsDiv);
         trash.setIcon("trash").onClick(async () => {
-            const doc = "export default []\n";
+            const doc = config.empty();
             view.setState(EditorState.create({ doc, extensions }));
             updateValidityIndicator(ValidityIndicator.VALID, "");
-            this.plugin.settings.snippets = doc;
+            this.plugin.settings[config.type] = doc;
             await this.plugin.saveSettings();
         });
+    }
+
+    renderHtml(html: string): DocumentFragment | string {
+        if (!html.includes("</")) {
+            return html;
+        }
+        const fragment = document.createDocumentFragment();
+        fragment.appendChild(
+            document.createRange().createContextualFragment(html),
+        );
+        return fragment;
     }
 }
 
@@ -1312,3 +1392,54 @@ async function main() {
 }
 
 main();
+
+async function validateSnippets(
+    snippets: string,
+    view: EditorView,
+): Promise<string | undefined> {
+    let success = ValidityIndicator.VALID;
+    let error = "";
+    const diagnostics = compiler(snippets);
+    const parsedDiagnostics = diagnostics.flatMap((d) => {
+        function getDiagnosticMessageText(d: Diagnostic): string {
+            let result: string;
+            if (typeof d.messageText !== "string") {
+                result = d.messageText.messageText;
+            } else {
+                result = d.messageText;
+            }
+            if (typeof d.start === "number") {
+                const start_line = view.state.doc.lineAt(d.start);
+                const start_line_number = start_line.number;
+                const start_char = start_line.from - d.start;
+                result += ` at Ln ${start_line_number}, Col ${start_char}`;
+            }
+            return result;
+        }
+        if (Array.isArray(d)) {
+            return d.map(getDiagnosticMessageText);
+        }
+        return [getDiagnosticMessageText(d)];
+    });
+    if (parsedDiagnostics.length > 0) {
+        console.error("Snippet syntax error:", diagnostics);
+        success = ValidityIndicator.INVALID;
+        error = "\n" + parsedDiagnostics.join("\n\n");
+    }
+    return success === ValidityIndicator.INVALID ? error : undefined;
+}
+
+function validateTextMacros(textMacros: string) {
+    return v.safeParse(
+        v.pipe(
+            v.string(),
+            v.transform((str): unknown => json5.parse(str)),
+            v.check(
+                (obj) => !Array.isArray(obj),
+                "Expected an object with 'text' and 'restricted' properties, but got an array.",
+            ),
+            mathlessArgsSchema,
+        ),
+        textMacros,
+    );
+}

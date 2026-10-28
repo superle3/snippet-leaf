@@ -118,7 +118,7 @@
     margin-bottom: 0.75rem;
     overflow: auto;
     border-radius: 4px;
-    height: 30em;
+    max-height: 30em;
     outline: none !important;
     text-align: left;
 }
