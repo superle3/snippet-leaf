@@ -128,9 +128,14 @@ export const json5Plugin = (): Plugin => ({
     name: "json5",
     setup(build) {
         // resolve .json5 files
-        build.onResolve({ filter: /\.json5$/ }, async (args) => {
+        build.onResolve({ filter: /\?json5$/ }, async (args) => {
             if (args.resolveDir === "") return;
-            const filePath = await getFilePath(args.path, args.resolveDir, "");
+
+            const filePath = await getFilePath(
+                args.path,
+                args.resolveDir,
+                /\?json5$/,
+            );
             return {
                 path: filePath,
                 namespace: "json5",

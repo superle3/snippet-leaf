@@ -34,10 +34,10 @@ export const json5Plugin = (): PluginOption => ({
     name: "rollup-plugin-json5",
     transform: {
         filter: {
-            id: /^\/.*\.json5$/,
+            id: /\?json5$/,
         },
         handler: function (code, id) {
-            if (!id.endsWith(".json5")) {
+            if (!id.endsWith("?json5")) {
                 return null;
             }
             const parsed = json5.parse(code);
