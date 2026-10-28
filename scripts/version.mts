@@ -1,5 +1,13 @@
+/// <reference types="node" />
+
+import { execSync } from "child_process";
 import { readFileSync, writeFileSync } from "fs";
 import path from "path";
+
+execSync("npm run lint");
+execSync("npm run build:greasemonkey");
+execSync("npm run web:build");
+execSync("npm test");
 
 const semanticBump = process.env.npm_package_version;
 
@@ -40,3 +48,6 @@ for (const filename of files) {
     writeFileSync(file, JSON.stringify(json, null, 4) + "\n", "utf-8");
     console.log(`Bumped version in ${filename} to ${semanticBump}`);
 }
+
+execSync("npm run format");
+execSync("git add .");
