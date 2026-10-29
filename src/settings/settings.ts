@@ -24,13 +24,16 @@ import {
     textMacroArgs,
 } from "src/editor_context/default_text_areas";
 import type { SnippetDebugLevelSchema } from "./setting_schemas";
-import { LatexSuiteRawSettingsSchema } from "./setting_schemas";
+import {
+    LatexSuiteRawSettingsSchema,
+    parseJson5Schema,
+} from "./setting_schemas";
 
 function validateTextMacros(textMacros: string) {
     return v.safeParse(
         v.pipe(
             v.string(),
-            v.parseJson(),
+            parseJson5Schema,
             v.check(
                 (obj) => !Array.isArray(obj),
                 "Expected an object with 'text' and 'restricted' properties, but got an array.",

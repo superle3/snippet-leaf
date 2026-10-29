@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.4 (2026-10-29)
+
+- Compressed keys concealmaps and textmacros weren't being uncompressed causing them not to be saved.
+
 ## 0.1.3 (2026-10-28)
 
 - Only enable conceal, color brackets and highlighting brackets when enabled.

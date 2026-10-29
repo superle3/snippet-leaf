@@ -3,6 +3,13 @@ import browser from "webextension-polyfill";
 import { compressToUint8Array, decompressFromUint8Array } from "lz-string";
 import { DEFAULT_SETTINGS_RAW } from "src/settings/default_raw_settings";
 
+const COMPRESSED_KEYS = [
+    "snippets",
+    "snippetVariables",
+    "concealMaps",
+    "textMacros",
+] as const satisfies (keyof typeof DEFAULT_SETTINGS_RAW)[];
+
 function uint8ArrayToBase64(uint8Array: Uint8Array): string {
     return btoa(String.fromCharCode(...uint8Array));
 }
@@ -45,7 +52,11 @@ export async function get_settings(): Promise<typeof DEFAULT_SETTINGS_RAW> {
     const settings = await browser.storage.sync.get(
         Object.entries(DEFAULT_SETTINGS_RAW).reduce(
             (acc, [key, value]) => {
-                if (key === "snippets" || key === "snippetVariables")
+                if (
+                    COMPRESSED_KEYS.includes(
+                        key as (typeof COMPRESSED_KEYS)[number],
+                    )
+                )
                     return acc;
                 acc[key] = value;
                 return acc;
@@ -53,9 +64,16 @@ export async function get_settings(): Promise<typeof DEFAULT_SETTINGS_RAW> {
             {} as Record<string, string | boolean | number>,
         ),
     );
-    settings.snippets = await get_decompressed("snippets");
-    settings.snippetVariables = await get_decompressed("snippetVariables");
-
+    for (const key of COMPRESSED_KEYS) {
+        if (!(key in settings)) {
+            settings[key] = await get_decompressed(key);
+        } else {
+            console.error(
+                "Compressed key found but uncompressed value exists in storage:",
+                key,
+            );
+        }
+    }
     return settings as typeof DEFAULT_SETTINGS_RAW;
 }
 
@@ -112,12 +130,6 @@ async function get_decompressed(key: string): Promise<string> {
 export async function store_settings(
     settings: typeof DEFAULT_SETTINGS_RAW = get_default_settings(),
 ): Promise<void> {
-    const compressedSnippets = compressToUint8Array(settings.snippets);
-    const compressedSnippetVariables = compressToUint8Array(
-        settings.snippetVariables,
-    );
-    const compressedConcealMaps = compressToUint8Array(settings.concealMaps);
-    const textMacros = compressToUint8Array(settings.textMacros);
     const results: Promise<void>[] = [];
 
     results.push(
@@ -125,10 +137,9 @@ export async function store_settings(
             ...Object.entries(settings).reduce(
                 (acc, [key, value]) => {
                     if (
-                        key === "snippets" ||
-                        key === "snippetVariables" ||
-                        key === "concealMaps" ||
-                        key === "textMacros"
+                        COMPRESSED_KEYS.includes(
+                            key as (typeof COMPRESSED_KEYS)[number],
+                        )
                     )
                         return acc;
                     acc[key] = value;
@@ -138,11 +149,9 @@ export async function store_settings(
             ),
         }),
     );
-    results.push(
-        store_compressed("snippets", compressedSnippets),
-        store_compressed("snippetVariables", compressedSnippetVariables),
-        store_compressed("concealMaps", compressedConcealMaps),
-        store_compressed("textMacros", textMacros),
-    );
+    for (const key of COMPRESSED_KEYS) {
+        const compressedValue = compressToUint8Array(settings[key]);
+        results.push(store_compressed(key, compressedValue));
+    }
     await Promise.all(results);
 }

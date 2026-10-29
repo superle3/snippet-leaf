@@ -266,6 +266,14 @@ if (!settings_div_temp) {
 }
 const settings_div = settings_div_temp;
 
+type Result<T, E> = { ok: true; value: T } | { ok: false; error: E };
+function Ok<T>(value: T): Result<T, never> {
+    return { ok: true, value };
+}
+function Err<E>(error: E): Result<never, E> {
+    return { ok: false, error };
+}
+
 class LatexSuiteSettingTab {
     containerEl: HTMLElement;
     plugin: {
@@ -531,7 +539,7 @@ class LatexSuiteSettingTab {
             type: "snippets",
             default: get_default_snippets,
             empty: () => "export default [\n\n]\n",
-            validate: validateSnippets,
+            transform: validateSnippets,
         });
 
         new Setting(containerEl)
@@ -673,7 +681,7 @@ class LatexSuiteSettingTab {
             );
         this.createSnippetsEditor(concealMapsSetting, {
             type: "concealMaps",
-            validate: async (value) => {
+            transform: async (value) => {
                 const parsed = v.safeParse(
                     v.pipe(
                         v.string(),
@@ -683,9 +691,11 @@ class LatexSuiteSettingTab {
                     value,
                 );
                 if (parsed.success) {
-                    return;
+                    return Ok(JSON.stringify(json5.parse(value), null, "\t"));
                 }
-                return parsed.issues.map((issue) => issue.message).join("\n");
+                return Err(
+                    parsed.issues.map((issue) => issue.message).join("\n"),
+                );
             },
             default: () => DEFAULT_SETTINGS_RAW.concealMaps,
             empty: () => "{\n\n}",
@@ -1039,12 +1049,13 @@ class LatexSuiteSettingTab {
             type: "snippetVariables",
             default: () => DEFAULT_SETTINGS_RAW.snippetVariables,
             empty: () => "{\n\n}",
-            validate: async (value) => {
+            transform: async (value) => {
                 try {
                     parseSnippetVariables(value);
+                    return Ok(value);
                 } catch (e) {
                     console.error("Snippet variable validation failed:", e);
-                    return String(e);
+                    return Err(String(e));
                 }
             },
         });
@@ -1141,7 +1152,7 @@ class LatexSuiteSettingTab {
             type: "textMacros",
             default: () => DEFAULT_SETTINGS_RAW.textMacros,
             empty: () => "{\n\n}",
-            validate: async (value) => {
+            transform: async (value) => {
                 const result = validateTextMacros(value);
                 if (!result.success) {
                     const message = result.issues.map((issue) => issue.message);
@@ -1149,8 +1160,9 @@ class LatexSuiteSettingTab {
                         "Text macro validation failed:",
                         message.join("\n"),
                     );
-                    return message.join("\n");
+                    return Err(message.join("\n"));
                 }
+                return Ok(value);
             },
         });
         //The toggle both hides the settings and makes the plugin not load the vim commands on startup.
@@ -1226,10 +1238,10 @@ class LatexSuiteSettingTab {
                 | "snippetVariables"
                 | "concealMaps"
                 | "textMacros";
-            validate: (
+            transform: (
                 content: string,
                 view: EditorView,
-            ) => Promise<void | string>;
+            ) => Promise<Result<string, string>>;
             default: () => string;
             empty: () => string;
         },
@@ -1288,14 +1300,15 @@ class LatexSuiteSettingTab {
 
         const delayedSave = debounce(async (view: ViewUpdate) => {
             const value = view.state.doc.toString();
-            const error = await config.validate(value, view.view);
-            const success =
-                error === undefined
-                    ? ValidityIndicator.VALID
-                    : ValidityIndicator.INVALID;
-            updateValidityIndicator(success, error ?? "");
-            if (success !== ValidityIndicator.VALID) return;
-            this.plugin.settings[config.type] = value;
+            const result = await config.transform(value, view.view);
+
+            const success = result.ok
+                ? ValidityIndicator.VALID
+                : ValidityIndicator.INVALID;
+            const error = result.ok ? "" : result.error;
+            updateValidityIndicator(success, error);
+            if (success !== ValidityIndicator.VALID || !result.ok) return;
+            this.plugin.settings[config.type] = result.value;
             await this.plugin.saveSettings();
         }, 1000);
         validityIndicator.onClick(() => {
@@ -1396,7 +1409,7 @@ main();
 async function validateSnippets(
     snippets: string,
     view: EditorView,
-): Promise<string | undefined> {
+): Promise<Result<string, string>> {
     let success = ValidityIndicator.VALID;
     let error = "";
     const diagnostics = compiler(snippets);
@@ -1426,7 +1439,11 @@ async function validateSnippets(
         success = ValidityIndicator.INVALID;
         error = "\n" + parsedDiagnostics.join("\n\n");
     }
-    return success === ValidityIndicator.INVALID ? error : undefined;
+    if (success === ValidityIndicator.VALID) {
+        return Ok(snippets);
+    } else {
+        return Err(error);
+    }
 }
 
 function validateTextMacros(textMacros: string) {

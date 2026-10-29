@@ -10,8 +10,13 @@ import { sortSnippets } from "src/snippets/sort";
 import * as v from "valibot";
 import { serializeSnippetLike } from "src/snippets/snippets";
 
+export const parseJson5Schema = v.pipe(
+    v.string(),
+    v.transform((str): unknown => json5.parse(str)),
+);
+
 export const MapsSchema = v.object({
-    concealMaps: v.pipe(v.string(), v.parseJson(), MappingSchema),
+    concealMaps: v.pipe(v.string(), parseJson5Schema, MappingSchema),
 });
 
 export const SnippetDebugLevelSchema = v.union([
@@ -26,11 +31,6 @@ export const StrToArraySchema = v.union([
     ),
 ]);
 
-export const UnParsedSnippetSnippetVariablesSchema = v.pipe(
-    v.string(),
-    v.transform((str): unknown => json5.parse(str)),
-);
-
 export const NestedRawSnippetArraySchema: v.GenericSchema<NestedArray<object>> =
     v.lazy(() =>
         v.array(v.union([v.looseObject({}), NestedRawSnippetArraySchema])),
@@ -38,10 +38,7 @@ export const NestedRawSnippetArraySchema: v.GenericSchema<NestedArray<object>> =
 
 export const SnippetVariablesSchema = v.pipe(
     v.union([
-        v.pipe(
-            UnParsedSnippetSnippetVariablesSchema,
-            v.record(v.string(), v.string()),
-        ),
+        v.pipe(parseJson5Schema, v.record(v.string(), v.string())),
         v.record(v.string(), v.string()),
     ]),
     v.transform((rawSnippetVariables: Record<string, string>) => {
@@ -73,7 +70,7 @@ export const SnippetSchemaAsync = v.pipeAsync(
         ),
         snippetVariables: v.pipe(
             v.string(),
-            UnParsedSnippetSnippetVariablesSchema,
+            parseJson5Schema,
             SnippetVariablesSchema,
         ),
         version: v.optional(v.union([v.literal(1), v.literal(2)]), 2),
@@ -184,7 +181,7 @@ export const LatexSuiteRawSettingsSchema = v.object({
         v.transform((arr) => new Set(arr)),
     ),
     textMacros: v.string(),
-    concealMaps: v.pipe(v.string(), v.parseJson(), MappingSchema),
+    concealMaps: v.pipe(v.string(), parseJson5Schema, MappingSchema),
 });
 
 export const SettingsSchemaWithoutSnippets = v.intersectAsync([
